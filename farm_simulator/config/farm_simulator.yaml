@@ -1,0 +1,2 @@
+farm_nodelet:
+  main_loop_freq: 1.0  # frequency of the main loop
