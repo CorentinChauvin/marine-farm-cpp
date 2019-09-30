@@ -61,6 +61,25 @@ namespace mfcpp {
     // TODO: function giving the orientation of the line (to get the orientation of one alga)
   };
 
+  /**
+   * \brief  Draw a random number from a Gaussian distribution
+   *
+   * \param mu     Mean of the distribution
+   * \param sigma  Standard deviation of the distribution
+   * \return  Random number following a normal law (mu, sigma)
+   */
+  double random_gaussian(double mu, double sigma);
+
+  /**
+   * \brief  Draw a random number from a uniform distribution
+   *
+   * \param a  Lower bound
+   * \param b  Upper bound
+   * \return   Random number following a uniform law in [a, b]
+   */
+  double random_uniform(double a, double b);
+
+
 
 } // namespace mfcpp
 

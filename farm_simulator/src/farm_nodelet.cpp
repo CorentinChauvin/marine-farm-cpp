@@ -7,12 +7,16 @@
  */
 
 #include "farm_nodelet.hpp"
+#include "rviz_visualisation.hpp"
 #include "farm_common.hpp"
+#include "farm_simulator/FarmSimulatorConfig.h"
+#include <dynamic_reconfigure/server.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
-#include <geometry_msgs/Point.h>
 #include <pluginlib/class_list_macros.h>
+#include <geometry_msgs/Point.h>
 #include <iostream>
+#include <cmath>
 
 using namespace std;
 
@@ -41,11 +45,20 @@ void FarmNodelet::onInit()
   private_nh_.param<float>("anchors_diameter", anchors_diameter_, 0.5);
   private_nh_.param<float>("anchors_height", anchors_height_, 0.5);
 
+  // Other variables
+  reconfigure_initialised_ = false;
+
   // ROS publishers
-  rviz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("anchors", 0 );
+  rviz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("farm", 0 );
+
+  // Dynamic reconfigure
+  dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig> reconfigure_server;
+  dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig>::CallbackType cb;
+  cb = boost::bind(&FarmNodelet::reconfigure_callback, this, _1, _2);
+  reconfigure_server.setCallback(cb);
 
   // Create algae lines
-  init_algae_lines();
+  init_algae_lines(false);
 
 
   // Main loop
@@ -67,8 +80,34 @@ void FarmNodelet::run_nodelet()
 }
 
 
-void FarmNodelet::init_algae_lines()
+void FarmNodelet::reconfigure_callback(farm_simulator::FarmSimulatorConfig &config,
+  uint32_t level)
 {
+  if (reconfigure_initialised_)
+    init_algae_lines(false, config.phi, config.theta);
+  else
+    reconfigure_initialised_ = true;
+}
+
+
+void FarmNodelet::init_algae_lines(bool randomise, float phi, float theta)
+{
+  algae_lines_.resize(0);
+
+  float l = depth_water_;
+  float L = length_lines_;
+
+  cout << "*** " << phi << " ; " << theta << endl;
+  if (randomise) {
+    phi = random_uniform(-1.0, 1.0);
+    theta = random_uniform(-1.0, 1.0);
+    // gamma = random_uniform(-0.5, 0.5);
+  }
+
+  cout << "*** " << phi << " ; " << theta << endl;
+
+  float gamma;
+
   for (unsigned int i = 0; i < nbr_lines_; i++) {
     AlgaeLine line;
 
@@ -84,17 +123,38 @@ void FarmNodelet::init_algae_lines()
     line.anchors_diameter = anchors_diameter_;
     line.anchors_height = anchors_height_;
 
-    // TODO: randomise this
-    // Initialise line
+    // Initialise lines
     line.line.thickness = thickness_lines_;
 
-    line.line.p1[0] = 0;
-    line.line.p1[1] = i * offset_lines_;
-    line.line.p1[2] = 0;
+    float x1 = l * sin(theta) * cos(phi);
+    float y1 = l * sin(theta) * sin(phi);
+    float z1 = l * cos(theta);
+    float alpha = atan2(x1, L - y1);
+    float beta = atan2(z1, sqrt(pow(x1, 2) + pow(L-y1, 2)));
+    cout << "beta=" << beta << endl;
+    gamma = acos(z1 / l / cos(beta));
+    float x2 = l * (sin(alpha)*sin(beta)*cos(gamma) - cos(alpha)*sin(gamma));
+    float y2 = l * (-sin(alpha)*sin(gamma) - cos(alpha)*sin(beta)*cos(alpha));
+    float z2 = l * (cos(beta)*cos(gamma));
 
-    line.line.p2[0] = length_lines_;
-    line.line.p2[1] = i * offset_lines_;
-    line.line.p2[2] = 0;
+    line.line.p1 = line.anchor1 + tf2::Vector3(x1, y1, z1);
+    line.line.p2 = line.anchor2 + tf2::Vector3(x2, y2, z2);
+
+    cout << "---" << endl;
+    cout << "z1 / l / cos(beta) = " << z1 / l / cos(beta) << endl;
+    cout << "Length first rope: " << tf2::tf2Distance(line.line.p1, line.anchor1) << endl;
+    cout << "Length second rope: " << tf2::tf2Distance(line.line.p2, line.anchor2) << endl;
+    cout << tf2::tf2Distance(line.line.p1, line.line.p2) << endl;
+    tf2::Vector3 ff = line.line.p1 - line.line.p2;
+    cout << ff[0] << " ; " << ff[1] << " ; " << ff[2] << endl;
+
+    // line.line.p1[0] = 0;
+    // line.line.p1[1] = i * offset_lines_;
+    // line.line.p1[2] = 0;
+
+    // line.line.p2[0] = length_lines_;
+    // line.line.p2[1] = i * offset_lines_;
+    // line.line.p2[2] = 0;
 
     // TODO: populate the algae
 
@@ -146,75 +206,4 @@ void FarmNodelet::pub_rviz_markers(float duration) const
 }
 
 
-visualization_msgs::Marker FarmNodelet::rviz_marker_line(tf2::Vector3 p1, tf2::Vector3 p2,
-  float thickness, const MarkerArgs &common_args) const
-{
-  visualization_msgs::Marker marker;
-
-  marker.header.frame_id = common_args.frame_id;
-  marker.header.stamp = common_args.stamp;
-  marker.ns = common_args.ns;
-  marker.lifetime = common_args.duration;
-
-  marker.type = visualization_msgs::Marker::LINE_LIST;
-  marker.action = visualization_msgs::Marker::ADD;
-
-  geometry_msgs::Point p;
-  p.x = p1.getX();
-  p.y = p1.getY();
-  p.z = p1.getZ();
-  marker.points.push_back(p);
-  p.x = p2.getX();
-  p.y = p2.getY();
-  p.z = p2.getZ();
-  marker.points.push_back(p);
-
-  marker.scale.x = thickness;
-  marker.color.r = 0.0f;
-  marker.color.g = 1.0f;
-  marker.color.b = 0.0f;
-  marker.color.a = 1.0;
-
-  return marker;
-}
-
-visualization_msgs::Marker FarmNodelet::rviz_marker_cylinder(tf2::Vector3 p, float diameter,
-  float height, const MarkerArgs &common_args) const
-{
-  visualization_msgs::Marker marker;
-
-  marker.header.frame_id = common_args.frame_id;
-  marker.header.stamp = common_args.stamp;
-  marker.ns = common_args.ns;
-  marker.lifetime = common_args.duration;
-
-  marker.type = visualization_msgs::Marker::CYLINDER;
-  marker.action = visualization_msgs::Marker::ADD;
-
-  marker.pose.position.x = p.getX();
-  marker.pose.position.y = p.getY();
-  marker.pose.position.z = p.getZ();
-
-  marker.scale.x = diameter;
-  marker.scale.y = diameter;
-  marker.scale.z = height;
-
-  marker.color.r = 0.0f;
-  marker.color.g = 1.0f;
-  marker.color.b = 0.0f;
-  marker.color.a = 1.0;
-
-  return marker;
-}
-
-
-void FarmNodelet::pop_marker_ids(visualization_msgs::MarkerArray &array) const
-{
-  unsigned int n = array.markers.size();
-
-  for (unsigned int i = 0; i < n; i++) {
-    array.markers[i].id = i;
-  }
-}
-
-} // namespace mfcpp
+}  // namespace mfcpp

@@ -13,12 +13,19 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   visualization_msgs
+  dynamic_reconfigure
+)
+
+generate_dynamic_reconfigure_options(
+  cfg/farm_simulator.cfg
 )
 
 catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS nodelet roscpp std_msgs
 )
+
+
 
 ###########
 ## Build ##
@@ -33,8 +40,13 @@ include_directories(${Eigen_INCLUDE_DIRS})
 
 add_library(farm_nodelet
   src/farm_nodelet.cpp
+  src/farm_common.cpp
+  src/rviz_visualisation.cpp
   )
 
-add_dependencies(farm_nodelet ${catkin_EXPORTED_TARGETS})
+add_dependencies(farm_nodelet
+  ${catkin_EXPORTED_TARGETS}
+  ${PROJECT_NAME}_gencfg
+)
 
 target_link_libraries(farm_nodelet ${catkin_LIBRARIES})
