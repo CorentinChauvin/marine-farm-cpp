@@ -1,2 +1,11 @@
 farm_nodelet:
-  main_loop_freq: 1.0  # frequency of the main loop
+  main_loop_freq: 5.0  # frequency of the main loop
+
+  nbr_lines: 3       # number of algae lines
+  offset_lines: 3.3  # lateral distance (m) between each line
+  length_lines: 30   # length (m) of each line
+  thickness_lines: 0.05  # diameter (m) of each line
+  depth_lines: 2.1   # distance (m) between water surface and line
+  depth_water: 6     # distance (m) between water surface and seafloor
+  anchors_diameter: 0.5  # diameter of the cylindrical anchors
+  anchors_height: 0.4    # height of the cylindrical anchors
