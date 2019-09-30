@@ -17,6 +17,7 @@
 #include <ros/ros.h>
 #include <string>
 #include <vector>
+#include <csignal>
 
 
 namespace mfcpp {
@@ -34,8 +35,11 @@ namespace mfcpp {
       virtual void onInit();
 
     private:
+      // Static members
+      static sig_atomic_t volatile b_sigint_;  ///<  Whether SIGINT signal has been received
+
       // Private members
-      ros::NodeHandle nh_;            ///<  Node handler (for topics and services)            )
+      ros::NodeHandle nh_;            ///<  Node handler (for topics and services)
       ros::NodeHandle private_nh_;    ///<  Private node handler (for parameters
       ros::Publisher rviz_pub_;       ///<  ROS publisher for Rviz
       std::vector<AlgaeLine> algae_lines_;  ///<  Vector of all the algae in the farm
@@ -57,6 +61,11 @@ namespace mfcpp {
        * \brief  Main loop of the nodelet
        */
       void run_nodelet();
+
+      /**
+       * \brief  SINGINT callback to stop the nodelet properly
+       */
+      static void sigint_handler(int s);
 
       /**
        * \brief  Callback for dynamic reconfigure

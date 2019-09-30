@@ -17,6 +17,8 @@
 #include <geometry_msgs/Point.h>
 #include <iostream>
 #include <cmath>
+#include <csignal>
+
 
 using namespace std;
 
@@ -28,11 +30,20 @@ namespace mfcpp {
 FarmNodelet::FarmNodelet() {}
 FarmNodelet::~FarmNodelet() {}
 
+sig_atomic_t volatile FarmNodelet::b_sigint_ = 0;
+
 
 void FarmNodelet::onInit()
 {
   nh_ = getNodeHandle();
   private_nh_ = getPrivateNodeHandle();
+
+  // Catch Ctrl+C stop signal
+  struct sigaction sigIntHandler;
+  sigIntHandler.sa_handler = FarmNodelet::sigint_handler;
+  sigemptyset(&sigIntHandler.sa_mask);
+  sigIntHandler.sa_flags = 0;
+  sigaction(SIGINT, &sigIntHandler, NULL);
 
   // ROS parameters
   private_nh_.param<float>("main_loop_freq", main_loop_freq_, 1.0);
@@ -70,13 +81,21 @@ void FarmNodelet::run_nodelet()
 {
   ros::Rate loop_rate(main_loop_freq_);
 
-  while (ros::ok() && !ros::isShuttingDown()) {
+  while (ros::ok() && !ros::isShuttingDown() && !b_sigint_) {
     ros::spinOnce();
 
     pub_rviz_markers(1/main_loop_freq_);
+    cout << ros::ok() << " ; " << ros::isShuttingDown() << endl;
 
     loop_rate.sleep();
   }
+
+  exit(1);
+}
+
+
+void FarmNodelet::sigint_handler(int s){
+  b_sigint_ = 1;
 }
 
 
