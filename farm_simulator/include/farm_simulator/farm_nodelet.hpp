@@ -63,7 +63,7 @@ namespace mfcpp {
       void run_nodelet();
 
       /**
-       * \brief  SINGINT callback to stop the nodelet properly
+       * \brief  SINGINT (Ctrl+C) callback to stop the nodelet properly
        */
       static void sigint_handler(int s);
 
@@ -80,10 +80,8 @@ namespace mfcpp {
        * \brief  Initialise the algae lines
        *
        * \param randomise  Whether to randomise the position of each line
-       * \param phi        (optional) First spherical angle for the first point
-       *                   of each line
-       * \param theta      (optional) Second spherical angle for the first point
-       *                   of each line
+       * \param phi        First spherical angle for the first point of each line
+       * \param theta      Second spherical angle for the first point of each line
        */
       void init_algae_lines(bool randomise, float phi=0.0, float theta=0.0);
 

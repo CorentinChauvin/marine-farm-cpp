@@ -27,10 +27,10 @@ PLUGINLIB_EXPORT_CLASS(mfcpp::FarmNodelet, nodelet::Nodelet)
 
 namespace mfcpp {
 
+sig_atomic_t volatile FarmNodelet::b_sigint_ = 0;
+
 FarmNodelet::FarmNodelet() {}
 FarmNodelet::~FarmNodelet() {}
-
-sig_atomic_t volatile FarmNodelet::b_sigint_ = 0;
 
 
 void FarmNodelet::onInit()
@@ -38,7 +38,7 @@ void FarmNodelet::onInit()
   nh_ = getNodeHandle();
   private_nh_ = getPrivateNodeHandle();
 
-  // Catch Ctrl+C stop signal
+  // Catch SIGINT (Ctrl+C) stop signal
   struct sigaction sigIntHandler;
   sigIntHandler.sa_handler = FarmNodelet::sigint_handler;
   sigemptyset(&sigIntHandler.sa_mask);
@@ -85,7 +85,6 @@ void FarmNodelet::run_nodelet()
     ros::spinOnce();
 
     pub_rviz_markers(1/main_loop_freq_);
-    cout << ros::ok() << " ; " << ros::isShuttingDown() << endl;
 
     loop_rate.sleep();
   }
@@ -116,27 +115,21 @@ void FarmNodelet::init_algae_lines(bool randomise, float phi, float theta)
   float l = depth_water_;
   float L = length_lines_;
 
-  cout << "*** " << phi << " ; " << theta << endl;
   if (randomise) {
     phi = random_uniform(-1.0, 1.0);
     theta = random_uniform(-1.0, 1.0);
-    // gamma = random_uniform(-0.5, 0.5);
   }
-
-  cout << "*** " << phi << " ; " << theta << endl;
-
-  float gamma;
 
   for (unsigned int i = 0; i < nbr_lines_; i++) {
     AlgaeLine line;
 
     // Initialise anchors
-    line.anchor1[0] = 0;
-    line.anchor1[1] = i * offset_lines_;
+    line.anchor1[0] = i * offset_lines_;
+    line.anchor1[1] = 0;
     line.anchor1[2] = -depth_water_;
 
-    line.anchor2[0] = length_lines_;
-    line.anchor2[1] = i * offset_lines_;
+    line.anchor2[0] = i * offset_lines_;
+    line.anchor2[1] = length_lines_;
     line.anchor2[2] = -depth_water_;
 
     line.anchors_diameter = anchors_diameter_;
@@ -145,35 +138,25 @@ void FarmNodelet::init_algae_lines(bool randomise, float phi, float theta)
     // Initialise lines
     line.line.thickness = thickness_lines_;
 
-    float x1 = l * sin(theta) * cos(phi);
-    float y1 = l * sin(theta) * sin(phi);
-    float z1 = l * cos(theta);
-    float alpha = atan2(x1, L - y1);
-    float beta = atan2(z1, sqrt(pow(x1, 2) + pow(L-y1, 2)));
-    cout << "beta=" << beta << endl;
-    gamma = acos(z1 / l / cos(beta));
-    float x2 = l * (sin(alpha)*sin(beta)*cos(gamma) - cos(alpha)*sin(gamma));
-    float y2 = l * (-sin(alpha)*sin(gamma) - cos(alpha)*sin(beta)*cos(alpha));
-    float z2 = l * (cos(beta)*cos(gamma));
+    double x1 = l * sin(theta) * cos(phi);
+    double y1 = l * sin(theta) * sin(phi);
+    double z1 = l * cos(theta);
+
+    double    D2 = pow(x1, 2) + pow(L-y1, 2);
+    double     d = sqrt(D2 + pow(z1, 2));
+    double alpha = atan2(x1, L - y1);
+    double  beta = atan2(z1, sqrt(D2));
+    double delta = -asin((pow(d, 2) + pow(l, 2) - pow(L, 2)) / (2*d*l));
+    double gamma = -acos(1/(cos(beta)*cos(delta)) * (z1/l + sin(beta)*sin(delta)));
+    gamma = copysign(gamma, y1);
+
+    double x2 = -l * ( sin(alpha)*(sin(beta)*cos(gamma)*cos(delta) + cos(beta)*sin(delta)) - cos(alpha)*sin(gamma)*cos(delta));
+    double y2 = -l * (-cos(alpha)*(sin(beta)*cos(gamma)*cos(delta) + cos(beta)*sin(delta)) - sin(alpha)*sin(gamma)*cos(delta));
+    double z2 = l * (cos(beta)*cos(gamma)*cos(delta) - sin(beta)*sin(delta));
 
     line.line.p1 = line.anchor1 + tf2::Vector3(x1, y1, z1);
     line.line.p2 = line.anchor2 + tf2::Vector3(x2, y2, z2);
 
-    cout << "---" << endl;
-    cout << "z1 / l / cos(beta) = " << z1 / l / cos(beta) << endl;
-    cout << "Length first rope: " << tf2::tf2Distance(line.line.p1, line.anchor1) << endl;
-    cout << "Length second rope: " << tf2::tf2Distance(line.line.p2, line.anchor2) << endl;
-    cout << tf2::tf2Distance(line.line.p1, line.line.p2) << endl;
-    tf2::Vector3 ff = line.line.p1 - line.line.p2;
-    cout << ff[0] << " ; " << ff[1] << " ; " << ff[2] << endl;
-
-    // line.line.p1[0] = 0;
-    // line.line.p1[1] = i * offset_lines_;
-    // line.line.p1[2] = 0;
-
-    // line.line.p2[0] = length_lines_;
-    // line.line.p2[1] = i * offset_lines_;
-    // line.line.p2[2] = 0;
 
     // TODO: populate the algae
 
