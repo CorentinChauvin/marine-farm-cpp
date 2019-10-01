@@ -46,6 +46,7 @@ void FarmNodelet::onInit()
   sigaction(SIGINT, &sigIntHandler, NULL);
 
   // Dynamic reconfigure
+  reconfigure_initialised_ = false;
   dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig> reconfigure_server;
   dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig>::CallbackType cb;
   cb = boost::bind(&FarmNodelet::reconfigure_callback, this, _1, _2);
@@ -69,8 +70,11 @@ void FarmNodelet::onInit()
   private_nh_.param<float>("bnd_theta_lines", bnd_theta_lines_, 0.3);
   private_nh_.param<float>("bnd_gamma_lines", bnd_gamma_lines_, 0.3);
 
+  private_nh_.param<int>("nbr_algae", nbr_algae_, 1);
+  private_nh_.param<float>("width_alga", width_alga_, 0.2);
+  private_nh_.param<float>("length_alga", length_alga_, 1.0);
+
   // Other variables
-  reconfigure_initialised_ = false;
 
   // ROS publishers
   rviz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("farm", 0 );
@@ -185,8 +189,21 @@ void FarmNodelet::init_algae_lines()
     line.line.p1 = line.anchor1 + tf2::Vector3(x1, y1, z1);
     line.line.p2 = line.anchor2 + tf2::Vector3(x2, y2, z2);
 
+    // Add algae on lines
+    line.algae.reserve(nbr_algae_);
+    unsigned int n = nbr_algae_;
+    tf2::Vector3 X1 = line.line.p1;
+    tf2::Vector3 X2 = line.line.p2;
 
-    // TODO: populate the algae
+    for (unsigned int k = 1; k <= nbr_algae_; k++) {
+      Alga alga;
+      alga.position = X1 + float(k)/(n+1) * (X2 - X1);
+      alga.orientation = 0.0;
+      alga.length = length_alga_;
+      alga.width = width_alga_;
+
+      line.algae.emplace_back(alga);
+    }
 
     algae_lines_.emplace_back(line);
 
@@ -200,16 +217,19 @@ void FarmNodelet::pub_rviz_markers(float duration) const
   MarkerArgs args;
   args.stamp = ros::Time::now();
   args.duration = ros::Duration(duration);
-  args.ns = "ns";
   args.frame_id = "/world";
 
   visualization_msgs::MarkerArray markers;
+  unsigned int nbr_assets = nbr_lines_ * (5 + nbr_algae_);
+  markers.markers.reserve(nbr_assets);
 
   // Visualise algae lines
-  for (unsigned int i = 0; i < algae_lines_.size(); i++) {
+  for (unsigned int i = 0; i < nbr_lines_; i++)
+  {
     const AlgaeLine *al = &algae_lines_[i];  // for convenience
 
     // Anchors
+    args.ns = "anchors";
     markers.markers.emplace_back(
       rviz_marker_cylinder(al->anchor1, al->anchors_diameter, al->anchors_height, args)
     );
@@ -218,6 +238,7 @@ void FarmNodelet::pub_rviz_markers(float duration) const
     );
 
     // Ropes
+    args.ns = "ropes";
     markers.markers.emplace_back(
       rviz_marker_line(al->anchor1, al->line.p1, al->line.thickness, args)
     );
@@ -227,6 +248,30 @@ void FarmNodelet::pub_rviz_markers(float duration) const
     markers.markers.emplace_back(
       rviz_marker_line(al->anchor2, al->line.p2, al->line.thickness, args)
     );
+
+    // Algae
+    args.ns = "algae";
+    tf2::Vector3 X1 = algae_lines_[i].line.p1;
+    tf2::Vector3 X2 = algae_lines_[i].line.p2;
+    tf2::Vector3 z(0, 0, 1);
+    tf2::Vector3 y = (X2-X1) / tf2::tf2Distance(X1, X2);
+    tf2::Vector3 x = tf2::tf2Cross(y, z);
+    float H = length_alga_;
+    float W = width_alga_;
+
+    for (unsigned int k = 0; k < algae_lines_[i].algae.size(); k++) {
+      tf2::Vector3 X = algae_lines_[i].algae[k].position;
+      float psi = algae_lines_[i].algae[k].orientation;
+
+      tf2::Vector3 p1 = X - W/2*y;
+      tf2::Vector3 p2 = X + W/2*y;
+      tf2::Vector3 p3 = p2 - H*(cos(psi)*z - sin(psi)*x);
+      tf2::Vector3 p4 = p1 - H*(cos(psi)*z - sin(psi)*x);
+
+      markers.markers.emplace_back(
+        rviz_marker_rectangle(p1, p2, p3, p4, args)
+      );
+    }
   }
 
   // Publish the markers

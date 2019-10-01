@@ -11,6 +11,7 @@
 
 #include <tf2/LinearMath/Vector3.h>
 #include <tf2/LinearMath/Quaternion.h>
+#include <iostream>
 #include <vector>
 
 namespace mfcpp {
@@ -60,6 +61,15 @@ namespace mfcpp {
     // TODO: function mapping (0, 1) to (extremity1, extremity2)
     // TODO: function giving the orientation of the line (to get the orientation of one alga)
   };
+
+  /**
+   * \brief  Displays a vector
+   *
+   * \param stream  Stream on which to display the vector
+   * \param v       Vector to display
+   * \return  Output stream
+   */
+  std::ostream &operator<<(std::ostream &stream, const tf2::Vector3 &v);
 
   /**
    * \brief  Draw a random number from a Gaussian distribution

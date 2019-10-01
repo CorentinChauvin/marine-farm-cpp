@@ -9,9 +9,16 @@
 #include "farm_common.hpp"
 #include <random>
 #include <cstdlib>
+#include <iostream>
 
 
 namespace mfcpp {
+
+  std::ostream &operator<<(std::ostream &stream, const tf2::Vector3 &v)
+  {
+    stream << "(x=" << v.getX() << " ; y=" << v.getY() << " ; z=" << v.getZ() << ")";
+  }
+
 
   /**
    * \brief  Seed initialiser for generation of random numbers

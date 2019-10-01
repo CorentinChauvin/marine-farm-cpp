@@ -29,14 +29,16 @@ visualization_msgs::Marker rviz_marker_line(tf2::Vector3 p1, tf2::Vector3 p2,
   marker.action = visualization_msgs::Marker::ADD;
 
   geometry_msgs::Point p;
+  marker.points.reserve(2);
+
   p.x = p1.getX();
   p.y = p1.getY();
   p.z = p1.getZ();
-  marker.points.push_back(p);
+  marker.points.emplace_back(p);
   p.x = p2.getX();
   p.y = p2.getY();
   p.z = p2.getZ();
-  marker.points.push_back(p);
+  marker.points.emplace_back(p);
 
   marker.scale.x = thickness;
   marker.color.r = 0.0f;
@@ -72,6 +74,62 @@ visualization_msgs::Marker rviz_marker_cylinder(tf2::Vector3 p, float diameter,
   marker.color.g = 1.0f;
   marker.color.b = 0.0f;
   marker.color.a = 1.0;
+
+  return marker;
+}
+
+
+visualization_msgs::Marker rviz_marker_rectangle(tf2::Vector3 p1, tf2::Vector3 p2,
+  tf2::Vector3 p3, tf2::Vector3 p4, const MarkerArgs &common_args)
+{
+  visualization_msgs::Marker marker;
+
+  marker.header.frame_id = common_args.frame_id;
+  marker.header.stamp = common_args.stamp;
+  marker.ns = common_args.ns;
+  marker.lifetime = common_args.duration;
+
+  marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
+  marker.action = visualization_msgs::Marker::ADD;
+
+  geometry_msgs::Point p;
+  marker.points.reserve(6);
+
+  // First triangle
+  p.x = p1.getX();
+  p.y = p1.getY();
+  p.z = p1.getZ();
+  marker.points.emplace_back(p);
+  p.x = p2.getX();
+  p.y = p2.getY();
+  p.z = p2.getZ();
+  marker.points.emplace_back(p);
+  p.x = p4.getX();
+  p.y = p4.getY();
+  p.z = p4.getZ();
+  marker.points.emplace_back(p);
+
+  // Second triangle
+  p.x = p2.getX();
+  p.y = p2.getY();
+  p.z = p2.getZ();
+  marker.points.emplace_back(p);
+  p.x = p3.getX();
+  p.y = p3.getY();
+  p.z = p3.getZ();
+  marker.points.emplace_back(p);
+  p.x = p4.getX();
+  p.y = p4.getY();
+  p.z = p4.getZ();
+  marker.points.emplace_back(p);
+
+  marker.color.r = 0.0f;
+  marker.color.g = 1.0f;
+  marker.color.b = 0.0f;
+  marker.color.a = 1.0;
+  marker.scale.x = 1;
+  marker.scale.y = 1;
+  marker.scale.z = 1;
 
   return marker;
 }

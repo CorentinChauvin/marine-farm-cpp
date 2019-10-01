@@ -65,6 +65,10 @@ namespace mfcpp {
       float bnd_theta_lines_;   ///<  Bound such that theta is sampled in [mean-bnd, mean+bnd]
       float bnd_gamma_lines_;   ///<  Bound such that gamma is sampled in [mean-bnd, mean+bnd]
 
+      int nbr_algae_;       ///<  Number of algae per line
+      float width_alga_;    ///<  Width of an alga
+      float length_alga_;   ///<  Length of an alga
+
       /**
        * \brief  Main loop of the nodelet
        */

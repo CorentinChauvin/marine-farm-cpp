@@ -55,6 +55,21 @@ namespace mfcpp {
     float height, const MarkerArgs &common_args);
 
   /**
+   * \brief  Creates a Rviz marker to display a rectangle
+   *
+   * The rectangle will be made of two triangles
+   *
+   * \param p1            First point
+   * \param p2            Second point
+   * \param p3            Third point
+   * \param p4            Fourth point
+   * \param common_args   Common arguments to fill ROS message
+   * \return out_marker   Corresponding Rviz marker
+   */
+  visualization_msgs::Marker rviz_marker_rectangle(tf2::Vector3 p1, tf2::Vector3 p2,
+    tf2::Vector3 p3, tf2::Vector3 p4, const MarkerArgs &common_args);
+
+  /**
    * \brief  Populates id of all the markers in a marker array
    *
    * \note  The id of each marker needs to be different for Rviz to display it

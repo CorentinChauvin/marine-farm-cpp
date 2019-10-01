@@ -12,9 +12,14 @@ farm_nodelet:
   anchors_height: 0.4    # height of the cylindrical anchors
 
   # Random generation of algae lines' position
-  randomise_lines: true  # whether to randomise the position of each line
+  randomise_lines: false  # whether to randomise the position of each line
   mean_phi_lines: 0.0     # mean of the 1st angle for the 1st point of each line
   mean_theta_lines: 0.0   # mean of the 2nd angle for the 1st point of each line
   bnd_phi_lines: 0.3      # bound such that phi is sampled in [mean-bnd, mean+bnd]
   bnd_theta_lines: 0.3    # same for theta
   bnd_gamma_lines: 0.0    # same for gamma (angle for the 2nd point of each line)
+
+  # Algae generation
+  nbr_algae: 100     # nbr of algae per line
+  width_alga: 0.2   # width of an alga
+  length_alga: 2.0  # length of an alga
