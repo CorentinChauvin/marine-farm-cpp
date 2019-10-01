@@ -1,6 +1,7 @@
 farm_nodelet:
   main_loop_freq: 5.0  # frequency of the main loop
 
+  # Algae lines generation
   nbr_lines: 3       # number of algae lines
   offset_lines: 3.3  # lateral distance (m) between each line
   length_lines: 30   # length (m) of each line
@@ -9,3 +10,11 @@ farm_nodelet:
   depth_water: 6     # distance (m) between water surface and seafloor
   anchors_diameter: 0.5  # diameter of the cylindrical anchors
   anchors_height: 0.4    # height of the cylindrical anchors
+
+  # Random generation of algae lines' position
+  randomise_lines: true  # whether to randomise the position of each line
+  mean_phi_lines: 0.0     # mean of the 1st angle for the 1st point of each line
+  mean_theta_lines: 0.0   # mean of the 2nd angle for the 1st point of each line
+  bnd_phi_lines: 0.3      # bound such that phi is sampled in [mean-bnd, mean+bnd]
+  bnd_theta_lines: 0.3    # same for theta
+  bnd_gamma_lines: 0.0    # same for gamma (angle for the 2nd point of each line)

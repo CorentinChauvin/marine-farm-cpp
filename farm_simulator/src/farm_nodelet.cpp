@@ -45,6 +45,12 @@ void FarmNodelet::onInit()
   sigIntHandler.sa_flags = 0;
   sigaction(SIGINT, &sigIntHandler, NULL);
 
+  // Dynamic reconfigure
+  dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig> reconfigure_server;
+  dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig>::CallbackType cb;
+  cb = boost::bind(&FarmNodelet::reconfigure_callback, this, _1, _2);
+  reconfigure_server.setCallback(cb);
+
   // ROS parameters
   private_nh_.param<float>("main_loop_freq", main_loop_freq_, 1.0);
   private_nh_.param<int>("nbr_lines", nbr_lines_, 1);
@@ -56,20 +62,21 @@ void FarmNodelet::onInit()
   private_nh_.param<float>("anchors_diameter", anchors_diameter_, 0.5);
   private_nh_.param<float>("anchors_height", anchors_height_, 0.5);
 
+  private_nh_.param<bool>("randomise_lines", randomise_lines_, false);
+  private_nh_.param<float>("mean_phi_lines", mean_phi_lines_, 0.0);
+  private_nh_.param<float>("mean_theta_lines", mean_theta_lines_, 0.0);
+  private_nh_.param<float>("bnd_phi_lines", bnd_phi_lines_, 0.3);
+  private_nh_.param<float>("bnd_theta_lines", bnd_theta_lines_, 0.3);
+  private_nh_.param<float>("bnd_gamma_lines", bnd_gamma_lines_, 0.3);
+
   // Other variables
   reconfigure_initialised_ = false;
 
   // ROS publishers
   rviz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("farm", 0 );
 
-  // Dynamic reconfigure
-  dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig> reconfigure_server;
-  dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig>::CallbackType cb;
-  cb = boost::bind(&FarmNodelet::reconfigure_callback, this, _1, _2);
-  reconfigure_server.setCallback(cb);
-
   // Create algae lines
-  init_algae_lines(false);
+  init_algae_lines();
 
 
   // Main loop
@@ -101,24 +108,28 @@ void FarmNodelet::sigint_handler(int s){
 void FarmNodelet::reconfigure_callback(farm_simulator::FarmSimulatorConfig &config,
   uint32_t level)
 {
-  if (reconfigure_initialised_)
-    init_algae_lines(false, config.phi, config.theta);
-  else
+  if (reconfigure_initialised_) {
+    randomise_lines_ = config.randomise_lines;
+    mean_phi_lines_ = config.mean_phi_lines;
+    mean_theta_lines_ = config.mean_theta_lines;
+    bnd_phi_lines_ = config.bnd_phi_lines;
+    bnd_theta_lines_ = config.bnd_theta_lines;
+    bnd_gamma_lines_ = config.bnd_gamma_lines;
+
+    init_algae_lines();
+  } else
     reconfigure_initialised_ = true;
 }
 
+#include <ctime>
 
-void FarmNodelet::init_algae_lines(bool randomise, float phi, float theta)
+void FarmNodelet::init_algae_lines()
 {
   algae_lines_.resize(0);
+  algae_lines_.reserve(5*nbr_lines_);  // per line: 2 anchors, 2 ropes, 1 line
 
-  float l = depth_water_;
-  float L = length_lines_;
-
-  if (randomise) {
-    phi = random_uniform(-1.0, 1.0);
-    theta = random_uniform(-1.0, 1.0);
-  }
+  double l = depth_water_;
+  double L = length_lines_;
 
   for (unsigned int i = 0; i < nbr_lines_; i++) {
     AlgaeLine line;
@@ -138,6 +149,14 @@ void FarmNodelet::init_algae_lines(bool randomise, float phi, float theta)
     // Initialise lines
     line.line.thickness = thickness_lines_;
 
+    double phi = mean_phi_lines_;
+    double theta = mean_theta_lines_;
+
+    if (randomise_lines_) {
+      phi += random_uniform(-bnd_phi_lines_, bnd_phi_lines_);
+      theta += random_uniform(-bnd_theta_lines_, bnd_theta_lines_);
+    }
+
     double x1 = l * sin(theta) * cos(phi);
     double y1 = l * sin(theta) * sin(phi);
     double z1 = l * cos(theta);
@@ -148,11 +167,20 @@ void FarmNodelet::init_algae_lines(bool randomise, float phi, float theta)
     double  beta = atan2(z1, sqrt(D2));
     double delta = -asin((pow(d, 2) + pow(l, 2) - pow(L, 2)) / (2*d*l));
     double gamma = -acos(1/(cos(beta)*cos(delta)) * (z1/l + sin(beta)*sin(delta)));
-    gamma = copysign(gamma, y1);
 
-    double x2 = -l * ( sin(alpha)*(sin(beta)*cos(gamma)*cos(delta) + cos(beta)*sin(delta)) - cos(alpha)*sin(gamma)*cos(delta));
-    double y2 = -l * (-cos(alpha)*(sin(beta)*cos(gamma)*cos(delta) + cos(beta)*sin(delta)) - sin(alpha)*sin(gamma)*cos(delta));
-    double z2 = l * (cos(beta)*cos(gamma)*cos(delta) - sin(beta)*sin(delta));
+    gamma = copysign(gamma, y1);
+    if (randomise_lines_)
+      gamma += random_uniform(-bnd_gamma_lines_, bnd_gamma_lines_);
+
+    double ca = cos(alpha);
+    double sa = sin(alpha);
+    double cgcd = cos(gamma)*cos(delta);
+    double expr = sin(beta)*cgcd + cos(beta)*sin(delta);
+    double sgcd = sin(gamma)*cos(delta);
+
+    double x2 = -l * ( sa*(expr) - ca*sgcd);
+    double y2 = -l * (-ca*(expr) - sa*sgcd);
+    double z2 = l * (cos(beta)*cgcd - sin(beta)*sin(delta));
 
     line.line.p1 = line.anchor1 + tf2::Vector3(x1, y1, z1);
     line.line.p2 = line.anchor2 + tf2::Vector3(x2, y2, z2);
@@ -160,7 +188,7 @@ void FarmNodelet::init_algae_lines(bool randomise, float phi, float theta)
 
     // TODO: populate the algae
 
-    algae_lines_.push_back(line);
+    algae_lines_.emplace_back(line);
 
   }
 }
@@ -182,21 +210,21 @@ void FarmNodelet::pub_rviz_markers(float duration) const
     const AlgaeLine *al = &algae_lines_[i];  // for convenience
 
     // Anchors
-    markers.markers.push_back(
+    markers.markers.emplace_back(
       rviz_marker_cylinder(al->anchor1, al->anchors_diameter, al->anchors_height, args)
     );
-    markers.markers.push_back(
+    markers.markers.emplace_back(
       rviz_marker_cylinder(al->anchor2, al->anchors_diameter, al->anchors_height, args)
     );
 
     // Ropes
-    markers.markers.push_back(
+    markers.markers.emplace_back(
       rviz_marker_line(al->anchor1, al->line.p1, al->line.thickness, args)
     );
-    markers.markers.push_back(
+    markers.markers.emplace_back(
       rviz_marker_line(al->line.p1, al->line.p2, al->line.thickness, args)
     );
-    markers.markers.push_back(
+    markers.markers.emplace_back(
       rviz_marker_line(al->anchor2, al->line.p2, al->line.thickness, args)
     );
   }

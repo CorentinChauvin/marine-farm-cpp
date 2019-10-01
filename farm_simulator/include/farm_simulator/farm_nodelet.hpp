@@ -48,14 +48,22 @@ namespace mfcpp {
 
       // ROS parameters
       float main_loop_freq_;  ///<  Frequency of the main loop
+
       int nbr_lines_;       ///<  Number of algae lines
       float offset_lines_;  ///<  Lateral distance (m) between each line
       float length_lines_;  ///<  Length (m) of each line
       float thickness_lines_;  ///<  Diameter (m) of each line
       float depth_lines_;   ///<  Distance (m) between water surface and line
       float depth_water_;   ///<  Distance (m) between water surface and seafloor
-      float anchors_diameter_;  ///<  diameter of the cylindrical anchors
-      float anchors_height_;    ///<  height of the cylindrical anchors
+      float anchors_diameter_;  ///<  Diameter (m) of the cylindrical anchors
+      float anchors_height_;    ///<  Height (m) of the cylindrical anchors
+
+      bool randomise_lines_;    ///<  Whether to randomise the position of each line
+      float mean_phi_lines_;    ///<  Mean of phi angle for algae line generation
+      float mean_theta_lines_;  ///<  Mean of theta angle for algae line generation
+      float bnd_phi_lines_;     ///<  Bound such that phi is sampled in [mean-bnd, mean+bnd]
+      float bnd_theta_lines_;   ///<  Bound such that theta is sampled in [mean-bnd, mean+bnd]
+      float bnd_gamma_lines_;   ///<  Bound such that gamma is sampled in [mean-bnd, mean+bnd]
 
       /**
        * \brief  Main loop of the nodelet
@@ -78,12 +86,8 @@ namespace mfcpp {
 
       /**
        * \brief  Initialise the algae lines
-       *
-       * \param randomise  Whether to randomise the position of each line
-       * \param phi        First spherical angle for the first point of each line
-       * \param theta      Second spherical angle for the first point of each line
        */
-      void init_algae_lines(bool randomise, float phi=0.0, float theta=0.0);
+      void init_algae_lines();
 
       /**
        * \brief  Displays objects by publishing Rviz markers
