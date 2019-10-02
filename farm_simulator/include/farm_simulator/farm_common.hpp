@@ -22,7 +22,6 @@ namespace mfcpp {
   {
     tf2::Vector3 p1;	///<  Position of the first extremity of the rope
     tf2::Vector3 p2;	///<  Position of the second extremity of the rope
-    float thickness;	///<  Thickness of the rope};
   };
 
   /**

@@ -28,13 +28,32 @@ namespace mfcpp {
   };
 
   /**
+   * \brief  Fill header of marker
+   *
+   * \param marker        The marker to fill
+   * \param common_args   Common arguments to fill ROS message
+   */
+  void fill_marker_header(visualization_msgs::Marker &marker,
+    const MarkerArgs &common_args);
+
+  /**
+   * \brief  Creates a blank Rviz marker to display lines
+   *
+   * \param thickness     Thickness of the line (in m)
+   * \param common_args   Common arguments to fill ROS message
+   * \return  Corresponding Rviz marker
+   */
+  visualization_msgs::Marker rviz_marker_line(float thickness,
+    const MarkerArgs &common_args);
+
+  /**
    * \brief  Creates a Rviz marker to display a line
    *
    * \param p1            First extremity of the line
    * \param p2            Second extremity of the line
    * \param thickness     Thickness of the line (in m)
    * \param common_args   Common arguments to fill ROS message
-   * \return out_marker   Corresponding Rviz marker
+   * \return  Corresponding Rviz marker
    */
   visualization_msgs::Marker rviz_marker_line(tf2::Vector3 p1, tf2::Vector3 p2,
     float thickness, const MarkerArgs &common_args);
@@ -49,10 +68,20 @@ namespace mfcpp {
    * \param diameter      Diameter (in m)
    * \param height        Height (in m)
    * \param common_args   Common arguments to fill ROS message
-   * \return out_marker   Corresponding Rviz marker
+   * \return  Corresponding Rviz marker
    */
   visualization_msgs::Marker rviz_marker_cylinder(tf2::Vector3 p, float diameter,
     float height, const MarkerArgs &common_args);
+
+  /**
+   * \brief  Creates a blank Rviz marker to display rectangles
+   *
+   * The rectangles will be made of two triangles
+   *
+   * \param common_args   Common arguments to fill ROS message
+   * \return  Corresponding Rviz marker
+   */
+  visualization_msgs::Marker rviz_marker_rect(const MarkerArgs &common_args);
 
   /**
    * \brief  Creates a Rviz marker to display a rectangle
@@ -64,9 +93,9 @@ namespace mfcpp {
    * \param p3            Third point
    * \param p4            Fourth point
    * \param common_args   Common arguments to fill ROS message
-   * \return out_marker   Corresponding Rviz marker
+   * \return  Corresponding Rviz marker
    */
-  visualization_msgs::Marker rviz_marker_rectangle(tf2::Vector3 p1, tf2::Vector3 p2,
+  visualization_msgs::Marker rviz_marker_rect(tf2::Vector3 p1, tf2::Vector3 p2,
     tf2::Vector3 p3, tf2::Vector3 p4, const MarkerArgs &common_args);
 
   /**

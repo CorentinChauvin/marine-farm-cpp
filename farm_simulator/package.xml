@@ -13,11 +13,13 @@
   <build_depend>roscpp</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
+  <build_depend>tf2_geometry_msgs</build_depend>
   <build_depend>visualization_msgs</build_depend>
   <build_depend>dynamic_reconfigure</build_depend>
   <build_export_depend>nodelet</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
+  <build_export_depend>tf2_geometry_msgs</build_export_depend>
   <build_export_depend>geometry_msgs</build_export_depend>
   <build_export_depend>visualization_msgs</build_export_depend>
   <build_export_depend>dynamic_reconfigure</build_export_depend>
