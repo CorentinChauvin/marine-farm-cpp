@@ -66,15 +66,21 @@ void FarmNodelet::onInit()
   private_nh_.param<float>("anchors_height", anchors_height_, 0.5);
 
   private_nh_.param<bool>("randomise_lines", randomise_lines_, false);
-  private_nh_.param<float>("mean_phi_lines", mean_phi_lines_, 0.0);
-  private_nh_.param<float>("mean_theta_lines", mean_theta_lines_, 0.0);
+  private_nh_.param<float>("phi_lines", phi_lines_, 0.0);
+  private_nh_.param<float>("theta_lines", theta_lines_, 0.0);
   private_nh_.param<float>("bnd_phi_lines", bnd_phi_lines_, 0.3);
   private_nh_.param<float>("bnd_theta_lines", bnd_theta_lines_, 0.3);
   private_nh_.param<float>("bnd_gamma_lines", bnd_gamma_lines_, 0.3);
 
+  private_nh_.param<bool>("randomise_algae", randomise_algae_, false);
   private_nh_.param<int>("nbr_algae", nbr_algae_, 1);
-  private_nh_.param<float>("width_alga", width_alga_, 0.2);
-  private_nh_.param<float>("length_alga", length_alga_, 1.0);
+  private_nh_.param<float>("width_alga", width_algae_, 0.2);
+  private_nh_.param<float>("length_alga", length_algae_, 1.0);
+  private_nh_.param<float>("psi_algae", psi_algae_, 0.0);
+  private_nh_.param<float>("std_width_algae", std_width_algae_, 0.05);
+  private_nh_.param<float>("std_length_algae", std_length_algae_, 0.2);
+  private_nh_.param<float>("std_psi_algae", std_psi_algae_, 0.1);
+
 
   // Other variables
 
@@ -116,8 +122,8 @@ void FarmNodelet::reconfigure_callback(farm_simulator::FarmSimulatorConfig &conf
 {
   if (reconfigure_initialised_) {
     randomise_lines_ = config.randomise_lines;
-    mean_phi_lines_ = config.mean_phi_lines;
-    mean_theta_lines_ = config.mean_theta_lines;
+    phi_lines_ = config.phi_lines;
+    theta_lines_ = config.theta_lines;
     bnd_phi_lines_ = config.bnd_phi_lines;
     bnd_theta_lines_ = config.bnd_theta_lines;
     bnd_gamma_lines_ = config.bnd_gamma_lines;
@@ -127,7 +133,6 @@ void FarmNodelet::reconfigure_callback(farm_simulator::FarmSimulatorConfig &conf
     reconfigure_initialised_ = true;
 }
 
-#include <ctime>
 
 void FarmNodelet::init_algae_lines()
 {
@@ -153,12 +158,12 @@ void FarmNodelet::init_algae_lines()
     line.anchors_height = anchors_height_;
 
     // Initialise lines
-    double phi = mean_phi_lines_;
-    double theta = mean_theta_lines_;
+    double phi = phi_lines_;
+    double theta = theta_lines_;
 
     if (randomise_lines_) {
-      phi += random_uniform(-bnd_phi_lines_, bnd_phi_lines_);
-      theta += random_uniform(-bnd_theta_lines_, bnd_theta_lines_);
+      phi += rand_uniform(-bnd_phi_lines_, bnd_phi_lines_);
+      theta += rand_uniform(-bnd_theta_lines_, bnd_theta_lines_);
     }
 
     double x1 = l * sin(theta) * cos(phi);
@@ -174,7 +179,7 @@ void FarmNodelet::init_algae_lines()
 
     gamma = copysign(gamma, y1);
     if (randomise_lines_)
-      gamma += random_uniform(-bnd_gamma_lines_, bnd_gamma_lines_);
+      gamma += rand_uniform(-bnd_gamma_lines_, bnd_gamma_lines_);
 
     double ca = cos(alpha);
     double sa = sin(alpha);
@@ -198,9 +203,16 @@ void FarmNodelet::init_algae_lines()
     for (unsigned int k = 1; k <= nbr_algae_; k++) {
       Alga alga;
       alga.position = X1 + float(k)/(n+1) * (X2 - X1);
-      alga.orientation = 0.0;
-      alga.length = length_alga_;
-      alga.width = width_alga_;
+
+      if (randomise_algae_) {
+        alga.orientation = rand_gaussian(psi_algae_, std_psi_algae_);
+        alga.length = abs(rand_gaussian(length_algae_, std_length_algae_));
+        alga.width = abs(rand_gaussian(width_algae_, std_width_algae_));
+      } else {
+        alga.orientation = psi_algae_;
+        alga.length = length_algae_;
+        alga.width = width_algae_;
+      }
 
       line.algae.emplace_back(alga);
     }
@@ -218,6 +230,10 @@ void FarmNodelet::pub_rviz_markers(float duration) const
   args.stamp = ros::Time::now();
   args.duration = ros::Duration(duration);
   args.frame_id = "/world";
+  args.color.r = 0.8;
+  args.color.g = 0.8;
+  args.color.b = 0.8;
+  args.color.a = 1.0;
 
   visualization_msgs::MarkerArray markers;
   unsigned int nbr_assets = nbr_lines_ * (5 + nbr_algae_);
@@ -260,9 +276,9 @@ void FarmNodelet::pub_rviz_markers(float duration) const
   visualization_msgs::Marker rect_marker = rviz_marker_rect(args);
   rect_marker.points.reserve(2 * nbr_lines_ * nbr_algae_);
   std_msgs::ColorRGBA color;
-  color.r = 0.0;
-  color.g = 1.0;
-  color.b = 0.0;
+  color.r = 0.1;
+  color.g = 0.8;
+  color.b = 0.1;
   color.a = 1.0;
   rect_marker.colors.resize(2 * nbr_lines_ * nbr_algae_, color);
 
@@ -274,12 +290,12 @@ void FarmNodelet::pub_rviz_markers(float duration) const
     tf2::Vector3 z(0, 0, 1);
     tf2::Vector3 y = (X2-X1) / tf2::tf2Distance(X1, X2);
     tf2::Vector3 x = tf2::tf2Cross(y, z);
-    float H = length_alga_;
-    float W = width_alga_;
 
     for (unsigned int k = 0; k < al->algae.size(); k++) {
       tf2::Vector3 X = al->algae[k].position;
       float psi = al->algae[k].orientation;
+      float H = al->algae[k].length;
+      float W = al->algae[k].width;
 
       tf2::Vector3 p1 = X - W/2*y;
       tf2::Vector3 p2 = X + W/2*y;

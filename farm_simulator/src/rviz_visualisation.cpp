@@ -31,6 +31,7 @@ visualization_msgs::Marker rviz_marker_line(tf2::Vector3 p1, tf2::Vector3 p2,
 {
   visualization_msgs::Marker marker;
   fill_marker_header(marker, common_args);
+  marker.color = common_args.color;
 
   marker.type = visualization_msgs::Marker::LINE_LIST;
   marker.action = visualization_msgs::Marker::ADD;
@@ -46,10 +47,6 @@ visualization_msgs::Marker rviz_marker_line(tf2::Vector3 p1, tf2::Vector3 p2,
   marker.points.emplace_back(p);
 
   marker.scale.x = thickness;
-  marker.color.r = 0.0f;
-  marker.color.g = 1.0f;
-  marker.color.b = 0.0f;
-  marker.color.a = 1.0;
 
   return marker;
 }
@@ -60,15 +57,12 @@ visualization_msgs::Marker rviz_marker_line(float thickness,
 {
   visualization_msgs::Marker marker;
   fill_marker_header(marker, common_args);
+  marker.color = common_args.color;
+  marker.scale.x = thickness;
 
   marker.type = visualization_msgs::Marker::LINE_LIST;
   marker.action = visualization_msgs::Marker::ADD;
 
-  marker.scale.x = thickness;
-  marker.color.r = 0.0f;
-  marker.color.g = 1.0f;
-  marker.color.b = 0.0f;
-  marker.color.a = 1.0;
 
   return marker;
 }
@@ -79,6 +73,7 @@ visualization_msgs::Marker rviz_marker_cylinder(tf2::Vector3 p, float diameter,
 {
   visualization_msgs::Marker marker;
   fill_marker_header(marker, common_args);
+  marker.color = common_args.color;
 
   marker.type = visualization_msgs::Marker::CYLINDER;
   marker.action = visualization_msgs::Marker::ADD;
@@ -91,11 +86,6 @@ visualization_msgs::Marker rviz_marker_cylinder(tf2::Vector3 p, float diameter,
   marker.scale.y = diameter;
   marker.scale.z = height;
 
-  marker.color.r = 0.0;
-  marker.color.g = 1.0;
-  marker.color.b = 0.0;
-  marker.color.a = 1.0;
-
   return marker;
 }
 
@@ -104,6 +94,7 @@ visualization_msgs::Marker rviz_marker_rect(const MarkerArgs &common_args)
 {
   visualization_msgs::Marker marker;
   fill_marker_header(marker, common_args);
+  marker.color = common_args.color;
 
   marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
   marker.action = visualization_msgs::Marker::ADD;
@@ -122,6 +113,7 @@ visualization_msgs::Marker rviz_marker_rect(tf2::Vector3 p1, tf2::Vector3 p2,
 {
   visualization_msgs::Marker marker;
   fill_marker_header(marker, common_args);
+  marker.color = common_args.color;
 
   marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
   marker.action = visualization_msgs::Marker::ADD;

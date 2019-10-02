@@ -31,14 +31,14 @@ namespace mfcpp {
   std::mt19937 random_generator_(random_device_());
 
 
-  double random_gaussian(double mu, double sigma)
+  double rand_gaussian(double mu, double sigma)
   {
     std::normal_distribution<double> distribution(mu, sigma);
     return distribution(random_generator_);
   }
 
 
-  double random_uniform(double a, double b)
+  double rand_uniform(double a, double b)
   {
     std::uniform_real_distribution<double> distribution(a, b);
     return distribution(random_generator_);

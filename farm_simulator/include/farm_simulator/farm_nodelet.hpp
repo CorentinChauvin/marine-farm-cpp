@@ -49,9 +49,9 @@ namespace mfcpp {
       // ROS parameters
       float main_loop_freq_;  ///<  Frequency of the main loop
 
-      int nbr_lines_;       ///<  Number of algae lines
-      float offset_lines_;  ///<  Lateral distance (m) between each line
-      float length_lines_;  ///<  Length (m) of each line
+      int nbr_lines_;          ///<  Number of algae lines
+      float offset_lines_;     ///<  Lateral distance (m) between each line
+      float length_lines_;     ///<  Length (m) of each line
       float thickness_lines_;  ///<  Diameter (m) of each line
       float depth_lines_;   ///<  Distance (m) between water surface and line
       float depth_water_;   ///<  Distance (m) between water surface and seafloor
@@ -59,15 +59,20 @@ namespace mfcpp {
       float anchors_height_;    ///<  Height (m) of the cylindrical anchors
 
       bool randomise_lines_;    ///<  Whether to randomise the position of each line
-      float mean_phi_lines_;    ///<  Mean of phi angle for algae line generation
-      float mean_theta_lines_;  ///<  Mean of theta angle for algae line generation
+      float phi_lines_;         ///<  Mean of phi angle for algae line generation
+      float theta_lines_;       ///<  Mean of theta angle for algae line generation
       float bnd_phi_lines_;     ///<  Bound such that phi is sampled in [mean-bnd, mean+bnd]
       float bnd_theta_lines_;   ///<  Bound such that theta is sampled in [mean-bnd, mean+bnd]
       float bnd_gamma_lines_;   ///<  Bound such that gamma is sampled in [mean-bnd, mean+bnd]
 
-      int nbr_algae_;       ///<  Number of algae per line
-      float width_alga_;    ///<  Width of an alga
-      float length_alga_;   ///<  Length of an alga
+      bool randomise_algae_;  ///<  Whether to randomise size and orientation of algae
+      int nbr_algae_;         ///<  Number of algae per line
+      float width_algae_;     ///<  Mean of the width of an alga
+      float length_algae_;    ///<  Mean of the length of an alga
+      float psi_algae_;       ///<  mean of the algae orientation
+      float std_width_algae_;   ///<  standard deviation on algae width
+      float std_length_algae_;  ///<  standard deviation on algae length
+      float std_psi_algae_;     ///<  standard deviation on algae orientation
 
       /**
        * \brief  Main loop of the nodelet

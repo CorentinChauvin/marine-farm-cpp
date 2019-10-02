@@ -56,9 +56,6 @@ namespace mfcpp {
     float anchors_diameter;	  ///<  Anchors diameter
     float anchors_height;		  ///<  Anchors height
     std::vector<Alga> algae;	///<  List of algae hanging on the line
-
-    // TODO: function mapping (0, 1) to (extremity1, extremity2)
-    // TODO: function giving the orientation of the line (to get the orientation of one alga)
   };
 
   /**
@@ -77,7 +74,7 @@ namespace mfcpp {
    * \param sigma  Standard deviation of the distribution
    * \return  Random number following a normal law (mu, sigma)
    */
-  double random_gaussian(double mu, double sigma);
+  double rand_gaussian(double mu, double sigma);
 
   /**
    * \brief  Draw a random number from a uniform distribution
@@ -86,7 +83,7 @@ namespace mfcpp {
    * \param b  Upper bound
    * \return   Random number following a uniform law in [a, b]
    */
-  double random_uniform(double a, double b);
+  double rand_uniform(double a, double b);
 
 
 

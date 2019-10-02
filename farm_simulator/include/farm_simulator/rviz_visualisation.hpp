@@ -9,6 +9,7 @@
 #ifndef RVIZ_VISUALISATION_HPP
 #define RVIZ_VISUALISATION_HPP
 
+#include <std_msgs/ColorRGBA.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <tf2/LinearMath/Vector3.h>
@@ -24,7 +25,8 @@ namespace mfcpp {
     ros::Time stamp;       ///<  Time stamp for the ROS message
     std::string frame_id;  ///<  Frame in which position/orientation of the object is
     std::string ns;        ///<  Namespace for the Rviz marker
-    ros::Duration duration;  ///<  Duration of the marker (in sec)
+    ros::Duration duration;     ///<  Duration of the marker (in sec)
+    std_msgs::ColorRGBA color;  ///<  Color of the marker
   };
 
   /**

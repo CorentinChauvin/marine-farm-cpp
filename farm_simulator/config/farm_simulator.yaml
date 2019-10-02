@@ -2,24 +2,29 @@ farm_nodelet:
   main_loop_freq: 5.0  # frequency of the main loop
 
   # Algae lines generation
-  nbr_lines: 3       # number of algae lines
-  offset_lines: 3.3  # lateral distance (m) between each line
-  length_lines: 30   # length (m) of each line
-  thickness_lines: 0.05  # diameter (m) of each line
-  depth_lines: 2.1   # distance (m) between water surface and line
-  depth_water: 6     # distance (m) between water surface and seafloor
-  anchors_diameter: 0.5  # diameter of the cylindrical anchors
-  anchors_height: 0.4    # height of the cylindrical anchors
+  nbr_lines: 3            # number of algae lines
+  offset_lines: 3.3       # lateral distance (m) between each line
+  length_lines: 30        # length (m) of each line
+  thickness_lines: 0.05   # diameter (m) of each line
+  depth_lines: 2.1        # distance (m) between water surface and line
+  depth_water: 6          # distance (m) between water surface and seafloor
+  anchors_diameter: 0.5   # diameter of the cylindrical anchors
+  anchors_height: 0.4     # height of the cylindrical anchors
 
-  # Random generation of algae lines' position
+  # Randomisation of algae lines' position
   randomise_lines: false  # whether to randomise the position of each line
-  mean_phi_lines: 0.0     # mean of the 1st angle for the 1st point of each line
-  mean_theta_lines: 0.0   # mean of the 2nd angle for the 1st point of each line
+  phi_lines: 0.0          # mean of the 1st angle for the 1st point of each line
+  theta_lines: 0.0        # mean of the 2nd angle for the 1st point of each line
   bnd_phi_lines: 0.3      # bound such that phi is sampled in [mean-bnd, mean+bnd]
   bnd_theta_lines: 0.3    # same for theta
   bnd_gamma_lines: 0.0    # same for gamma (angle for the 2nd point of each line)
 
   # Algae generation
-  nbr_algae: 100     # nbr of algae per line
-  width_alga: 0.2   # width of an alga
-  length_alga: 2.0  # length of an alga
+  randomise_algae: false  # whether to randomise the size and orientation of algae
+  nbr_algae: 100          # nbr of algae per line
+  width_algae: 0.2        # mean of the width of an alga
+  length_algae: 2.0       # mean of the length of an alga
+  psi_algae: 0.0          # mean of the algae orientation
+  std_width_algae: 0.05   # standard deviation on algae width
+  std_length_algae: 0.2   # standard deviation on algae length
+  std_psi_algae: 0.1      # standard deviation on algae orientation
