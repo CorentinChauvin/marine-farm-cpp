@@ -39,9 +39,19 @@ namespace mfcpp {
     const MarkerArgs &common_args);
 
   /**
+   * \brief  Creates a blank Rviz marker to display spheres
+   *
+   * \param diameter      Diameter of the spheres (in m)
+   * \param common_args   Common arguments to fill ROS message
+   * \return  Corresponding Rviz marker
+   */
+  visualization_msgs::Marker rviz_marker_spheres(float thickness,
+    const MarkerArgs &common_args);
+
+  /**
    * \brief  Creates a blank Rviz marker to display lines
    *
-   * \param thickness     Thickness of the line (in m)
+   * \param thickness     Thickness of the lines (in m)
    * \param common_args   Common arguments to fill ROS message
    * \return  Corresponding Rviz marker
    */

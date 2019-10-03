@@ -26,6 +26,23 @@ void fill_marker_header(visualization_msgs::Marker &marker,
 }
 
 
+visualization_msgs::Marker rviz_marker_spheres(float diameter,
+  const MarkerArgs &common_args)
+{
+  visualization_msgs::Marker marker;
+  fill_marker_header(marker, common_args);
+  marker.color = common_args.color;
+  marker.scale.x = diameter;
+  marker.scale.y = diameter;
+  marker.scale.z = diameter;
+
+  marker.type = visualization_msgs::Marker::SPHERE_LIST;
+  marker.action = visualization_msgs::Marker::ADD;
+
+  return marker;
+}
+
+
 visualization_msgs::Marker rviz_marker_line(tf2::Vector3 p1, tf2::Vector3 p2,
   float thickness, const MarkerArgs &common_args)
 {
@@ -62,7 +79,6 @@ visualization_msgs::Marker rviz_marker_line(float thickness,
 
   marker.type = visualization_msgs::Marker::LINE_LIST;
   marker.action = visualization_msgs::Marker::ADD;
-
 
   return marker;
 }

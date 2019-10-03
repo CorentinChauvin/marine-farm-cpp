@@ -59,11 +59,13 @@ void FarmNodelet::onInit()
   private_nh_.param<int>("nbr_lines", nbr_lines_, 1);
   private_nh_.param<float>("offset_lines", offset_lines_, 1.0);
   private_nh_.param<float>("length_lines", length_lines_, 100.0);
-  private_nh_.param<float>("thickness_lines", thickness_lines_, 0.1);
+  private_nh_.param<float>("thickness_ropes", thickness_ropes_, 0.1);
   private_nh_.param<float>("depth_lines", depth_lines_, 1.0);
   private_nh_.param<float>("depth_water", depth_water_, 5.0);
   private_nh_.param<float>("anchors_diameter", anchors_diameter_, 0.5);
   private_nh_.param<float>("anchors_height", anchors_height_, 0.5);
+  private_nh_.param<int>("nbr_buoys", nbr_buoys_, 2);
+  private_nh_.param<float>("buoys_diameter", buoys_diameter_, 0.6);
 
   private_nh_.param<bool>("randomise_lines", randomise_lines_, false);
   private_nh_.param<float>("phi_lines", phi_lines_, 0.0);
@@ -139,8 +141,9 @@ void FarmNodelet::init_algae_lines()
   algae_lines_.resize(0);
   algae_lines_.reserve(5*nbr_lines_);  // per line: 2 anchors, 2 ropes, 1 line
 
-  double l = depth_water_;
-  double L = length_lines_;
+  float l = depth_water_;      // distance seafloor - floating line
+  float h = l - depth_lines_;  // distance seafloor - algae line
+  float L = length_lines_;
 
   for (unsigned int i = 0; i < nbr_lines_; i++) {
     AlgaeLine line;
@@ -157,39 +160,55 @@ void FarmNodelet::init_algae_lines()
     line.anchors_diameter = anchors_diameter_;
     line.anchors_height = anchors_height_;
 
-    // Initialise lines
-    double phi = phi_lines_;
-    double theta = theta_lines_;
+    // Initialise buoys
+    line.nbr_buoys = nbr_buoys_;
+    line.buoys_diameter = buoys_diameter_;
+
+    // Initialise floating ropes
+    line.thickness_ropes = thickness_ropes_;
+    float phi = phi_lines_;
+    float theta = theta_lines_;
 
     if (randomise_lines_) {
       phi += rand_uniform(-bnd_phi_lines_, bnd_phi_lines_);
       theta += rand_uniform(-bnd_theta_lines_, bnd_theta_lines_);
     }
 
-    double x1 = l * sin(theta) * cos(phi);
-    double y1 = l * sin(theta) * sin(phi);
-    double z1 = l * cos(theta);
+    float x1 = l * sin(theta) * cos(phi);
+    float y1 = l * sin(theta) * sin(phi);
+    float z1 = l * cos(theta);
 
-    double    D2 = pow(x1, 2) + pow(L-y1, 2);
-    double     d = sqrt(D2 + pow(z1, 2));
-    double alpha = atan2(x1, L - y1);
-    double  beta = atan2(z1, sqrt(D2));
-    double delta = -asin((pow(d, 2) + pow(l, 2) - pow(L, 2)) / (2*d*l));
-    double gamma = -acos(1/(cos(beta)*cos(delta)) * (z1/l + sin(beta)*sin(delta)));
+    float    D2 = pow(x1, 2) + pow(L-y1, 2);
+    float     d = sqrt(D2 + pow(z1, 2));
+    float alpha = atan2(x1, L - y1);
+    float  beta = atan2(z1, sqrt(D2));
+    float delta = -asin((pow(d, 2) + pow(l, 2) - pow(L, 2)) / (2*d*l));
+    float gamma = -acos(1/(cos(beta)*cos(delta)) * (z1/l + sin(beta)*sin(delta)));
 
     gamma = copysign(gamma, y1);
     if (randomise_lines_)
       gamma += rand_uniform(-bnd_gamma_lines_, bnd_gamma_lines_);
 
-    double ca = cos(alpha);
-    double sa = sin(alpha);
-    double cgcd = cos(gamma)*cos(delta);
-    double expr = sin(beta)*cgcd + cos(beta)*sin(delta);
-    double sgcd = sin(gamma)*cos(delta);
+    float ca = cos(alpha);
+    float sa = sin(alpha);
+    float cgcd = cos(gamma)*cos(delta);
+    float expr = sin(beta)*cgcd + cos(beta)*sin(delta);
+    float sgcd = sin(gamma)*cos(delta);
 
-    double x2 = -l * ( sa*(expr) - ca*sgcd);
-    double y2 = -l * (-ca*(expr) - sa*sgcd);
-    double z2 = l * (cos(beta)*cgcd - sin(beta)*sin(delta));
+    float x2 = -l * ( sa*(expr) - ca*sgcd);
+    float y2 = -l * (-ca*(expr) - sa*sgcd);
+    float z2 = l * (cos(beta)*cgcd - sin(beta)*sin(delta));
+
+    line.floating_rope.p1 = line.anchor1 + tf2::Vector3(x1, y1, z1);
+    line.floating_rope.p2 = line.anchor2 + tf2::Vector3(x2, y2, z2);
+
+    // Initialise algae lines
+    x1 = h * sin(theta) * cos(phi);
+    y1 = h * sin(theta) * sin(phi);
+    z1 = h * cos(theta);
+    x2 = -h * ( sa*(expr) - ca*sgcd);
+    y2 = -h * (-ca*(expr) - sa*sgcd);
+    z2 = h * (cos(beta)*cgcd - sin(beta)*sin(delta));
 
     line.line.p1 = line.anchor1 + tf2::Vector3(x1, y1, z1);
     line.line.p2 = line.anchor2 + tf2::Vector3(x2, y2, z2);
@@ -252,9 +271,29 @@ void FarmNodelet::pub_rviz_markers(float duration) const
     );
   }
 
+  // Add buoys
+  args.ns = "buoys";
+  visualization_msgs::Marker buoys_marker = rviz_marker_spheres(buoys_diameter_, args);
+  buoys_marker.points.reserve(nbr_lines_ * nbr_buoys_);
+
+  for (unsigned int i = 0; i < nbr_lines_; i++) {
+    const AlgaeLine *al = &algae_lines_[i];  // for convenience
+    geometry_msgs::Point point;
+    tf2::Vector3 X1 = al->floating_rope.p1;
+    tf2::Vector3 X2 = al->floating_rope.p2;
+    unsigned int n = al->nbr_buoys;
+
+    for (unsigned int k = 0; k < n; k++) {
+      tf2::Vector3 X = X1 + float(k)/(n-1) * (X2-X1);
+      buoys_marker.points.emplace_back(tf2::toMsg(X, point));
+    }
+  }
+
+  markers.markers.emplace_back(buoys_marker);
+
   // Add ropes
   args.ns = "ropes";
-  visualization_msgs::Marker line_marker = rviz_marker_line(thickness_lines_, args);
+  visualization_msgs::Marker line_marker = rviz_marker_line(thickness_ropes_, args);
   line_marker.points.reserve(3 * nbr_lines_);
 
   for (unsigned int i = 0; i < nbr_lines_; i++) {
@@ -262,11 +301,27 @@ void FarmNodelet::pub_rviz_markers(float duration) const
     geometry_msgs::Point point;
 
     line_marker.points.emplace_back(tf2::toMsg(al->anchor1, point));
-    line_marker.points.emplace_back(tf2::toMsg(al->line.p1, point));
-    line_marker.points.emplace_back(tf2::toMsg(al->line.p1, point));
-    line_marker.points.emplace_back(tf2::toMsg(al->line.p2, point));
-    line_marker.points.emplace_back(tf2::toMsg(al->line.p2, point));
+    line_marker.points.emplace_back(tf2::toMsg(al->floating_rope.p1, point));
+    line_marker.points.emplace_back(tf2::toMsg(al->floating_rope.p2, point));
     line_marker.points.emplace_back(tf2::toMsg(al->anchor2, point));
+    line_marker.points.emplace_back(tf2::toMsg(al->floating_rope.p1, point));
+    line_marker.points.emplace_back(tf2::toMsg(al->floating_rope.p2, point));
+    line_marker.points.emplace_back(tf2::toMsg(al->line.p1, point));
+    line_marker.points.emplace_back(tf2::toMsg(al->line.p2, point));
+
+    // Ropes between the buoys and the algae line
+    unsigned int n = al->nbr_buoys;
+    tf2::Vector3 X1 = al->floating_rope.p1;
+    tf2::Vector3 X2 = al->floating_rope.p2;
+    tf2::Vector3 Y1 = al->line.p1;
+    tf2::Vector3 Y2 = al->line.p2;
+
+    for (unsigned int k = 1; k < n-1; k++) {
+      tf2::Vector3 X = X1 + float(k)/(n-1) * (X2-X1);
+      tf2::Vector3 Y = Y1 + float(k)/(n-1) * (Y2-Y1);
+      line_marker.points.emplace_back(tf2::toMsg(X, point));
+      line_marker.points.emplace_back(tf2::toMsg(Y, point));
+    }
   }
 
   markers.markers.emplace_back(line_marker);

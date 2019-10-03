@@ -51,10 +51,14 @@ namespace mfcpp {
   struct AlgaeLine
   {
     Rope line;					      ///<  Rope on wich the algae grow
+    Rope floating_rope;       ///<  Rope on wich the buoys are
     tf2::Vector3 anchor1;		  ///<  First anchor
     tf2::Vector3 anchor2;		  ///<  Second anchor
+    float thickness_ropes;    ///<  Thickness of each rope
     float anchors_diameter;	  ///<  Anchors diameter
     float anchors_height;		  ///<  Anchors height
+    unsigned int nbr_buoys;   ///<  Number of buoys on the floating rope
+    float buoys_diameter;     ///<  Diameter of a buoy
     std::vector<Alga> algae;	///<  List of algae hanging on the line
   };
 

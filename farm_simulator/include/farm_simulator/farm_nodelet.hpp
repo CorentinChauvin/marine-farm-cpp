@@ -52,11 +52,13 @@ namespace mfcpp {
       int nbr_lines_;          ///<  Number of algae lines
       float offset_lines_;     ///<  Lateral distance (m) between each line
       float length_lines_;     ///<  Length (m) of each line
-      float thickness_lines_;  ///<  Diameter (m) of each line
+      float thickness_ropes_;  ///<  Diameter (m) of each line
       float depth_lines_;   ///<  Distance (m) between water surface and line
       float depth_water_;   ///<  Distance (m) between water surface and seafloor
       float anchors_diameter_;  ///<  Diameter (m) of the cylindrical anchors
       float anchors_height_;    ///<  Height (m) of the cylindrical anchors
+      int nbr_buoys_;           ///<  Number of buoys on each floating rope
+      float buoys_diameter_;    ///<  Diameter (m) of each buoy
 
       bool randomise_lines_;    ///<  Whether to randomise the position of each line
       float phi_lines_;         ///<  Mean of phi angle for algae line generation
