@@ -2,7 +2,7 @@
  * @file
  *
  * \brief  Declaration of nodelet for managing the farm simulation
- * \author Corentin Chauvin-Hamea
+ * \author Corentin Chauvin-Hameau
  * \date   2019
  */
 
@@ -18,6 +18,9 @@
 #include <string>
 #include <vector>
 #include <csignal>
+
+
+#include "perlin_noise.hpp"
 
 
 namespace mfcpp {
@@ -61,6 +64,7 @@ namespace mfcpp {
       float buoys_diameter_;    ///<  Diameter (m) of each buoy
 
       bool randomise_lines_;    ///<  Whether to randomise the position of each line
+      float alga_miss_rate_;    ///<  Probability to have a missing alga
       float phi_lines_;         ///<  Mean of phi angle for algae line generation
       float theta_lines_;       ///<  Mean of theta angle for algae line generation
       float bnd_phi_lines_;     ///<  Bound such that phi is sampled in [mean-bnd, mean+bnd]
@@ -75,6 +79,9 @@ namespace mfcpp {
       float std_width_algae_;   ///<  standard deviation on algae width
       float std_length_algae_;  ///<  standard deviation on algae length
       float std_psi_algae_;     ///<  standard deviation on algae orientation
+
+      // FIXME: to remove
+      PerlinNoiseGenerator perlin_;
 
       /**
        * \brief  Main loop of the nodelet

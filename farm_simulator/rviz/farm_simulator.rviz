@@ -3,7 +3,9 @@ Panels:
     Help Height: 0
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /Farm1
+        - /Farm1/Namespaces1
       Splitter Ratio: 0.5
     Tree Height: 340
   - Class: rviz/Selection
@@ -18,7 +20,6 @@ Panels:
   - Class: rviz/Views
     Expanded:
       - /Current View1
-      - /Current View1/Focal Point1
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz/Time
@@ -72,7 +73,11 @@ Visualization Manager:
       Marker Topic: /farm
       Name: Farm
       Namespaces:
-        ns: true
+        algae: true
+        anchors: true
+        buoys: true
+        ropes: true
+        test: true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -99,26 +104,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/ThirdPersonFollower
-      Distance: 16.7979641
+      Class: rviz/XYOrbit
+      Distance: 2.00569534
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 8.51854134
-        Y: 5.64134693
-        Z: -6.00000048
+        X: -1.50442445
+        Y: 0.191229284
+        Z: -6.47070237e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.30979678
+      Pitch: 0.34479773
       Target Frame: base_link
-      Value: ThirdPersonFollower (rviz)
-      Yaw: 5.4085145
+      Value: XYOrbit (rviz)
+      Yaw: 3.65351343
     Saved: ~
 Window Geometry:
   Displays:

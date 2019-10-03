@@ -2,7 +2,7 @@
  * @file
  *
  * \brief  Declaration of common Rviz display functions
- * \author Corentin Chauvin-Hamea
+ * \author Corentin Chauvin-Hameau
  * \date   2019
  */
 

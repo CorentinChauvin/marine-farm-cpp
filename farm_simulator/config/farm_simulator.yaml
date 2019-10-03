@@ -22,8 +22,9 @@ farm_nodelet:
   bnd_gamma_lines: 0.0    # same for gamma (angle for the 2nd point of each line)
 
   # Algae generation
-  randomise_algae: false  # whether to randomise the size and orientation of algae
-  nbr_algae: 100          # nbr of algae per line
+  randomise_algae: true   # whether to randomise the size and orientation of algae
+  alga_miss_rate: 0.2     # probability to have a missing alga
+  nbr_algae: 100          # max nbr of algae per line
   width_algae: 0.2        # mean of the width of an alga
   length_algae: 2.0       # mean of the length of an alga
   psi_algae: 0.0          # mean of the algae orientation

@@ -2,7 +2,7 @@
  * @file
  *
  * \brief  Definition of nodelet for managing the farm simulation
- * \author Corentin Chauvin-Hamea
+ * \author Corentin Chauvin-Hameau
  * \date   2019
  */
 
@@ -10,6 +10,7 @@
 #include "rviz_visualisation.hpp"
 #include "farm_common.hpp"
 #include "farm_simulator/FarmSimulatorConfig.h"
+#include "perlin_noise.hpp"
 #include <dynamic_reconfigure/server.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
@@ -20,7 +21,6 @@
 #include <iostream>
 #include <cmath>
 #include <csignal>
-
 
 using namespace std;
 
@@ -33,7 +33,6 @@ sig_atomic_t volatile FarmNodelet::b_sigint_ = 0;
 
 FarmNodelet::FarmNodelet() {}
 FarmNodelet::~FarmNodelet() {}
-
 
 void FarmNodelet::onInit()
 {
@@ -68,6 +67,7 @@ void FarmNodelet::onInit()
   private_nh_.param<float>("buoys_diameter", buoys_diameter_, 0.6);
 
   private_nh_.param<bool>("randomise_lines", randomise_lines_, false);
+  private_nh_.param<float>("alga_miss_rate", alga_miss_rate_, 0.0);
   private_nh_.param<float>("phi_lines", phi_lines_, 0.0);
   private_nh_.param<float>("theta_lines", theta_lines_, 0.0);
   private_nh_.param<float>("bnd_phi_lines", bnd_phi_lines_, 0.3);
@@ -82,6 +82,9 @@ void FarmNodelet::onInit()
   private_nh_.param<float>("std_width_algae", std_width_algae_, 0.05);
   private_nh_.param<float>("std_length_algae", std_length_algae_, 0.2);
   private_nh_.param<float>("std_psi_algae", std_psi_algae_, 0.1);
+
+  perlin_.configure(1, 1, 3, 3);
+  perlin_.generate();
 
 
   // Other variables
@@ -220,20 +223,22 @@ void FarmNodelet::init_algae_lines()
     tf2::Vector3 X2 = line.line.p2;
 
     for (unsigned int k = 1; k <= nbr_algae_; k++) {
-      Alga alga;
-      alga.position = X1 + float(k)/(n+1) * (X2 - X1);
+      if (!rand_bernoulli(alga_miss_rate_)) {
+        Alga alga;
+        alga.position = X1 + float(k)/(n+1) * (X2 - X1);
 
-      if (randomise_algae_) {
-        alga.orientation = rand_gaussian(psi_algae_, std_psi_algae_);
-        alga.length = abs(rand_gaussian(length_algae_, std_length_algae_));
-        alga.width = abs(rand_gaussian(width_algae_, std_width_algae_));
-      } else {
-        alga.orientation = psi_algae_;
-        alga.length = length_algae_;
-        alga.width = width_algae_;
+        if (randomise_algae_) {
+          alga.orientation = rand_gaussian(psi_algae_, std_psi_algae_);
+          alga.length = abs(rand_gaussian(length_algae_, std_length_algae_));
+          alga.width = abs(rand_gaussian(width_algae_, std_width_algae_));
+        } else {
+          alga.orientation = psi_algae_;
+          alga.length = length_algae_;
+          alga.width = width_algae_;
+        }
+
+        line.algae.emplace_back(alga);
       }
-
-      line.algae.emplace_back(alga);
     }
 
     algae_lines_.emplace_back(line);
@@ -330,12 +335,6 @@ void FarmNodelet::pub_rviz_markers(float duration) const
   args.ns = "algae";
   visualization_msgs::Marker rect_marker = rviz_marker_rect(args);
   rect_marker.points.reserve(2 * nbr_lines_ * nbr_algae_);
-  std_msgs::ColorRGBA color;
-  color.r = 0.1;
-  color.g = 0.8;
-  color.b = 0.1;
-  color.a = 1.0;
-  rect_marker.colors.resize(2 * nbr_lines_ * nbr_algae_, color);
 
   for (unsigned int i = 0; i < nbr_lines_; i++) {
     const AlgaeLine *al = &algae_lines_[i];
@@ -369,7 +368,51 @@ void FarmNodelet::pub_rviz_markers(float duration) const
     }
   }
 
+  std_msgs::ColorRGBA color;
+  color.r = 0.1;
+  color.g = 0.8;
+  color.b = 0.1;
+  color.a = 1.0;
+  rect_marker.colors.resize(rect_marker.points.size()/3, color);
+
   markers.markers.emplace_back(rect_marker);
+
+  // TEST on heatmaps
+  float W = 1;
+  float H = 1;
+  int n_W = 20;
+  int n_H = 20;
+  args.ns = "test";
+  visualization_msgs::Marker pts_marker;
+  fill_marker_header(pts_marker, args);
+  pts_marker.color = args.color;
+  pts_marker.scale.x = W/n_W;
+  pts_marker.scale.y = W/n_H;
+  pts_marker.pose.position.x = -2.0;
+  pts_marker.type = visualization_msgs::Marker::POINTS;
+  pts_marker.action = visualization_msgs::Marker::ADD;
+  geometry_msgs::Point point;
+
+  for (int i = 0; i < n_W; i++) {
+    tf2::Vector3 p;
+    p[1] = float(i)/n_W*W;
+
+    for (int j = 0; j < n_H; j++) {
+      p[2] = float(j)/n_H*H;
+
+      std_msgs::ColorRGBA color;
+      const float perlin_color = perlin_.evaluate(p[1], p[2]);
+
+      color.r = perlin_color;
+      color.g = 1-perlin_color;
+      color.b = 0;
+      color.a = 1.0;
+      pts_marker.colors.emplace_back(color);
+
+      pts_marker.points.emplace_back(tf2::toMsg(p, point));
+    }
+  }
+  markers.markers.emplace_back(pts_marker);
 
   // Publish the markers
   pop_marker_ids(markers);

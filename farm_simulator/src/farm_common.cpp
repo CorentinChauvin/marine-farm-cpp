@@ -2,7 +2,7 @@
  * @file
  *
  * \brief  Definition of common functions for farm simulator
- * \author Corentin Chauvin-Hamea
+ * \author Corentin Chauvin-Hameau
  * \date   2019
  */
 
@@ -41,6 +41,13 @@ namespace mfcpp {
   double rand_uniform(double a, double b)
   {
     std::uniform_real_distribution<double> distribution(a, b);
+    return distribution(random_generator_);
+  }
+
+
+  bool rand_bernoulli(double p)
+  {
+    std::bernoulli_distribution distribution(p);
     return distribution(random_generator_);
   }
 

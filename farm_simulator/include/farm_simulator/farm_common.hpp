@@ -2,7 +2,7 @@
  * @file
  *
  * \brief  Declaration of common structures and functions for farm simulator
- * \author Corentin Chauvin-Hamea
+ * \author Corentin Chauvin-Hameau
  * \date   2019
  */
 
@@ -88,6 +88,14 @@ namespace mfcpp {
    * \return   Random number following a uniform law in [a, b]
    */
   double rand_uniform(double a, double b);
+
+  /**
+   * \brief  Draw a random number from a bernoulli distribution
+   *
+   * \param p  Probability to get true
+   * \return   Random number following a uniform law in [a, b]
+   */
+  bool rand_bernoulli(double p);
 
 
 

@@ -33,6 +33,7 @@ catkin_package(
 ###########
 include_directories(
   include/farm_simulator
+  include/perlin_noise
   ${catkin_INCLUDE_DIRS}
 )
 
