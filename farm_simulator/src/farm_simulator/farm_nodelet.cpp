@@ -86,9 +86,13 @@ void FarmNodelet::onInit()
   private_nh_.param<float>("std_width_algae", std_width_algae_, 0.05);
   private_nh_.param<float>("std_length_algae", std_length_algae_, 0.2);
   private_nh_.param<float>("std_psi_algae", std_psi_algae_, 0.1);
+
+  private_nh_.param<bool>("disp_disease", disp_disease_, false);
+  private_nh_.param<float>("disease_ratio", disease_ratio_, 0.5);
   private_nh_.param<int>("height_disease_heatmap", height_disease_heatmap_, 30);
   private_nh_.param<int>("width_disease_heatmap", width_disease_heatmap_, 10);
-  private_nh_.param<float>("disease_ratio", disease_ratio_, 0.5);
+  private_nh_.param<int>("height_grid_heatmap", height_grid_heatmap_, 6);
+  private_nh_.param<int>("width_grid_heatmap", width_grid_heatmap_, 2);
 
 
   // Other variables
@@ -98,7 +102,7 @@ void FarmNodelet::onInit()
 
   // Create algae lines
   clock_t begin = clock();
-
+  cout << "Starting init" << endl;
   init_algae_lines();
 
   clock_t end = clock();
@@ -143,6 +147,7 @@ void FarmNodelet::reconfigure_callback(farm_simulator::FarmSimulatorConfig &conf
     bnd_phi_lines_ = config.bnd_phi_lines;
     bnd_theta_lines_ = config.bnd_theta_lines;
     bnd_gamma_lines_ = config.bnd_gamma_lines;
+    disp_disease_ = config.disp_disease;
 
     init_algae_lines();
   } else
@@ -233,7 +238,8 @@ void FarmNodelet::init_algae_lines()
     tf2::Vector3 X1 = line.line.p1;
     tf2::Vector3 X2 = line.line.p2;
 
-    perlin_.configure(height_disease_heatmap_, width_disease_heatmap_, 3, 3);
+    perlin_.configure(height_disease_heatmap_, width_disease_heatmap_,
+      height_grid_heatmap_, width_grid_heatmap_);
     perlin_.randomise_gradients();
 
 
@@ -265,7 +271,7 @@ void FarmNodelet::init_algae_lines()
         for (int i = 0; i < height_disease_heatmap_; i++) {
           for (int j = 0; j < width_disease_heatmap_; j++) {
             float value = perlin_.evaluate(i, j);
-            alga.disease_heatmap[i][j] = perlin_.accentuate(value);
+            alga.disease_heatmap[i][j] = disease_ratio_*perlin_.accentuate(value);
           }
         }
 
@@ -277,196 +283,6 @@ void FarmNodelet::init_algae_lines()
     algae_lines_.emplace_back(line);
 
   }
-}
-
-
-void FarmNodelet::pub_rviz_markers(float duration) const
-{
-  // Initialise common marker data
-  MarkerArgs args;
-  args.stamp = ros::Time::now();
-  args.duration = ros::Duration(duration);
-  args.frame_id = "/world";
-  args.color.r = 0.8;
-  args.color.g = 0.8;
-  args.color.b = 0.8;
-  args.color.a = 1.0;
-
-  visualization_msgs::MarkerArray markers;
-  unsigned int nbr_assets = nbr_lines_ * (5 + nbr_algae_);
-  markers.markers.reserve(nbr_assets);
-
-  // Add anchor markers
-  args.ns = "anchors";
-  for (unsigned int i = 0; i < nbr_lines_; i++) {
-    const AlgaeLine *al = &algae_lines_[i];  // for convenience
-
-    markers.markers.emplace_back(
-      rviz_marker_cylinder(al->anchor1, al->anchors_diameter, al->anchors_height, args)
-    );
-    markers.markers.emplace_back(
-      rviz_marker_cylinder(al->anchor2, al->anchors_diameter, al->anchors_height, args)
-    );
-  }
-
-  // Add buoys
-  args.ns = "buoys";
-  visualization_msgs::Marker buoys_marker = rviz_marker_spheres(buoys_diameter_, args);
-  buoys_marker.points.reserve(nbr_lines_ * nbr_buoys_);
-
-  for (unsigned int i = 0; i < nbr_lines_; i++) {
-    const AlgaeLine *al = &algae_lines_[i];  // for convenience
-    geometry_msgs::Point point;
-    tf2::Vector3 X1 = al->floating_rope.p1;
-    tf2::Vector3 X2 = al->floating_rope.p2;
-    unsigned int n = al->nbr_buoys;
-
-    for (unsigned int k = 0; k < n; k++) {
-      tf2::Vector3 X = X1 + float(k)/(n-1) * (X2-X1);
-      buoys_marker.points.emplace_back(tf2::toMsg(X, point));
-    }
-  }
-
-  markers.markers.emplace_back(buoys_marker);
-
-  // Add ropes
-  args.ns = "ropes";
-  visualization_msgs::Marker line_marker = rviz_marker_line(thickness_ropes_, args);
-  line_marker.points.reserve(3 * nbr_lines_);
-
-  for (unsigned int i = 0; i < nbr_lines_; i++) {
-    const AlgaeLine *al = &algae_lines_[i];
-    geometry_msgs::Point point;
-
-    line_marker.points.emplace_back(tf2::toMsg(al->anchor1, point));
-    line_marker.points.emplace_back(tf2::toMsg(al->floating_rope.p1, point));
-    line_marker.points.emplace_back(tf2::toMsg(al->floating_rope.p2, point));
-    line_marker.points.emplace_back(tf2::toMsg(al->anchor2, point));
-    line_marker.points.emplace_back(tf2::toMsg(al->floating_rope.p1, point));
-    line_marker.points.emplace_back(tf2::toMsg(al->floating_rope.p2, point));
-    line_marker.points.emplace_back(tf2::toMsg(al->line.p1, point));
-    line_marker.points.emplace_back(tf2::toMsg(al->line.p2, point));
-
-    // Ropes between the buoys and the algae line
-    unsigned int n = al->nbr_buoys;
-    tf2::Vector3 X1 = al->floating_rope.p1;
-    tf2::Vector3 X2 = al->floating_rope.p2;
-    tf2::Vector3 Y1 = al->line.p1;
-    tf2::Vector3 Y2 = al->line.p2;
-
-    for (unsigned int k = 1; k < n-1; k++) {
-      tf2::Vector3 X = X1 + float(k)/(n-1) * (X2-X1);
-      tf2::Vector3 Y = Y1 + float(k)/(n-1) * (Y2-Y1);
-      line_marker.points.emplace_back(tf2::toMsg(X, point));
-      line_marker.points.emplace_back(tf2::toMsg(Y, point));
-    }
-  }
-
-  markers.markers.emplace_back(line_marker);
-
-  // Add algae
-  args.ns = "algae";
-  visualization_msgs::Marker rect_marker = rviz_marker_rect(args);
-  rect_marker.points.reserve(2 * nbr_lines_ * nbr_algae_);
-
-  for (unsigned int i = 0; i < nbr_lines_; i++) {
-    const AlgaeLine *al = &algae_lines_[i];
-
-    tf2::Vector3 X1 = al->line.p1;
-    tf2::Vector3 X2 = al->line.p2;
-    tf2::Vector3 z(0, 0, 1);
-    tf2::Vector3 y = (X2-X1) / tf2::tf2Distance(X1, X2);
-    tf2::Vector3 x = tf2::tf2Cross(y, z);
-
-    for (unsigned int k = 0; k < al->algae.size(); k++) {
-      tf2::Vector3 X = al->algae[k].position;
-      float psi = al->algae[k].orientation;
-      float H = al->algae[k].length;
-      float W = al->algae[k].width;
-
-      tf2::Vector3 p1 = X - W/2*y;
-      tf2::Vector3 p2 = X + W/2*y;
-      tf2::Vector3 p3 = p2 - H*(cos(psi)*z - sin(psi)*x);
-      tf2::Vector3 p4 = p1 - H*(cos(psi)*z - sin(psi)*x);
-
-      // Add the rectangular alga as two triangles
-      geometry_msgs::Point point;
-      rect_marker.points.emplace_back(tf2::toMsg(p1, point));  // first triangle
-      rect_marker.points.emplace_back(tf2::toMsg(p2, point));
-      rect_marker.points.emplace_back(tf2::toMsg(p4, point));
-
-      rect_marker.points.emplace_back(tf2::toMsg(p2, point));  // second triangle
-      rect_marker.points.emplace_back(tf2::toMsg(p3, point));
-      rect_marker.points.emplace_back(tf2::toMsg(p4, point));
-    }
-  }
-
-  std_msgs::ColorRGBA color;
-  color.r = 0.1;
-  color.g = 0.8;
-  color.b = 0.1;
-  color.a = 1.0;
-  rect_marker.colors.resize(rect_marker.points.size()/3, color);
-
-  markers.markers.emplace_back(rect_marker);
-
-  // TEST on heatmaps
-  float W = 0.20;
-  float H = 1;
-  int n_W = 10;
-  int n_H = 50;
-  args.ns = "test";
-  visualization_msgs::Marker img_marker = rviz_marker_rect(args);
-  img_marker.points.reserve(2*n_W*n_H);
-  img_marker.colors.reserve(2*n_W*n_H);
-  img_marker.pose.position.x = -2.0;
-
-  for (int i = 0; i < n_W; i++) {
-    tf2::Vector3 p1, p2, p3, p4;
-    p1[1] = float(i)/n_W*W;
-    p2[1] = float(i+1)/n_W*W;
-    p3[1] = float(i+1)/n_W*W;
-    p4[1] = float(i)/n_W*W;
-    p1[0] = 0.0;
-    p2[0] = 0.0;
-    p3[0] = 0.0;
-    p4[0] = 0.0;
-
-    for (int j = 0; j < n_H; j++) {
-      p1[2] = float(j)/n_H*H;
-      p2[2] = float(j)/n_H*H;
-      p3[2] = float(j+1)/n_H*H;
-      p4[2] = float(j+1)/n_H*H;
-
-      std_msgs::ColorRGBA color;
-      // float perlin_color = perlin_.evaluate((p1[1]+p2[1])/2, (p1[2]+p4[2])/2);
-      // float a = 0.5;
-      // float value = max((float)a*faded(faded(faded(faded(perlin_color)))), (float)0.0);
-      // value = min(value, (float)1);
-      //
-      // color.r = value;
-      // color.g = value;
-      // color.b = value;
-      color.a = 1;
-      img_marker.colors.emplace_back(color);
-      img_marker.colors.emplace_back(color);
-
-      geometry_msgs::Point point;
-      img_marker.points.emplace_back(tf2::toMsg(p1, point));  // first triangle
-      img_marker.points.emplace_back(tf2::toMsg(p2, point));
-      img_marker.points.emplace_back(tf2::toMsg(p4, point));
-
-      img_marker.points.emplace_back(tf2::toMsg(p2, point));  // second triangle
-      img_marker.points.emplace_back(tf2::toMsg(p3, point));
-      img_marker.points.emplace_back(tf2::toMsg(p4, point));
-    }
-  }
-  markers.markers.emplace_back(img_marker);
-
-  // Publish the markers
-  pop_marker_ids(markers);
-  rviz_pub_.publish(markers);
-
 }
 
 

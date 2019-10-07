@@ -3,6 +3,9 @@ project(farm_simulator)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
+set(CMAKE_CXX_FLAGS_DEBUG "-g -fno-omit-frame-pointer")
+set(ROS_BUILD_TYPE Debug)
+# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
 
 ########################
 ##  Configure Catkin  ##
@@ -26,6 +29,8 @@ catkin_package(
   CATKIN_DEPENDS nodelet roscpp std_msgs
 )
 
+# add_compile_options(-pg)
+# set(catkin_LIBRARIES ${catkin_LIBRARIES} -pg)
 
 
 ###########
@@ -41,9 +46,11 @@ find_package(Eigen3 REQUIRED)
 include_directories(${Eigen_INCLUDE_DIRS})
 
 add_library(farm_nodelet
-  src/farm_nodelet.cpp
-  src/farm_common.cpp
-  src/rviz_visualisation.cpp
+  src/farm_simulator/farm_nodelet.cpp
+  src/farm_simulator/farm_visualisation.cpp
+  src/farm_simulator/farm_common.cpp
+  src/farm_simulator/rviz_visualisation.cpp
+  src/perlin_noise/perlin_noise.cpp
   )
 
 add_dependencies(farm_nodelet

@@ -10,6 +10,7 @@
 #define FARM_NODELET_HPP
 
 #include "farm_common.hpp"
+#include "rviz_visualisation.hpp"
 #include "farm_simulator/FarmSimulatorConfig.h"
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -79,9 +80,13 @@ namespace mfcpp {
       float std_width_algae_;   ///<  Standard deviation on algae width
       float std_length_algae_;  ///<  Standard deviation on algae length
       float std_psi_algae_;     ///<  Standard deviation on algae orientation
+
+      bool disp_disease_;    ///<  Whether to display the disease heatmaps
+      float disease_ratio_;  ///<  Ratio of alga disease (0->fully sane, 1->fully sick)
       int height_disease_heatmap_;  ///<  Height of the algae disease heatmap
       int width_disease_heatmap_;   ///<  Width of the algae disease heatmap
-      float disease_ratio_;  ///<  Ratio of alga disease (0->fully sane, 1->fully sick)
+      int height_grid_heatmap_;     ///<  Height of the grid for perlin noise generation
+      int width_grid_heatmap_;      ///<  Width of the grid for perlin noise generation
 
       // FIXME: to remove
       PerlinNoiseGenerator perlin_;
@@ -111,8 +116,58 @@ namespace mfcpp {
       void init_algae_lines();
 
       /**
-       * \brief  Polynomial intensification of a value in [0, 1]
+       * \brief  Populates a marker for displaying the buoys
+       *
+       * \param marker  Marker to populate
+       * \param args    Common arguments to fill ROS message
        */
+      void pop_buoys_marker(visualization_msgs::Marker &marker,
+        MarkerArgs args) const;
+
+      /**
+       * \brief  Populates a marker for displaying the ropes
+       *
+       * \param marker  Marker to populate
+       * \param args    Common arguments to fill ROS message
+       */
+      void pop_ropes_marker(visualization_msgs::Marker &marker,
+        MarkerArgs args) const;
+
+      /**
+       * \brief  Populates a marker for displaying the algae
+       *
+       * \param marker  Marker to populate
+       * \param args    Common arguments to fill ROS message
+       */
+      void pop_algae_marker(visualization_msgs::Marker &marker,
+        MarkerArgs args) const;
+
+      /**
+       * \brief  Populates a marker for displaying the disease heatmaps
+       *
+       * \param marker  Marker to populate
+       * \param args    Common arguments to fill ROS message
+       */
+      void pop_algae_heatmaps(visualization_msgs::Marker &marker,
+        MarkerArgs args) const;
+
+      /**
+       * \brief  Populates a triangle marker for displaying images
+       *
+       * coord[0] | coord[1]
+       * -------------------
+       * coord[3] | coord[2]
+       *
+       * \note  For speed issues, space for the concerned vectors should
+       *        already be reserved.
+       *
+       * \param marker   Marker to populate
+       * \param img      Black and white image to add to the marker
+       * \param coord    Four 3D coordinates of the corners of the image
+       */
+      void pop_img_marker(visualization_msgs::Marker &marker,
+        std::vector<std::vector<float>> img,
+        const std::vector<tf2::Vector3> &coord) const;
 
       /**
        * \brief  Displays objects by publishing Rviz markers

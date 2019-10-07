@@ -68,6 +68,20 @@ namespace mfcpp {
   };
 
   /**
+   * \brief  Computes the corner coordinates of an alga
+   *
+   * coord[0] | coord[1]   --> line
+   * -------------------
+   * coord[3] | coord[2]
+   *
+   * \param line  Algae line on which the algae is
+   * \param alga  Alga to find the coordinates
+   * \return  Coordinates of the alga
+   */
+  std::vector<tf2::Vector3> get_alga_coord(const AlgaeLine &line, const Alga &alga);
+
+
+  /**
    * \brief  Displays a vector
    *
    * \param stream  Stream on which to display the vector
