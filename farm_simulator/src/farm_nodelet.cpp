@@ -22,6 +22,10 @@
 #include <cmath>
 #include <csignal>
 
+#include <ctime>
+
+
+
 using namespace std;
 
 
@@ -82,9 +86,9 @@ void FarmNodelet::onInit()
   private_nh_.param<float>("std_width_algae", std_width_algae_, 0.05);
   private_nh_.param<float>("std_length_algae", std_length_algae_, 0.2);
   private_nh_.param<float>("std_psi_algae", std_psi_algae_, 0.1);
-
-  perlin_.configure(1, 1, 3, 3);
-  perlin_.generate();
+  private_nh_.param<int>("height_disease_heatmap", height_disease_heatmap_, 30);
+  private_nh_.param<int>("width_disease_heatmap", width_disease_heatmap_, 10);
+  private_nh_.param<float>("disease_ratio", disease_ratio_, 0.5);
 
 
   // Other variables
@@ -93,7 +97,14 @@ void FarmNodelet::onInit()
   rviz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("farm", 0 );
 
   // Create algae lines
+  clock_t begin = clock();
+
   init_algae_lines();
+
+  clock_t end = clock();
+  double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+
+  cout << "After init(): " << elapsed_secs << endl;
 
 
   // Main loop
@@ -222,9 +233,15 @@ void FarmNodelet::init_algae_lines()
     tf2::Vector3 X1 = line.line.p1;
     tf2::Vector3 X2 = line.line.p2;
 
+    perlin_.configure(height_disease_heatmap_, width_disease_heatmap_, 3, 3);
+    perlin_.randomise_gradients();
+
+
     for (unsigned int k = 1; k <= nbr_algae_; k++) {
       if (!rand_bernoulli(alga_miss_rate_)) {
         Alga alga;
+
+        // Initialise pose and dimensions of alga
         alga.position = X1 + float(k)/(n+1) * (X2 - X1);
 
         if (randomise_algae_) {
@@ -237,6 +254,22 @@ void FarmNodelet::init_algae_lines()
           alga.width = width_algae_;
         }
 
+        // Initialise disease heatmap of alga
+        alga.disease_heatmap.resize(
+          height_disease_heatmap_,
+          vector<float>(width_disease_heatmap_, 0)
+        );
+
+        perlin_.generate();
+
+        for (int i = 0; i < height_disease_heatmap_; i++) {
+          for (int j = 0; j < width_disease_heatmap_; j++) {
+            float value = perlin_.evaluate(i, j);
+            alga.disease_heatmap[i][j] = perlin_.accentuate(value);
+          }
+        }
+
+        // Add the alga
         line.algae.emplace_back(alga);
       }
     }
@@ -378,41 +411,57 @@ void FarmNodelet::pub_rviz_markers(float duration) const
   markers.markers.emplace_back(rect_marker);
 
   // TEST on heatmaps
-  float W = 1;
+  float W = 0.20;
   float H = 1;
-  int n_W = 20;
-  int n_H = 20;
+  int n_W = 10;
+  int n_H = 50;
   args.ns = "test";
-  visualization_msgs::Marker pts_marker;
-  fill_marker_header(pts_marker, args);
-  pts_marker.color = args.color;
-  pts_marker.scale.x = W/n_W;
-  pts_marker.scale.y = W/n_H;
-  pts_marker.pose.position.x = -2.0;
-  pts_marker.type = visualization_msgs::Marker::POINTS;
-  pts_marker.action = visualization_msgs::Marker::ADD;
-  geometry_msgs::Point point;
+  visualization_msgs::Marker img_marker = rviz_marker_rect(args);
+  img_marker.points.reserve(2*n_W*n_H);
+  img_marker.colors.reserve(2*n_W*n_H);
+  img_marker.pose.position.x = -2.0;
 
   for (int i = 0; i < n_W; i++) {
-    tf2::Vector3 p;
-    p[1] = float(i)/n_W*W;
+    tf2::Vector3 p1, p2, p3, p4;
+    p1[1] = float(i)/n_W*W;
+    p2[1] = float(i+1)/n_W*W;
+    p3[1] = float(i+1)/n_W*W;
+    p4[1] = float(i)/n_W*W;
+    p1[0] = 0.0;
+    p2[0] = 0.0;
+    p3[0] = 0.0;
+    p4[0] = 0.0;
 
     for (int j = 0; j < n_H; j++) {
-      p[2] = float(j)/n_H*H;
+      p1[2] = float(j)/n_H*H;
+      p2[2] = float(j)/n_H*H;
+      p3[2] = float(j+1)/n_H*H;
+      p4[2] = float(j+1)/n_H*H;
 
       std_msgs::ColorRGBA color;
-      const float perlin_color = perlin_.evaluate(p[1], p[2]);
+      // float perlin_color = perlin_.evaluate((p1[1]+p2[1])/2, (p1[2]+p4[2])/2);
+      // float a = 0.5;
+      // float value = max((float)a*faded(faded(faded(faded(perlin_color)))), (float)0.0);
+      // value = min(value, (float)1);
+      //
+      // color.r = value;
+      // color.g = value;
+      // color.b = value;
+      color.a = 1;
+      img_marker.colors.emplace_back(color);
+      img_marker.colors.emplace_back(color);
 
-      color.r = perlin_color;
-      color.g = 1-perlin_color;
-      color.b = 0;
-      color.a = 1.0;
-      pts_marker.colors.emplace_back(color);
+      geometry_msgs::Point point;
+      img_marker.points.emplace_back(tf2::toMsg(p1, point));  // first triangle
+      img_marker.points.emplace_back(tf2::toMsg(p2, point));
+      img_marker.points.emplace_back(tf2::toMsg(p4, point));
 
-      pts_marker.points.emplace_back(tf2::toMsg(p, point));
+      img_marker.points.emplace_back(tf2::toMsg(p2, point));  // second triangle
+      img_marker.points.emplace_back(tf2::toMsg(p3, point));
+      img_marker.points.emplace_back(tf2::toMsg(p4, point));
     }
   }
-  markers.markers.emplace_back(pts_marker);
+  markers.markers.emplace_back(img_marker);
 
   // Publish the markers
   pop_marker_ids(markers);

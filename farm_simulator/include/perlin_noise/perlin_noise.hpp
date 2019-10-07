@@ -12,8 +12,8 @@
 #include <random>
 #include <cmath>
 #include <vector>
+#include <algorithm>
 #include <iostream>
-
 
 namespace mfcpp {
   /**
@@ -51,7 +51,12 @@ namespace mfcpp {
         unsigned int n_width);
 
       /**
-       * \brief  Generates random gradient vectors on the grid
+       * \brief  Fills the hash list with random gradients
+       */
+      void randomise_gradients();
+
+      /**
+       * \brief  Populates the grid with random gradients from the hash list
        */
       void generate();
 
@@ -64,6 +69,17 @@ namespace mfcpp {
        */
       double evaluate(float x, float y) const;
 
+      /**
+       * \brief  Applies a polynomial to accentuate the given value
+       *
+       * Values under 0.5 are pushed towards 0, while values above 0.5 are
+       * pushed towards 1.
+       *
+       * \param x  Given value
+       * \return  Accentuated value
+       */
+      inline float accentuate(float x) const;
+
     private:
       /**
        * \brief  Two dimensional vector
@@ -74,6 +90,7 @@ namespace mfcpp {
 
         Vec2d();
         Vec2d(float _x, float _y);
+        void operator=(const Vec2d &a);
 
         /**
          * \brief  Computes the square of the euclidean norm of the vector
@@ -102,6 +119,9 @@ namespace mfcpp {
 
       /// Gradients evaluated at nodes of the grid
       std::vector<std::vector<Vec2d>> gradients_;
+
+      /// Hash list of random gradients
+      std::vector<Vec2d> hash_gradients_;
 
       ///  Seed initialiser for generation of random numbers
       std::random_device random_device_;
@@ -143,7 +163,7 @@ namespace mfcpp {
        * \param t  Number between 0 and 1
        * \return  6t^5 - 15t^4 + 10t^3
        */
-      float fade(float t) const;
+      inline float fade(float t) const;
   };
 
 
@@ -162,6 +182,13 @@ namespace mfcpp {
      x(_x), y(_y)
   {
 
+  }
+
+
+  void PerlinNoiseGenerator::Vec2d::operator=(const Vec2d &a)
+  {
+    x = a.x;
+    y = a.y;
   }
 
 
@@ -218,25 +245,42 @@ namespace mfcpp {
   }
 
 
-  void PerlinNoiseGenerator::generate()
+  void PerlinNoiseGenerator::randomise_gradients()
   {
     std::mt19937 random_generator(random_device_());
     std::uniform_real_distribution<double> distribution(-1, 1);
+    hash_gradients_.resize(256, Vec2d());
 
+    for (int i = 0; i < 256; i++) {
+      Vec2d v;
+
+      do {
+        v.x = distribution(random_generator);
+        v.y = distribution(random_generator);
+      } while (v.norm2() > 1.0 && v.norm2() == 0.0);
+
+      float norm = v.norm();
+      v.x /= norm;
+      v.y /= norm;
+
+      hash_gradients_[i] = v;
+    }
+  }
+
+
+  void PerlinNoiseGenerator::generate()
+  {
+    // Generate permutations
+    std::vector<unsigned int> permut(256);
+    for (int i = 0; i < 256; i++) {
+      permut[i] = i;
+    }
+    std::random_shuffle (permut.begin(), permut.end());
+
+    // Assign gradients to each node
     for (unsigned int i = 0; i <= n_height_; i++) {
       for (unsigned int j = 0; j <= n_width_; j++) {
-        Vec2d v;
-
-        do {
-          v.x = distribution(random_generator);
-          v.y = distribution(random_generator);
-        } while (v.norm2() > 1.0 && v.norm2() == 0.0);
-
-        float norm = v.norm();
-        v.x /= norm;
-        v.y /= norm;
-
-        gradients_[i][j] = v;
+        gradients_[i][j] = hash_gradients_[permut[(i + permut[j]) & 255]];
       }
     }
   }
@@ -304,9 +348,15 @@ namespace mfcpp {
   }
 
 
-  float PerlinNoiseGenerator::fade(float t) const
+  inline float PerlinNoiseGenerator::fade(float t) const
   {
     return t * t * t * (t * (t * 6 - 15) + 10);  // 6t^5 - 15t^4 + 10t^3
+  }
+
+
+  inline float PerlinNoiseGenerator::accentuate(float x) const
+  {
+    return fade(fade(fade(fade(x))));
   }
 
 

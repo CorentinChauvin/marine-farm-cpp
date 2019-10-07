@@ -31,3 +31,6 @@ farm_nodelet:
   std_width_algae: 0.05   # standard deviation on algae width
   std_length_algae: 0.2   # standard deviation on algae length
   std_psi_algae: 0.1      # standard deviation on algae orientation
+  height_disease_heatmap: 30  # height of the algae disease heatmap
+  width_disease_heatmap: 10   # width of the algae disease heatmap
+  disease_ratio: 0.5  # ratio of alga disease (0->fully sane, 1->fully sick)

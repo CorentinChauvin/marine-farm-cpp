@@ -75,10 +75,13 @@ namespace mfcpp {
       int nbr_algae_;         ///<  Number of algae per line
       float width_algae_;     ///<  Mean of the width of an alga
       float length_algae_;    ///<  Mean of the length of an alga
-      float psi_algae_;       ///<  mean of the algae orientation
-      float std_width_algae_;   ///<  standard deviation on algae width
-      float std_length_algae_;  ///<  standard deviation on algae length
-      float std_psi_algae_;     ///<  standard deviation on algae orientation
+      float psi_algae_;       ///<  Mean of the algae orientation
+      float std_width_algae_;   ///<  Standard deviation on algae width
+      float std_length_algae_;  ///<  Standard deviation on algae length
+      float std_psi_algae_;     ///<  Standard deviation on algae orientation
+      int height_disease_heatmap_;  ///<  Height of the algae disease heatmap
+      int width_disease_heatmap_;   ///<  Width of the algae disease heatmap
+      float disease_ratio_;  ///<  Ratio of alga disease (0->fully sane, 1->fully sick)
 
       // FIXME: to remove
       PerlinNoiseGenerator perlin_;
@@ -106,6 +109,10 @@ namespace mfcpp {
        * \brief  Initialise the algae lines
        */
       void init_algae_lines();
+
+      /**
+       * \brief  Polynomial intensification of a value in [0, 1]
+       */
 
       /**
        * \brief  Displays objects by publishing Rviz markers

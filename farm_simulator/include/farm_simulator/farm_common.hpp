@@ -41,8 +41,13 @@ namespace mfcpp {
     float length;		    ///<  Length of the alga
     float width;		    ///<  Width of the alga
 
-    // heatmap color, image texture
-    // TODO
+    /**
+     * \brief  Heatmap representing disease across the alga
+     *
+     * 0.0 -> alga sane <br/>
+     * 1.0 -> alga sick
+     */
+    std::vector<std::vector<float>> disease_heatmap;
   };
 
   /**
