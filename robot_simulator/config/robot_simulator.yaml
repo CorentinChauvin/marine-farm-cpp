@@ -1,0 +1,2 @@
+robot_simulator:
+  model_constants: [0, 1, 2, 3]

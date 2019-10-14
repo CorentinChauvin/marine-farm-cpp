@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(farm_simulator)
+project(robot_model)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -11,22 +11,13 @@ set(ROS_BUILD_TYPE Debug)
 ##  Configure Catkin  ##
 ########################
 find_package(catkin REQUIRED COMPONENTS
-  nodelet
   roscpp
-  std_msgs
-  geometry_msgs
-  tf2_geometry_msgs
-  visualization_msgs
-  dynamic_reconfigure
-)
-
-generate_dynamic_reconfigure_options(
-  cfg/farm_simulator.cfg
 )
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS nodelet roscpp std_msgs
+  CATKIN_DEPENDS roscpp
+  LIBRARIES robot_model
 )
 
 # add_compile_options(-pg)
@@ -37,22 +28,19 @@ catkin_package(
 ## Build ##
 ###########
 include_directories(
-  include/farm_simulator
-  include/perlin_noise
+  include/robot_model
   ${catkin_INCLUDE_DIRS}
 )
 
-add_library(farm_nodelet
-  src/farm_simulator/farm_nodelet.cpp
-  src/farm_simulator/farm_visualisation.cpp
-  src/farm_simulator/farm_common.cpp
-  src/farm_simulator/rviz_visualisation.cpp
-  src/perlin_noise/perlin_noise.cpp
-  )
+find_package(Eigen3 REQUIRED)
+include_directories(${Eigen_INCLUDE_DIRS})
 
-add_dependencies(farm_nodelet
-  ${catkin_EXPORTED_TARGETS}
-  ${PROJECT_NAME}_gencfg
+add_library(robot_model
+  src/robot_model/robot_model.cpp
 )
 
-target_link_libraries(farm_nodelet ${catkin_LIBRARIES})
+add_dependencies(robot_model
+  ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(robot_model ${catkin_LIBRARIES})
