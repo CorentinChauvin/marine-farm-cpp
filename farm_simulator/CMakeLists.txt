@@ -36,6 +36,12 @@ catkin_package(
 ###########
 ## Build ##
 ###########
+
+# Build reactphysics3d
+set(CMAKE_INSTALL_LIBDIR ${CATKIN_PACKAGE_LIB_DESTINATION}/reactphysics3d)
+add_subdirectory(reactphysics3d)
+
+# Build farm simulator
 include_directories(
   include/farm_simulator
   include/perlin_noise
@@ -55,4 +61,4 @@ add_dependencies(farm_nodelet
   ${PROJECT_NAME}_gencfg
 )
 
-target_link_libraries(farm_nodelet ${catkin_LIBRARIES})
+target_link_libraries(farm_nodelet ${catkin_LIBRARIES} reactphysics3d)
