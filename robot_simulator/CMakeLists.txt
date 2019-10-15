@@ -38,8 +38,6 @@ catkin_package(
 #############
 ##  Build  ##
 #############
-# find_package(robot_model REQUIRED)
-
 include_directories(
   include/robot_simulator
   ${robot_model_INCLUDE_DIRS}
@@ -49,6 +47,6 @@ include_directories(
 add_executable(robot_simulator
   src/robot_simulator/robot_simulator.cpp
 )
-add_dependencies(robot_simulator ${catkin_EXPORTED_TARGETS})
+add_dependencies(robot_simulator ${catkin_EXPORTED_TARGETS} robot_simulator_generate_messages_cpp)
 
 target_link_libraries(robot_simulator ${catkin_LIBRARIES})

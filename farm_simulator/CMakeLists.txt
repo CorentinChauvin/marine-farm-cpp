@@ -18,7 +18,10 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_geometry_msgs
   visualization_msgs
   dynamic_reconfigure
+  reactphysics3d
 )
+
+find_package(reactphysics3d REQUIRED)
 
 generate_dynamic_reconfigure_options(
   cfg/farm_simulator.cfg
@@ -37,11 +40,6 @@ catkin_package(
 ## Build ##
 ###########
 
-# Build reactphysics3d
-set(CMAKE_INSTALL_LIBDIR ${CATKIN_PACKAGE_LIB_DESTINATION}/reactphysics3d)
-add_subdirectory(reactphysics3d)
-
-# Build farm simulator
 include_directories(
   include/farm_simulator
   include/perlin_noise
@@ -61,4 +59,4 @@ add_dependencies(farm_nodelet
   ${PROJECT_NAME}_gencfg
 )
 
-target_link_libraries(farm_nodelet ${catkin_LIBRARIES} reactphysics3d)
+target_link_libraries(farm_nodelet ${catkin_LIBRARIES})
