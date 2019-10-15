@@ -1,0 +1,10 @@
+<launch>
+  <node name="keyboard_teleop" type="keyboard_teleop.py" pkg="robot_simulator"
+    output="screen">
+    <remap from="command" to="/robot_simulator/input" />
+
+    <param name="init_speed" value="500.0" />
+    <param name="inc_delta" value="1.0" />
+    <param name="inc_P" value="0.002" />
+  </node>
+</launch>

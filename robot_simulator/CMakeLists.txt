@@ -14,11 +14,24 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   robot_model
+  std_msgs
+  message_generation
+  tf
+)
+
+add_message_files(
+  FILES
+  Command.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
 )
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp
+  CATKIN_DEPENDS roscpp message_runtime
 )
 
 

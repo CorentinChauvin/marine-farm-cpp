@@ -9,6 +9,7 @@
 #ifndef ROBOT_MODEL_HPP
 #define ROBOT_MODEL_HPP
 
+#include <tf2_ros/transform_broadcaster.h>
 #include <eigen3/Eigen/Dense>
 #include <vector>
 
@@ -70,7 +71,7 @@ class RobotModel
     /// \warning  c[0] is not used to respect notation
     std::vector<double> c_;
 
-    /// Gravity
+    /// Gravity acceleration
     double g_;
 
     /// Model inputs
