@@ -22,9 +22,6 @@
 #include <cmath>
 #include <csignal>
 
-#include <ctime>
-
-
 
 using namespace std;
 
@@ -33,8 +30,16 @@ PLUGINLIB_EXPORT_CLASS(mfcpp::FarmNodelet, nodelet::Nodelet)
 
 namespace mfcpp {
 
+/*
+ * Definition of static varibles
+ */
 sig_atomic_t volatile FarmNodelet::b_sigint_ = 0;
+ros::Timer FarmNodelet::init_timer_ = ros::Timer();
+ros::Timer FarmNodelet::main_timer_ = ros::Timer();
 
+/*
+ * Definition of member functions
+ */
 FarmNodelet::FarmNodelet() {}
 FarmNodelet::~FarmNodelet() {}
 
@@ -52,10 +57,9 @@ void FarmNodelet::onInit()
 
   // Dynamic reconfigure
   reconfigure_initialised_ = false;
-  dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig> reconfigure_server;
   dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig>::CallbackType cb;
-  cb = boost::bind(&FarmNodelet::reconfigure_callback, this, _1, _2);
-  reconfigure_server.setCallback(cb);
+  cb = boost::bind(&FarmNodelet::reconfigure_cb, this, _1, _2);
+  reconf_srv_.setCallback(cb);
 
   // ROS parameters
   private_nh_.param<float>("main_loop_freq", main_loop_freq_, 1.0);
@@ -94,50 +98,44 @@ void FarmNodelet::onInit()
   private_nh_.param<int>("height_grid_heatmap", height_grid_heatmap_, 6);
   private_nh_.param<int>("width_grid_heatmap", width_grid_heatmap_, 2);
 
-
   // Other variables
+  init_done_ = false;
 
   // ROS publishers
-  rviz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("farm", 0 );
+  rviz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("farm", 0);
 
   // Create algae lines
-  clock_t begin = clock();
-  cout << "Starting init" << endl;
-  init_algae_lines();
-
-  clock_t end = clock();
-  double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-
-  cout << "After init(): " << elapsed_secs << endl;
+  init_timer_ = private_nh_.createTimer(
+    ros::Duration(0), &FarmNodelet::init_cb, this, true
+  );
 
 
   // Main loop
-  run_nodelet();
+  main_timer_ = private_nh_.createTimer(
+    ros::Duration(1/main_loop_freq_), &FarmNodelet::main_cb, this
+  );
 }
 
 
-void FarmNodelet::run_nodelet()
+void FarmNodelet::main_cb(const ros::TimerEvent &timer_event)
 {
-  ros::Rate loop_rate(main_loop_freq_);
+  if (!ros::ok() || ros::isShuttingDown() || b_sigint_)
+    return;
 
-  while (ros::ok() && !ros::isShuttingDown() && !b_sigint_) {
-    ros::spinOnce();
-
+  if (init_done_) {
     pub_rviz_markers(1/main_loop_freq_);
-
-    loop_rate.sleep();
   }
-
-  exit(1);
 }
 
 
-void FarmNodelet::sigint_handler(int s){
+void FarmNodelet::sigint_handler(int s) {
   b_sigint_ = 1;
+  init_timer_.stop();
+  main_timer_.stop();
 }
 
 
-void FarmNodelet::reconfigure_callback(farm_simulator::FarmSimulatorConfig &config,
+void FarmNodelet::reconfigure_cb(farm_simulator::FarmSimulatorConfig &config,
   uint32_t level)
 {
   if (reconfigure_initialised_) {
@@ -152,6 +150,13 @@ void FarmNodelet::reconfigure_callback(farm_simulator::FarmSimulatorConfig &conf
     init_algae_lines();
   } else
     reconfigure_initialised_ = true;
+}
+
+
+void FarmNodelet::init_cb(const ros::TimerEvent &timer_event)
+{
+  init_algae_lines();
+  init_done_ = true;
 }
 
 

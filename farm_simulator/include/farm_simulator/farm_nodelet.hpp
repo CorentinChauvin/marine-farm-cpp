@@ -12,16 +12,15 @@
 #include "farm_common.hpp"
 #include "rviz_visualisation.hpp"
 #include "farm_simulator/FarmSimulatorConfig.h"
+#include "perlin_noise.hpp"
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <dynamic_reconfigure/server.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
 #include <string>
 #include <vector>
 #include <csignal>
-
-
-#include "perlin_noise.hpp"
 
 
 namespace mfcpp {
@@ -40,15 +39,19 @@ namespace mfcpp {
 
     private:
       // Static members
+      // Note: the timers need to be static since stopped by the SIGINT callback
       static sig_atomic_t volatile b_sigint_;  ///<  Whether SIGINT signal has been received
+      static ros::Timer init_timer_;  ///<  Timer callback for the init function
+      static ros::Timer main_timer_;  ///<  Timer callback for the main function
 
       // Private members
       ros::NodeHandle nh_;            ///<  Node handler (for topics and services)
-      ros::NodeHandle private_nh_;    ///<  Private node handler (for parameters
+      ros::NodeHandle private_nh_;    ///<  Private node handler (for parameters)
+      dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig> reconf_srv_;  ///<  Dynamic reconfigure server
       ros::Publisher rviz_pub_;       ///<  ROS publisher for Rviz
       std::vector<AlgaeLine> algae_lines_;  ///<  Vector of all the algae in the farm
-      bool reconfigure_initialised_;  ///<  Whether the dynamic reconfigure callback
-                                      ///<  has been called once
+      bool reconfigure_initialised_;  ///<  Whether the dynamic reconfigure callback has been called once
+      bool init_done_;  ///<  Whether the farm initialisation has been done
 
       // ROS parameters
       float main_loop_freq_;  ///<  Frequency of the main loop
@@ -92,9 +95,11 @@ namespace mfcpp {
       PerlinNoiseGenerator perlin_;
 
       /**
-       * \brief  Main loop of the nodelet
+       * \brief  Main callback which is called by a timer
+       *
+       * \param timer_event  Timer event information
        */
-      void run_nodelet();
+      void main_cb(const ros::TimerEvent& timer_event);
 
       /**
        * \brief  SINGINT (Ctrl+C) callback to stop the nodelet properly
@@ -107,8 +112,15 @@ namespace mfcpp {
        * \param  New configuration
        * \param  Change level
        */
-      void reconfigure_callback(farm_simulator::FarmSimulatorConfig &config,
+      void reconfigure_cb(farm_simulator::FarmSimulatorConfig &config,
         uint32_t level);
+
+      /**
+       * \brief  Callback for the initialisation oneshot timer
+       *
+       * \param timer_event  Timer event information
+       */
+      void init_cb(const ros::TimerEvent &timer_event);
 
       /**
        * \brief  Initialise the algae lines
@@ -177,7 +189,6 @@ namespace mfcpp {
       void pub_rviz_markers(float duration) const;
 
   };
-
 
 
 }  // namespace mfcpp

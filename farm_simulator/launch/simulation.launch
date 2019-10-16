@@ -1,0 +1,20 @@
+<launch>
+  <!-- Launchfile arguments -->
+  <arg name="rviz" value="true" />
+
+  <!-- Nodelet manager -->
+  <node pkg="nodelet" type="nodelet" args="manager" name="simu_nodelet_manager" output="screen" />
+
+  <!-- Farm simulation -->
+  <rosparam file="$(find farm_simulator)/config/farm_simulator.yaml" command="load" />
+  <node pkg="nodelet" type="nodelet" args="load farm_simulator/FarmNodelet simu_nodelet_manager"
+    name="farm_nodelet" output="screen" />
+
+  <!-- Sensors simulation -->
+  <node pkg="nodelet" type="nodelet" args="load sensors_simulator/CameraNodelet simu_nodelet_manager"
+    name="camera_nodelet" output="screen" />
+
+  <!-- Rviz -->
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find farm_simulator)/rviz/farm_simulator.rviz" if="$(arg rviz)" />
+
+</launch>

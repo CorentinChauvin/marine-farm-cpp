@@ -21,8 +21,6 @@ find_package(catkin REQUIRED COMPONENTS
   reactphysics3d
 )
 
-find_package(reactphysics3d REQUIRED)
-
 generate_dynamic_reconfigure_options(
   cfg/farm_simulator.cfg
 )

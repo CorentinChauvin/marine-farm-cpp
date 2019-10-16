@@ -1,0 +1,7 @@
+<library path="lib/libcamera_nodelet">
+    <class name="sensors_simulator/CameraNodelet" type="mfcpp::CameraNodelet" base_class_type="nodelet::Nodelet">
+        <description>
+            Nodelet for camera simulation
+        </description>
+    </class>
+</library>

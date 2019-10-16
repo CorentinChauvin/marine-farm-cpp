@@ -40,38 +40,21 @@ class RobotSimulator {
     void disp_state();
 
   private:
-    /// ROS node handler
-    ros::NodeHandle nh_;
+    // Private members
+    ros::NodeHandle nh_;         ///<  ROS node handler
+    ros::Subscriber input_sub_;  ///< ROS subscriber for the control input
+    ros::Publisher odom_publisher_;  ///<  ROS publisher for the odometry output
+    tf2_ros::TransformBroadcaster tf_br_;  ///<  Tf broadcaster
 
-    /// ROS subscriber for the control input
-    ros::Subscriber input_sub_;
+    RobotModel robot_model_;        ///<  Robot model
+    RobotModel::state_type state_;  ///<  Current state of the robot
+    RobotModel::input_type input_;  ///<  Current control input
 
-    /// ROS publisher for the odometry output
-    ros::Publisher odom_publisher_;
-
-    /// Tf broadcaster
-    tf2_ros::TransformBroadcaster tf_br_;
-
-    /// State update frequency
-    double update_freq_;
-
-    /// Initial number of integration steps during the update
-    int nbr_int_steps_;
-
-    /// Robot model
-    RobotModel robot_model_;
-
-    /// Current state of the robot
-    RobotModel::state_type state_;
-
-    /// Bound on delta_m (ballast control)
-    double bnd_delta_m_;
-
-    /// Current control input
-    RobotModel::input_type input_;
-
-    /// Bounds on the control input
-    RobotModel::input_type bnd_input_;
+    // ROS parameters
+    double update_freq_;  ///<  State update frequency
+    int nbr_int_steps_;   ///<  Initial number of integration steps during the update
+    double bnd_delta_m_;  ///<  Bound on delta_m (ballast control)
+    RobotModel::input_type bnd_input_;  ///<  Bounds on the control input
 
     /**
      * \brief  Callback for the control input
