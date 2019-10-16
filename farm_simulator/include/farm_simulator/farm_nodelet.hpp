@@ -115,8 +115,11 @@ namespace mfcpp {
       void reconfigure_cb(farm_simulator::FarmSimulatorConfig &config,
         uint32_t level);
 
+
+      /// \name  Initialisation functions
+      ///@{
       /**
-       * \brief  Callback for the initialisation oneshot timer
+       * \brief  Callback for the oneshot initialisation timer
        *
        * \param timer_event  Timer event information
        */
@@ -126,6 +129,40 @@ namespace mfcpp {
        * \brief  Initialise the algae lines
        */
       void init_algae_lines();
+
+      /**
+       * \brief  Init anchors of a specific algae line
+       *
+       * \param line  Concerned algae line
+       * \param i     Index of the algae line
+       */
+      void init_anchors(AlgaeLine &line, unsigned int i);
+
+      /**
+       * \brief  Init ropes of an algae line
+       *
+       * \param line  Concerned algae line
+       */
+      void init_ropes(AlgaeLine &line);
+
+      /**
+       * \brief  Init algae of an algae line
+       *
+       * \param line  Concerned algae line
+       */
+      void init_algae(AlgaeLine &line);
+
+
+      ///@}
+
+      /// \name  Visualisation functions
+      ///@{
+      /**
+       * \brief  Displays objects by publishing Rviz markers
+       *
+       * \param duration  Duration of the marker (in sec)
+       */
+      void pub_rviz_markers(float duration) const;
 
       /**
        * \brief  Populates a marker for displaying the buoys
@@ -180,13 +217,7 @@ namespace mfcpp {
       void pop_img_marker(visualization_msgs::Marker &marker,
         std::vector<std::vector<float>> img,
         const std::vector<tf2::Vector3> &coord) const;
-
-      /**
-       * \brief  Displays objects by publishing Rviz markers
-       *
-       * \param duration  Duration of the marker (in sec)
-       */
-      void pub_rviz_markers(float duration) const;
+      ///@}
 
   };
 

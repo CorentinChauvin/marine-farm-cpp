@@ -14,7 +14,69 @@
 
 using namespace std;
 
+
 namespace mfcpp {
+
+void FarmNodelet::pub_rviz_markers(float duration) const
+{
+  // Initialise common marker data
+  MarkerArgs args;
+  args.stamp = ros::Time::now();
+  args.duration = ros::Duration(duration);
+  args.frame_id = "/world";
+  args.color.r = 0.8;
+  args.color.g = 0.8;
+  args.color.b = 0.8;
+  args.color.a = 1.0;
+
+  visualization_msgs::MarkerArray markers;
+  unsigned int nbr_assets = nbr_lines_ * (5 + nbr_algae_);
+  markers.markers.reserve(nbr_assets);
+
+  // Add anchor markers
+  args.ns = "anchors";
+  for (unsigned int i = 0; i < nbr_lines_; i++) {
+    const AlgaeLine *al = &algae_lines_[i];  // for convenience
+
+    markers.markers.emplace_back(
+      rviz_marker_cylinder(al->anchor1, al->anchors_diameter, al->anchors_height, args)
+    );
+    markers.markers.emplace_back(
+      rviz_marker_cylinder(al->anchor2, al->anchors_diameter, al->anchors_height, args)
+    );
+  }
+
+  // Add buoys
+  args.ns = "buoys";
+  visualization_msgs::Marker buoys_marker;
+  pop_buoys_marker(buoys_marker, args);
+  markers.markers.emplace_back(buoys_marker);
+
+  // Add ropes
+  args.ns = "ropes";
+  visualization_msgs::Marker line_marker;
+  pop_ropes_marker(line_marker, args);
+  markers.markers.emplace_back(line_marker);
+
+  // Add algae
+  args.ns = "algae";
+  visualization_msgs::Marker rect_marker;
+  pop_algae_marker(rect_marker, args);
+  markers.markers.emplace_back(rect_marker);
+
+  // Add disease heatmaps
+  if (disp_disease_) {
+    args.ns = "heatmaps";
+    visualization_msgs::Marker img_marker;
+    pop_algae_heatmaps(img_marker, args);
+    markers.markers.emplace_back(img_marker);
+  }
+
+  // Publish the markers
+  pop_marker_ids(markers);
+  rviz_pub_.publish(markers);
+
+}
 
 void FarmNodelet::pop_buoys_marker(visualization_msgs::Marker &marker,
   MarkerArgs args) const
@@ -205,68 +267,6 @@ void FarmNodelet::pop_img_marker(visualization_msgs::Marker &marker,
       p += y;
     }
   }
-}
-
-
-void FarmNodelet::pub_rviz_markers(float duration) const
-{
-  // Initialise common marker data
-  MarkerArgs args;
-  args.stamp = ros::Time::now();
-  args.duration = ros::Duration(duration);
-  args.frame_id = "/world";
-  args.color.r = 0.8;
-  args.color.g = 0.8;
-  args.color.b = 0.8;
-  args.color.a = 1.0;
-
-  visualization_msgs::MarkerArray markers;
-  unsigned int nbr_assets = nbr_lines_ * (5 + nbr_algae_);
-  markers.markers.reserve(nbr_assets);
-
-  // Add anchor markers
-  args.ns = "anchors";
-  for (unsigned int i = 0; i < nbr_lines_; i++) {
-    const AlgaeLine *al = &algae_lines_[i];  // for convenience
-
-    markers.markers.emplace_back(
-      rviz_marker_cylinder(al->anchor1, al->anchors_diameter, al->anchors_height, args)
-    );
-    markers.markers.emplace_back(
-      rviz_marker_cylinder(al->anchor2, al->anchors_diameter, al->anchors_height, args)
-    );
-  }
-
-  // Add buoys
-  args.ns = "buoys";
-  visualization_msgs::Marker buoys_marker;
-  pop_buoys_marker(buoys_marker, args);
-  markers.markers.emplace_back(buoys_marker);
-
-  // Add ropes
-  args.ns = "ropes";
-  visualization_msgs::Marker line_marker;
-  pop_ropes_marker(line_marker, args);
-  markers.markers.emplace_back(line_marker);
-
-  // Add algae
-  args.ns = "algae";
-  visualization_msgs::Marker rect_marker;
-  pop_algae_marker(rect_marker, args);
-  markers.markers.emplace_back(rect_marker);
-
-  // Add disease heatmaps
-  if (disp_disease_) {
-    args.ns = "heatmaps";
-    visualization_msgs::Marker img_marker;
-    pop_algae_heatmaps(img_marker, args);
-    markers.markers.emplace_back(img_marker);
-  }
-
-  // Publish the markers
-  pop_marker_ids(markers);
-  rviz_pub_.publish(markers);
-
 }
 
 

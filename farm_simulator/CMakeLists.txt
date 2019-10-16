@@ -46,6 +46,7 @@ include_directories(
 
 add_library(farm_nodelet
   src/farm_simulator/farm_nodelet.cpp
+  src/farm_simulator/farm_initialisation.cpp
   src/farm_simulator/farm_visualisation.cpp
   src/farm_simulator/farm_common.cpp
   src/farm_simulator/rviz_visualisation.cpp
