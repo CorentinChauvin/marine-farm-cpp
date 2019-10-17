@@ -7,7 +7,6 @@
  */
 
 #include "farm_common.hpp"
-#include "reactphysics3d.h"
 #include <random>
 #include <cstdlib>
 #include <iostream>

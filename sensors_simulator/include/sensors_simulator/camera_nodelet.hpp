@@ -9,6 +9,8 @@
 #ifndef CAMERA_HPP
 #define CAMERA_HPP
 
+#include "farm_simulator/Algae.h"
+#include "reactphysics3d.h"
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
 #include <csignal>
@@ -39,6 +41,11 @@ class CameraNodelet: public nodelet::Nodelet {
     // Private members
     ros::NodeHandle nh_;          ///<  Node handler (for topics and services)
     ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
+    ros::Subscriber algae_sub_;   ///<  Subscriber for the algae of the farm
+    farm_simulator::AlgaeConstPtr last_algae_msg_;  ///<  Last algae message
+    bool algae_msg_received_;  ///<  Whether an algae message has been received
+    rp3d::CollisionWorld coll_world_;     ///<  Collision world
+    rp3d::WorldSettings world_settings_;  ///<  Collision world settings
 
     // ROS parameters
     float camera_freq_;  ///<  Frequency of the sensor
@@ -55,6 +62,18 @@ class CameraNodelet: public nodelet::Nodelet {
      * \brief  SINGINT (Ctrl+C) callback to stop the nodelet properly
      */
     static void sigint_handler(int s);
+
+    /**
+     * \brief  Callback for the algae of the farm
+     *
+     * \param msg  Pointer to the algae
+     */
+    void algae_cb(const farm_simulator::AlgaeConstPtr msg);
+
+    /**
+     * \brief  Updates the collision world
+     */
+    void update_coll_world();
 
 
 };

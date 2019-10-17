@@ -7,6 +7,8 @@
  */
 
 #include "camera_nodelet.hpp"
+#include "farm_simulator/Algae.h"
+#include "reactphysics3d.h"
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 #include <csignal>
@@ -45,12 +47,23 @@ void CameraNodelet::onInit()
   sigaction(SIGINT, &sigIntHandler, NULL);
 
   // ROS parameters
-  private_nh_.param<float>("camera_freq_", camera_freq_, 1.0);
+  private_nh_.param<float>("camera_freq", camera_freq_, 1.0);
+
+  // ROS subscribers
+  algae_sub_ = private_nh_.subscribe<farm_simulator::Algae>("algae", 1, boost::bind(&CameraNodelet::algae_cb, this, _1));
+
+  // Other parameters
+  algae_msg_received_ = false;
+
+  // Initialise collision world
+  // world_settings_.defaultVelocitySolverNbIterations = 20;
+  // world_settings_.isSleepingEnabled = false;
+  rp3d::CollisionWorld coll_world_(world_settings_);
 
 
   // Main loop
   main_timer_ = private_nh_.createTimer(
-    ros::Duration(1/1.0), &CameraNodelet::main_cb, this
+    ros::Duration(1/camera_freq_), &CameraNodelet::main_cb, this
   );
 }
 
@@ -60,13 +73,27 @@ void CameraNodelet::main_cb(const ros::TimerEvent &timer_event)
   if (!ros::ok() || ros::isShuttingDown() || b_sigint_)
     return;
 
-  cout << "CameraNodelet cb" << endl;
+  if (algae_msg_received_)
+    update_coll_world();
 }
 
 
 void CameraNodelet::sigint_handler(int s) {
   b_sigint_ = 1;
   main_timer_.stop();
+}
+
+
+void CameraNodelet::algae_cb(const farm_simulator::AlgaeConstPtr msg)
+{
+  last_algae_msg_ = msg;
+  algae_msg_received_ = true;
+}
+
+
+void CameraNodelet::update_collision_world()
+{
+
 }
 
 

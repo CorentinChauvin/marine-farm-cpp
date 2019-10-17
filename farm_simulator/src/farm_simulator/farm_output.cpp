@@ -1,7 +1,7 @@
 /**
  * @file
  *
- * \brief  Implementation of functions to visualise a marine farm
+ * \brief  Implementation of functions publishing farm data
  * \author Corentin Chauvin-Hameau
  * \date   2019
  */
@@ -10,6 +10,9 @@
 #include "rviz_visualisation.hpp"
 #include "farm_common.hpp"
 #include "perlin_noise.hpp"
+#include "farm_simulator/Alga.h"
+#include "farm_simulator/Algae.h"
+#include <std_msgs/Float32.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 using namespace std;
@@ -230,7 +233,7 @@ void FarmNodelet::pop_img_marker(visualization_msgs::Marker &marker,
   if (height > 0)
     width = img[0].size();
   else {
-    cout << "[farm_visualisation] Dimensions of image not valid" << endl;
+    NODELET_ERROR("[farm_output] Dimensions of image not valid");
     return;
   }
 
@@ -267,6 +270,62 @@ void FarmNodelet::pop_img_marker(visualization_msgs::Marker &marker,
       p += y;
     }
   }
+}
+
+
+void FarmNodelet::pub_algae()
+{
+  farm_simulator::Algae algae;
+  algae.algae.reserve(nbr_lines_ * nbr_algae_);
+
+  for (unsigned int k = 0; k < nbr_lines_; k++) {
+    const AlgaeLine *al = &algae_lines_[k];
+
+    tf2::Vector3 X1 = al->line.p1;
+    tf2::Vector3 X2 = al->line.p2;
+    tf2::Vector3 z(0, 0, 1);
+    tf2::Vector3 y = (X2-X1) / tf2::tf2Distance(X1, X2);
+    tf2::Vector3 x = tf2::tf2Cross(y, z);
+
+    for (unsigned int l = 0; l < al->algae.size(); l++) {
+      farm_simulator::Alga alga;
+
+      // Get the position of the alga
+      tf2::Vector3 X = al->algae[l].position;
+      float psi = al->algae[l].orientation;
+      float H = al->algae[l].length;
+      float W = al->algae[l].width;
+
+      tf2::Vector3 p1 = X - W/2*y;
+      tf2::Vector3 p2 = X + W/2*y;
+      tf2::Vector3 p3 = p2 - H*(cos(psi)*z - sin(psi)*x);
+      tf2::Vector3 p4 = p1 - H*(cos(psi)*z - sin(psi)*x);
+
+      alga.p1 = vector3_to_point32(p1);
+      alga.p2 = vector3_to_point32(p2);
+      alga.p3 = vector3_to_point32(p3);
+      alga.p4 = vector3_to_point32(p4);
+
+      // Get the disease heatmap of the alga
+      int n_height = height_disease_heatmap_;
+      int n_width = width_disease_heatmap_;
+
+      alga.disease_heatmap.resize(n_height);
+      for (unsigned int i = 0; i < n_height; i++)
+        alga.disease_heatmap[i].array.resize(n_width);
+
+      for (unsigned int i = 0; i < n_height; i++) {
+        for (unsigned int j = 0; j < n_width; j++) {
+          alga.disease_heatmap[i].array[j] = al->algae[l].disease_heatmap[i][j];
+        }
+      }
+
+      // Add the alga
+      algae.algae.emplace_back(alga);
+    }
+  }
+
+  algae_pub_.publish(algae);
 }
 
 

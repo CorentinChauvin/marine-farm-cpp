@@ -15,19 +15,34 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   geometry_msgs
+  message_generation
   tf2_geometry_msgs
   visualization_msgs
   dynamic_reconfigure
-  reactphysics3d
 )
 
 generate_dynamic_reconfigure_options(
   cfg/farm_simulator.cfg
 )
 
+add_message_files(
+  FILES
+  Float32Array.msg
+  Alga.msg
+  Algae.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+    geometry_msgs
+    std_msgs
+)
+
 catkin_package(
-  INCLUDE_DIRS include
-  CATKIN_DEPENDS nodelet roscpp std_msgs
+  INCLUDE_DIRS
+    include
+  CATKIN_DEPENDS
+    nodelet roscpp std_msgs geometry_msgs message_runtime
 )
 
 # add_compile_options(-pg)
@@ -47,7 +62,7 @@ include_directories(
 add_library(farm_nodelet
   src/farm_simulator/farm_nodelet.cpp
   src/farm_simulator/farm_initialisation.cpp
-  src/farm_simulator/farm_visualisation.cpp
+  src/farm_simulator/farm_output.cpp
   src/farm_simulator/farm_common.cpp
   src/farm_simulator/rviz_visualisation.cpp
   src/perlin_noise/perlin_noise.cpp

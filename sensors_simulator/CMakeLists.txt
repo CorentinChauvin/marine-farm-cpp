@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   nodelet
   roscpp
   reactphysics3d
+  farm_simulator
 )
 
 catkin_package(

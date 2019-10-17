@@ -49,6 +49,7 @@ namespace mfcpp {
       ros::NodeHandle private_nh_;    ///<  Private node handler (for parameters)
       dynamic_reconfigure::Server<farm_simulator::FarmSimulatorConfig> reconf_srv_;  ///<  Dynamic reconfigure server
       ros::Publisher rviz_pub_;       ///<  ROS publisher for Rviz
+      ros::Publisher algae_pub_;      ///<  ROS publisher for the algae
       std::vector<AlgaeLine> algae_lines_;  ///<  Vector of all the algae in the farm
       bool reconfigure_initialised_;  ///<  Whether the dynamic reconfigure callback has been called once
       bool init_done_;  ///<  Whether the farm initialisation has been done
@@ -114,6 +115,11 @@ namespace mfcpp {
        */
       void reconfigure_cb(farm_simulator::FarmSimulatorConfig &config,
         uint32_t level);
+
+      /**
+       * \brief  Publishes the position and heatmap of the algae
+       */
+      void pub_algae();
 
 
       /// \name  Initialisation functions

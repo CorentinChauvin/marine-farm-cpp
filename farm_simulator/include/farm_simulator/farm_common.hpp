@@ -11,6 +11,7 @@
 
 #include <tf2/LinearMath/Vector3.h>
 #include <tf2/LinearMath/Quaternion.h>
+#include <geometry_msgs/Point32.h>
 #include <iostream>
 #include <vector>
 
@@ -89,6 +90,23 @@ namespace mfcpp {
    * \return  Output stream
    */
   std::ostream &operator<<(std::ostream &stream, const tf2::Vector3 &v);
+
+  /**
+   * \brief  Convert a tf2::Vector3 to a geometry_msgs::Point32
+   *
+   * \note   tf2::ToMsg() implements a conversion to Point, but not Point32
+   * \param p  Vector3 to convert
+   * \return  Converted Point32
+   */
+  inline geometry_msgs::Point32 vector3_to_point32(tf2::Vector3 p)
+  {
+    geometry_msgs::Point32 pt;
+    pt.x = p.getX();
+    pt.y = p.getY();
+    pt.z = p.getZ();
+
+    return pt;
+  }
 
   /**
    * \brief  Draw a random number from a Gaussian distribution

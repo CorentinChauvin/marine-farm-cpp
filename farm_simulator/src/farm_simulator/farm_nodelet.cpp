@@ -10,10 +10,12 @@
 #include "rviz_visualisation.hpp"
 #include "farm_common.hpp"
 #include "farm_simulator/FarmSimulatorConfig.h"
-// #include "perlin_noise.hpp"
+#include "farm_simulator/Algae.h"
 #include <dynamic_reconfigure/server.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
+#include <geometry_msgs/Point.h>
+#include <geometry_msgs/Point32.h>
 #include <std_msgs/ColorRGBA.h>
 #include <pluginlib/class_list_macros.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -102,7 +104,8 @@ void FarmNodelet::onInit()
   init_done_ = false;
 
   // ROS publishers
-  rviz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("farm", 0);
+  algae_pub_ = private_nh_.advertise<farm_simulator::Algae>("algae", 0);
+  rviz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("farm_makers", 0);
 
   // Create algae lines
   init_timer_ = private_nh_.createTimer(
@@ -124,6 +127,7 @@ void FarmNodelet::main_cb(const ros::TimerEvent &timer_event)
 
   if (init_done_) {
     pub_rviz_markers(1/main_loop_freq_);
+    pub_algae();
   }
 }
 

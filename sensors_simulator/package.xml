@@ -13,10 +13,13 @@
   <build_depend>roscpp</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>reactphysics3d</build_depend>
+  <build_depend>farm_simulator</build_depend>
   <build_export_depend>nodelet</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
   <exec_depend>nodelet</exec_depend>
   <exec_depend>roscpp</exec_depend>
+  <exec_depend>farm_simulator</exec_depend>
+
 
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml" />

@@ -34,19 +34,13 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        ocean:
-          Value: true
-        world:
-          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        world:
-          ocean:
-            {}
+        {}
       Update Interval: 0
       Value: true
     - Alpha: 0.100000001
@@ -87,10 +81,13 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /farm
+      Marker Topic: /farm_makers
       Name: Farm
       Namespaces:
-        {}
+        algae: true
+        anchors: true
+        buoys: true
+        ropes: true
       Queue Size: 100
       Value: true
     - Angle Tolerance: 0.100000001
