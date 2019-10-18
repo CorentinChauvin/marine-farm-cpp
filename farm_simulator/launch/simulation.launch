@@ -1,6 +1,6 @@
 <launch>
   <!-- Launchfile arguments -->
-  <arg name="rviz" value="false" />
+  <arg name="rviz" value="true" />
 
   <!-- Nodelet manager -->
   <node pkg="nodelet" type="nodelet" args="manager" name="simu_nodelet_manager" output="screen" />
@@ -10,8 +10,17 @@
   <node pkg="nodelet" type="nodelet" args="load farm_simulator/FarmNodelet simu_nodelet_manager"
     name="farm_nodelet" output="screen" />
 
+  <!-- Robot simulation -->
+  <rosparam file="$(find robot_simulator)/config/robot_simulator.yaml" command="load" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_world_ocean" args="0 0 0 0 0 3.14159265359 world ocean" />
+
+  <node name="robot_simulator" type="robot_simulator" pkg="robot_simulator"
+    output="screen" />
+
   <!-- Sensors simulation -->
   <rosparam file="$(find sensors_simulator)/config/sensors_simulator.yaml" command="load" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_base_camera" args="0 0 0 -1.5707963267948966 0 0 base_link camera" />
+
   <node pkg="nodelet" type="nodelet" args="load sensors_simulator/CameraNodelet simu_nodelet_manager"
     name="camera_nodelet" output="screen">
     <remap from="/camera_nodelet/algae" to="/farm_nodelet/algae" />

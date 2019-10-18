@@ -2,11 +2,14 @@
 # Alga message
 #
 
-# Position of the corners of the alga
-geometry_msgs/Point32 p1
-geometry_msgs/Point32 p2
-geometry_msgs/Point32 p3
-geometry_msgs/Point32 p4
+# Position of the top left hand corner of the alga
+geometry_msgs/Point32 position
 
-# Heatmap
+# Orientation
+geometry_msgs/Quaternion orientation
+
+# Dimensions along the different axes
+geometry_msgs/Point32 dimensions
+
+# Disease heatmap
 Float32Array[] disease_heatmap

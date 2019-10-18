@@ -11,9 +11,12 @@
 
 #include "farm_simulator/Algae.h"
 #include "reactphysics3d.h"
+#include <tf2_ros/transform_listener.h>
+#include <geometry_msgs/Transform.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
 #include <csignal>
+#include <string>
 
 
 namespace mfcpp {
@@ -42,13 +45,22 @@ class CameraNodelet: public nodelet::Nodelet {
     ros::NodeHandle nh_;          ///<  Node handler (for topics and services)
     ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
     ros::Subscriber algae_sub_;   ///<  Subscriber for the algae of the farm
+    tf2_ros::Buffer tf_buffer_;
+    tf2_ros::TransformListener tf_listener_;
+
     farm_simulator::AlgaeConstPtr last_algae_msg_;  ///<  Last algae message
     bool algae_msg_received_;  ///<  Whether an algae message has been received
+    geometry_msgs::Transform camera_tf_;  ///<  Transform of the camera in the world
+
     rp3d::CollisionWorld coll_world_;     ///<  Collision world
     rp3d::WorldSettings world_settings_;  ///<  Collision world settings
+    std::vector<rp3d::CollisionBody*> coll_bodies_;  ///<  Collision bodies
+    std::vector<std::unique_ptr<rp3d::BoxShape>> coll_shapes_;  ///<  Collision shapes of the bodies
 
     // ROS parameters
     float camera_freq_;  ///<  Frequency of the sensor
+    std::string fixed_frame_;   ///<  Frame in which the pose is expressed
+    std::string camera_frame_;  ///<  Frame of the camera
 
 
     /**
@@ -74,6 +86,13 @@ class CameraNodelet: public nodelet::Nodelet {
      * \brief  Updates the collision world
      */
     void update_coll_world();
+
+    /**
+     * \brief  Gets tf transform of the camera
+     *
+     * \return  Whether a transform has been received
+     */
+    bool get_camera_tf();
 
 
 };

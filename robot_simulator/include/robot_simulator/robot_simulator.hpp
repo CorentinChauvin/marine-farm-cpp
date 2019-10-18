@@ -43,7 +43,8 @@ class RobotSimulator {
     // Private members
     ros::NodeHandle nh_;         ///<  ROS node handler
     ros::Subscriber input_sub_;  ///< ROS subscriber for the control input
-    ros::Publisher odom_publisher_;  ///<  ROS publisher for the odometry output
+    ros::Publisher odom_pub_;    ///<  ROS publisher for the odometry output
+    ros::Publisher rviz_pub_;    ///<  ROS publisher for rviz markers
     tf2_ros::TransformBroadcaster tf_br_;  ///<  Tf broadcaster
 
     RobotModel robot_model_;        ///<  Robot model
@@ -51,9 +52,13 @@ class RobotSimulator {
     RobotModel::input_type input_;  ///<  Current control input
 
     // ROS parameters
-    double update_freq_;  ///<  State update frequency
+    float update_freq_;   ///<  State update frequency
+    std::string fixed_frame_;  ///<  Frame in which the pose is expressed
+    std::string robot_frame_;  ///<  Frame of the robot
+    float robot_length_;  ///<  Length of the robot (assuming cylindrical shape)
+    float robot_radius_;  ///<  Radius of the robot (assuming cylindrical shape)
     int nbr_int_steps_;   ///<  Initial number of integration steps during the update
-    double bnd_delta_m_;  ///<  Bound on delta_m (ballast control)
+    float bnd_delta_m_;   ///<  Bound on delta_m (ballast control)
     RobotModel::input_type bnd_input_;  ///<  Bounds on the control input
 
     /**

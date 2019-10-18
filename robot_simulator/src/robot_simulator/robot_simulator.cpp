@@ -9,12 +9,13 @@
 #include "robot_simulator.hpp"
 #include "robot_model/robot_model.hpp"
 #include "robot_simulator/Command.h"
+#include <visualization_msgs/Marker.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_datatypes.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <ros/ros.h>
-
+#include <string>
 #include <vector>
 
 using namespace std;
@@ -40,15 +41,20 @@ void RobotSimulator::init_node()
   // ROS parameters
   vector<double> model_csts;  // model constants
 
-  nh_.param<double>("update_freq", update_freq_, 1.0);
+  nh_.param<float>("update_freq", update_freq_, 1.0);
+  nh_.param<string>("fixed_frame", fixed_frame_, "ocean");
+  nh_.param<string>("robot_frame", robot_frame_, "base_link");
+  nh_.param<float>("robot_length", robot_length_, 1.0);
+  nh_.param<float>("robot_radius", robot_radius_, 0.3);
   nh_.param<int>("nbr_int_steps", nbr_int_steps_, 10);
   nh_.param<vector<double>>("model_constants", model_csts, vector<double>(11, 0.0));
   nh_.param<vector<double>>("init_state", state_, vector<double>(13, 0.0));
-  nh_.param<double>("bnd_delta_m", bnd_delta_m_, 0.02);
+  nh_.param<float>("bnd_delta_m", bnd_delta_m_, 0.02);
   nh_.param<vector<double>>("bnd_input", bnd_input_, vector<double>(4, 0.0));
 
   // ROS publishers
-  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>("odom_output", 1);
+  odom_pub_ = nh_.advertise<nav_msgs::Odometry>("odom_output", 1);
+  rviz_pub_ = nh_.advertise<visualization_msgs::Marker>("rviz_markers", 1);
 
   // ROS subscribers
   input_sub_ = nh_.subscribe<robot_simulator::Command>("input", 1, &RobotSimulator::input_cb, this);
@@ -72,8 +78,6 @@ void RobotSimulator::run_node()
 
     update_state(dt);
     publish_state();
-    cout << "---" << endl;
-    disp_state();
 
     loop_rate.sleep();
   }
@@ -141,13 +145,13 @@ void RobotSimulator::publish_state()
   odom.twist.twist.angular.y = state_[10];
   odom.twist.twist.angular.z = state_[11];
 
-  odom_publisher_.publish(odom);
+  odom_pub_.publish(odom);
 
   // Broadcast transform
   geometry_msgs::TransformStamped transform;
   transform.header.stamp = ros::Time::now();
-  transform.header.frame_id = "ocean";
-  transform.child_frame_id = "base_link";
+  transform.header.frame_id = fixed_frame_;
+  transform.child_frame_id = robot_frame_;
   transform.transform.translation.x = odom.pose.pose.position.x;
   transform.transform.translation.y = odom.pose.pose.position.y;
   transform.transform.translation.z = odom.pose.pose.position.z;
@@ -156,6 +160,31 @@ void RobotSimulator::publish_state()
   transform.transform.rotation.z = odom.pose.pose.orientation.z;
   transform.transform.rotation.w = odom.pose.pose.orientation.w;
   tf_br_.sendTransform(transform);
+
+  // Publish Rviz marker
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = robot_frame_;
+  marker.header.stamp = ros::Time::now();
+  marker.ns = "robot";
+  marker.lifetime = ros::Duration(1/update_freq_);
+  marker.color.r = 0.4;
+  marker.color.g = 0.4;
+  marker.color.b = 0.4;
+  marker.color.a = 1.0;
+
+  marker.type = visualization_msgs::Marker::CYLINDER;
+  marker.action = visualization_msgs::Marker::ADD;
+
+  marker.pose.orientation.x = 0;
+  marker.pose.orientation.y = 0.7071068;
+  marker.pose.orientation.z = 0;
+  marker.pose.orientation.w = 0.7071068;
+
+  marker.scale.x = 2*robot_radius_;
+  marker.scale.y = 2*robot_radius_;
+  marker.scale.z = robot_length_;
+
+  rviz_pub_.publish(marker);
 }
 
 

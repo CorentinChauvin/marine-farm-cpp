@@ -1,2 +1,4 @@
 camera_nodelet:
   camera_freq: 1.0  # Frequency of the camera (Hz)
+  fixed_frame: "ocean"
+  robot_frame: "camera"

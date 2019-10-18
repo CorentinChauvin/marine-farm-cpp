@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   reactphysics3d
   farm_simulator
+  tf2
+  tf2_ros
 )
 
 catkin_package(

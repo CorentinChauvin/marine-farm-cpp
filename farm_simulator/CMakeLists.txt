@@ -71,6 +71,7 @@ add_library(farm_nodelet
 add_dependencies(farm_nodelet
   ${catkin_EXPORTED_TARGETS}
   ${PROJECT_NAME}_gencfg
+  ${PROJECT_NAME}_generate_messages_cpp
 )
 
 target_link_libraries(farm_nodelet ${catkin_LIBRARIES})

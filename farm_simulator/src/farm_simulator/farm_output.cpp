@@ -301,23 +301,33 @@ void FarmNodelet::pub_algae()
     for (unsigned int l = 0; l < al->algae.size(); l++) {
       farm_simulator::Alga alga;
 
-      // Get the position of the alga
-      tf2::Vector3 X = al->algae[l].position;
+      // Set the orientation of the alga
       float psi = al->algae[l].orientation;
       float H = al->algae[l].length;
       float W = al->algae[l].width;
 
-      tf2::Vector3 p1 = X - W/2*y1;
-      tf2::Vector3 p2 = X + W/2*y1;
-      tf2::Vector3 p3 = p2 - H*(cos(psi)*z1 - sin(psi)*x1);
-      tf2::Vector3 p4 = p1 - H*(cos(psi)*z1 - sin(psi)*x1);
+      tf2::Vector3 x3 = -cos(psi)*x1 + sin(psi)*y1;
+      tf2::Vector3 y3 = y1;
+      tf2::Vector3 z3 = -cos(psi)*z1 - sin(psi)*x1;
 
-      alga.p1 = vector3_to_point32(p1);
-      alga.p2 = vector3_to_point32(p2);
-      alga.p3 = vector3_to_point32(p3);
-      alga.p4 = vector3_to_point32(p4);
+      tf2::Matrix3x3 rotation;
+      rotation.setValue(x3.getX(), y3.getX(), z3.getX(),
+                        x3.getY(), y3.getY(), z3.getY(),
+                        x3.getZ(), y3.getZ(), z3.getZ());
+      tf2::Quaternion quati;
+      rotation.getRotation(quati);
+      alga.orientation = tf2::toMsg(quati);
 
-      // Get the disease heatmap of the alga
+      // Set the position of the alga
+      tf2::Vector3 X = al->algae[l].position;
+      alga.position = vector3_to_point32(X - W/2*y1);
+
+      // Set the dimensions of the alga
+      alga.dimensions.x = H;
+      alga.dimensions.y = W;
+      alga.dimensions.z = thickness_algae_;
+
+      // Set the disease heatmap of the alga
       int n_height = height_disease_heatmap_;
       int n_width = width_disease_heatmap_;
 

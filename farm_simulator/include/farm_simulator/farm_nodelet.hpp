@@ -80,7 +80,8 @@ namespace mfcpp {
       int nbr_algae_;         ///<  Number of algae per line
       float width_algae_;     ///<  Mean of the width of an alga
       float length_algae_;    ///<  Mean of the length of an alga
-      float psi_algae_;       ///<  Mean of the algae orientation
+      float thickness_algae_;   ///<  Thickness of an alga (for collision detection)
+      float psi_algae_;         ///<  Mean of the algae orientation
       float std_width_algae_;   ///<  Standard deviation on algae width
       float std_length_algae_;  ///<  Standard deviation on algae length
       float std_psi_algae_;     ///<  Standard deviation on algae orientation
