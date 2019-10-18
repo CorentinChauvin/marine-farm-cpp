@@ -86,8 +86,8 @@ void FarmNodelet::onInit()
 
   private_nh_.param<bool>("randomise_algae", randomise_algae_, false);
   private_nh_.param<int>("nbr_algae", nbr_algae_, 1);
-  private_nh_.param<float>("width_alga", width_algae_, 0.2);
-  private_nh_.param<float>("length_alga", length_algae_, 1.0);
+  private_nh_.param<float>("width_algae", width_algae_, 0.2);
+  private_nh_.param<float>("length_algae", length_algae_, 1.0);
   private_nh_.param<float>("psi_algae", psi_algae_, 0.0);
   private_nh_.param<float>("std_width_algae", std_width_algae_, 0.05);
   private_nh_.param<float>("std_length_algae", std_length_algae_, 0.2);

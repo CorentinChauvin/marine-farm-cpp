@@ -149,9 +149,14 @@ void FarmNodelet::pop_algae_marker(visualization_msgs::Marker &marker,
 
     tf2::Vector3 X1 = al->line.p1;
     tf2::Vector3 X2 = al->line.p2;
-    tf2::Vector3 z(0, 0, 1);
-    tf2::Vector3 y = (X2-X1) / tf2::tf2Distance(X1, X2);
-    tf2::Vector3 x = tf2::tf2Cross(y, z);
+    tf2::Vector3 z0(0, 0, 1);
+    tf2::Vector3 y0(X2.getX()-X1.getX(), X2.getY()-X1.getY(), 0);
+    y0 /= tf2::tf2Distance(y0, tf2::Vector3(0, 0, 0));
+    float delta = asin((X2.getZ()-X1.getZ()) / length_lines_);
+
+    tf2::Vector3 z1 = cos(delta)*z0 - sin(delta)*y0;
+    tf2::Vector3 y1 = (X2-X1) / tf2::tf2Distance(X1, X2);
+    tf2::Vector3 x1 = tf2::tf2Cross(y1, z1);
 
     for (unsigned int k = 0; k < al->algae.size(); k++) {
       tf2::Vector3 X = al->algae[k].position;
@@ -159,10 +164,10 @@ void FarmNodelet::pop_algae_marker(visualization_msgs::Marker &marker,
       float H = al->algae[k].length;
       float W = al->algae[k].width;
 
-      tf2::Vector3 p1 = X - W/2*y;
-      tf2::Vector3 p2 = X + W/2*y;
-      tf2::Vector3 p3 = p2 - H*(cos(psi)*z - sin(psi)*x);
-      tf2::Vector3 p4 = p1 - H*(cos(psi)*z - sin(psi)*x);
+      tf2::Vector3 p1 = X - W/2*y1;
+      tf2::Vector3 p2 = X + W/2*y1;
+      tf2::Vector3 p3 = p2 - H*(cos(psi)*z1 - sin(psi)*x1);
+      tf2::Vector3 p4 = p1 - H*(cos(psi)*z1 - sin(psi)*x1);
 
       // Add the rectangular alga as two triangles
       geometry_msgs::Point point;
@@ -283,9 +288,15 @@ void FarmNodelet::pub_algae()
 
     tf2::Vector3 X1 = al->line.p1;
     tf2::Vector3 X2 = al->line.p2;
-    tf2::Vector3 z(0, 0, 1);
-    tf2::Vector3 y = (X2-X1) / tf2::tf2Distance(X1, X2);
-    tf2::Vector3 x = tf2::tf2Cross(y, z);
+    tf2::Vector3 z0(0, 0, 1);
+    tf2::Vector3 y0(X2.getX()-X1.getX(), X2.getY()-X1.getY(), 0);
+    y0 /= tf2::tf2Distance(y0, tf2::Vector3(0, 0, 0));
+    float delta = asin((X2.getZ()-X1.getZ()) / length_lines_);
+
+    tf2::Vector3 z1 = cos(delta)*z0 - sin(delta)*y0;
+    tf2::Vector3 y1 = (X2-X1) / tf2::tf2Distance(X1, X2);
+    tf2::Vector3 x1 = tf2::tf2Cross(y1, z1);
+
 
     for (unsigned int l = 0; l < al->algae.size(); l++) {
       farm_simulator::Alga alga;
@@ -296,10 +307,10 @@ void FarmNodelet::pub_algae()
       float H = al->algae[l].length;
       float W = al->algae[l].width;
 
-      tf2::Vector3 p1 = X - W/2*y;
-      tf2::Vector3 p2 = X + W/2*y;
-      tf2::Vector3 p3 = p2 - H*(cos(psi)*z - sin(psi)*x);
-      tf2::Vector3 p4 = p1 - H*(cos(psi)*z - sin(psi)*x);
+      tf2::Vector3 p1 = X - W/2*y1;
+      tf2::Vector3 p2 = X + W/2*y1;
+      tf2::Vector3 p3 = p2 - H*(cos(psi)*z1 - sin(psi)*x1);
+      tf2::Vector3 p4 = p1 - H*(cos(psi)*z1 - sin(psi)*x1);
 
       alga.p1 = vector3_to_point32(p1);
       alga.p2 = vector3_to_point32(p2);
