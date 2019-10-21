@@ -320,12 +320,12 @@ void FarmNodelet::pub_algae()
 
       // Set the position of the alga
       tf2::Vector3 X = al->algae[l].position;
-      alga.position = vector3_to_point32(X - W/2*y1);
+      alga.position = vector3_to_point32(X + H/2*z3);
 
       // Set the dimensions of the alga
-      alga.dimensions.x = H;
+      alga.dimensions.x = thickness_algae_;
       alga.dimensions.y = W;
-      alga.dimensions.z = thickness_algae_;
+      alga.dimensions.z = H;
 
       // Set the disease heatmap of the alga
       int n_height = height_disease_heatmap_;

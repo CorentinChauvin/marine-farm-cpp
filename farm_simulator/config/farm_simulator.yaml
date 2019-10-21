@@ -1,8 +1,8 @@
 farm_nodelet:
-  main_loop_freq: 5.0  # frequency of the main loop
+  main_loop_freq: 0.5  # frequency of the main loop
 
   # Algae lines generation
-  nbr_lines: 3            # number of algae lines
+  nbr_lines: 10            # number of algae lines
   offset_lines: 3.3       # lateral distance (m) between each line
   length_lines: 30        # length (m) of each line
   thickness_ropes: 0.05   # diameter (m) of each rope
@@ -24,7 +24,7 @@ farm_nodelet:
   # Algae generation
   randomise_algae: false   # whether to randomise the size and orientation of algae
   alga_miss_rate: 0.2     # probability to have a missing alga
-  nbr_algae: 100          # max nbr of algae per line
+  nbr_algae: 1000          # max nbr of algae per line
   width_algae: 0.2        # mean of the width of an alga
   length_algae: 2.0       # mean of the length of an alga
   thickness_algae: 0.01   # thickness of an alga (for collision detection)

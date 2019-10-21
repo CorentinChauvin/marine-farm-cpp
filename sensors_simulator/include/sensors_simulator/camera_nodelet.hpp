@@ -13,7 +13,7 @@
 #include "farm_simulator/Algae.h"
 #include "reactphysics3d.h"
 #include <tf2_ros/transform_listener.h>
-#include <geometry_msgs/Transform.h>
+#include <geometry_msgs/TransformStamped.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
 #include <csignal>
@@ -37,6 +37,21 @@ class CameraNodelet: public nodelet::Nodelet {
     virtual void onInit();
 
   private:
+    /**
+     * \brief  Callback class for raycasting
+     */
+    class RaycastCallback: public rp3d::RaycastCallback
+    {
+      public:
+        RaycastCallback(CameraNodelet *parent);
+        virtual rp3d::decimal notifyRaycastHit(const rp3d::RaycastInfo& info);
+
+      private:
+        /// Parent CameraNodelet instance
+        CameraNodelet *parent_;
+    };
+
+
     // Static members
     // Note: the timers need to be static since stopped by the SIGINT callback
     static sig_atomic_t volatile b_sigint_;  ///<  Whether SIGINT signal has been received
@@ -52,12 +67,14 @@ class CameraNodelet: public nodelet::Nodelet {
 
     farm_simulator::AlgaeConstPtr last_algae_msg_;  ///<  Last algae message
     bool algae_msg_received_;  ///<  Whether an algae message has been received
-    geometry_msgs::Transform camera_tf_;  ///<  Transform of the camera in the world
+    geometry_msgs::TransformStamped camera_tf_;  ///<  Transform from fixed frame to camera
 
+    bool world_init_;   ///<  Whether the collision world has been initialised
     rp3d::CollisionWorld coll_world_;     ///<  Collision world
     rp3d::WorldSettings world_settings_;  ///<  Collision world settings
     std::vector<rp3d::CollisionBody*> coll_bodies_;  ///<  Collision bodies
     std::vector<std::unique_ptr<rp3d::BoxShape>> coll_shapes_;  ///<  Collision shapes of the bodies
+    RaycastCallback raycast_cb_;
 
     // ROS parameters
     float camera_freq_;  ///<  Frequency of the sensor
@@ -95,7 +112,7 @@ class CameraNodelet: public nodelet::Nodelet {
     void update_coll_world();
 
     /**
-     * \brief  Gets tf transform of the camera
+     * \brief  Gets tf transform from fixed frame to camera
      *
      * \return  Whether a transform has been received
      */
@@ -103,11 +120,13 @@ class CameraNodelet: public nodelet::Nodelet {
 
     /**
      * \brief  Publishes a Rviz marker for the camera field of view
-     *
-     * \param args  Arguments for filling the ROS message
      */
-    void publish_fov(MarkerArgs args);
+    void publish_rviz_fov();
 
+    /**
+     * \brief  Publishes camera output
+     */
+    void publish_output();
 
 };
 

@@ -12,6 +12,7 @@
 #include "reactphysics3d.h"
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Point.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/transform_listener.h>
@@ -20,6 +21,8 @@
 #include <csignal>
 #include <string>
 #include <iostream>
+
+#include <ctime>
 
 using namespace std;
 
@@ -38,7 +41,8 @@ ros::Timer CameraNodelet::main_timer_ = ros::Timer();
  * Definition of member functions
  */
 CameraNodelet::CameraNodelet():
-  tf_listener_(tf_buffer_)
+  tf_listener_(tf_buffer_),
+  raycast_cb_(this)
 {
 
 }
@@ -78,6 +82,7 @@ void CameraNodelet::onInit()
 
   // Other parameters
   algae_msg_received_ = false;
+  world_init_ = false;
 
   // Initialise collision world
   rp3d::CollisionWorld coll_world_(world_settings_);
@@ -92,26 +97,21 @@ void CameraNodelet::onInit()
 
 void CameraNodelet::main_cb(const ros::TimerEvent &timer_event)
 {
+  clock_t begin = clock();
   if (!ros::ok() || ros::isShuttingDown() || b_sigint_)
     return;
 
   if (algae_msg_received_)
     update_coll_world();
 
+  cout <<  "Update time: " << double(clock() - begin) / CLOCKS_PER_SEC << endl;
+  begin = clock();
   if (get_camera_tf()) {
-    // Publish camera field of view on Rviz
-    MarkerArgs args;
-    args.stamp = ros::Time::now();
-    args.frame_id = camera_frame_;
-    args.ns = "FieldOfView";
-    args.duration = ros::Duration(1/camera_freq_);
-    args.color.r = fov_color_[0];
-    args.color.g = fov_color_[1];
-    args.color.b = fov_color_[2];
-    args.color.a = fov_color_[3];
-
-    publish_fov(args);
+    publish_rviz_fov();
+    publish_output();
   }
+
+  cout <<  "Collision time: " << double(clock() - begin) / CLOCKS_PER_SEC << endl;
 }
 
 
@@ -131,36 +131,58 @@ void CameraNodelet::algae_cb(const farm_simulator::AlgaeConstPtr msg)
 void CameraNodelet::update_coll_world()
 {
   // Clean collision world (FIXME: probably not optimal)
-  unsigned int n = coll_bodies_.size();
+  // unsigned int n = coll_bodies_.size();
+  //
+  // for (unsigned int k = 0; k < n; k++) {
+  //   coll_world_.destroyCollisionBody(coll_bodies_[k]);
+  // }
 
-  for (unsigned int k = 0; k < n; k++) {
-    // cout << ((coll_bodies_[k]->getTransform()).getPosition()).y << endl;
-    coll_world_.destroyCollisionBody(coll_bodies_[k]);
+  // Add bodies to collision world if world not initialised
+  if (!world_init_) {
+    unsigned int n = last_algae_msg_->algae.size();
+    coll_bodies_.resize(n);
+    coll_shapes_.resize(n);
+
+    for (unsigned int k = 0; k < n; k++) {
+      const farm_simulator::Alga *al = &last_algae_msg_->algae[k];
+
+      // Creating a collision body
+      rp3d::Vector3 pos(al->position.x, al->position.y, al->position.z);
+      rp3d::Quaternion orient(al->orientation.x, al->orientation.y,
+        al->orientation.z, al->orientation.w);
+
+      rp3d::Transform transform(pos, orient);
+      rp3d::CollisionBody* body = coll_world_.createCollisionBody(transform);
+      coll_bodies_[k] = body;
+
+      // Adding a collision shape to the body
+      rp3d::Vector3 half_extents(al->dimensions.x/2, al->dimensions.y/2,
+        al->dimensions.z/2);
+      coll_shapes_[k] = unique_ptr<rp3d::BoxShape>(new rp3d::BoxShape(half_extents));
+      body->addCollisionShape(coll_shapes_[k].get(), rp3d::Transform::identity());
+    }
+
+    world_init_ = true;
   }
 
-  // Add bodies to collision world
-  n = last_algae_msg_->algae.size();
-  coll_bodies_.resize(n);
-  coll_shapes_.resize(n);
+  // Update bodies' position if world already initialised
+  else {
+    unsigned int n = last_algae_msg_->algae.size();
 
-  for (unsigned int k = 0; k < n; k++) {
-    const farm_simulator::Alga *al = &last_algae_msg_->algae[k];
+    for (unsigned int k = 0; k < n; k++) {
+      const farm_simulator::Alga *al = &last_algae_msg_->algae[k];
 
-    // Creating a collision body
-    rp3d::Vector3 pos(al->position.x, al->position.y, al->position.z);
-    rp3d::Quaternion orient(al->orientation.x, al->orientation.y,
-      al->orientation.z, al->orientation.w);
+      // Creating a collision body
+      rp3d::Vector3 pos(al->position.x, al->position.y, al->position.z);
+      rp3d::Quaternion orient(al->orientation.x, al->orientation.y,
+        al->orientation.z, al->orientation.w);
 
-    rp3d::Transform transform(pos, orient);
-    rp3d::CollisionBody* body = coll_world_.createCollisionBody(transform);
-    coll_bodies_[k] = body;
-
-    // Adding a collision shape to the body
-    rp3d::Vector3 half_extents(al->dimensions.x/2, al->dimensions.y/2,
-      al->dimensions.z/2);
-    coll_shapes_[k] = unique_ptr<rp3d::BoxShape>(new rp3d::BoxShape(half_extents));
-    body->addCollisionShape(coll_shapes_[k].get(), rp3d::Transform::identity());
+      rp3d::Transform transform(pos, orient);
+      coll_bodies_[k]->setTransform(transform);
+    }
   }
+
+  algae_msg_received_ = false;
 }
 
 
@@ -176,13 +198,23 @@ bool CameraNodelet::get_camera_tf()
     return false;
   }
 
-  camera_tf_ = tf.transform;
+  camera_tf_ = tf;
   return true;
 }
 
 
-void CameraNodelet::publish_fov(MarkerArgs args)
+void CameraNodelet::publish_rviz_fov()
 {
+  MarkerArgs args;
+  args.stamp = ros::Time::now();
+  args.frame_id = camera_frame_;
+  args.ns = "FieldOfView";
+  args.duration = ros::Duration(1/camera_freq_);
+  args.color.r = fov_color_[0];
+  args.color.g = fov_color_[1];
+  args.color.b = fov_color_[2];
+  args.color.a = fov_color_[3];
+
   visualization_msgs::Marker marker = rviz_marker_triangles(args);
   marker.points.reserve(18);
   marker.colors.resize(6, args.color);
@@ -229,6 +261,70 @@ void CameraNodelet::publish_fov(MarkerArgs args)
 
   // Publish the marker
   rviz_pub_.publish(marker);
+}
+
+
+void CameraNodelet::publish_output()
+{
+  // Get line in camera frame
+  tf2::Vector3 tf_origin(0, 0, 0);
+  tf2::Vector3 tf_p(0, 0, 2);
+
+  // Transform it into fixed frame
+  geometry_msgs::Pose p_origin;
+  geometry_msgs::Pose p_p;
+  tf2::toMsg(tf_origin, p_origin.position);
+  tf2::toMsg(tf_p, p_p.position);
+  p_origin.orientation.w = 1;
+  p_p.orientation.w = 1;
+
+  geometry_msgs::Pose origin;
+  geometry_msgs::Pose p;
+  tf2::doTransform(p_origin, origin, camera_tf_);
+  tf2::doTransform(p_p, p, camera_tf_);
+
+  // Raycast
+  rp3d::Vector3 start_point(origin.position.x, origin.position.y, origin.position.z);
+  rp3d::Vector3 end_point(p.position.x, p.position.y, p.position.z);
+  rp3d::Ray ray(start_point, end_point);
+
+  coll_world_.raycast(ray, &raycast_cb_);
+}
+
+
+
+CameraNodelet::RaycastCallback::RaycastCallback(CameraNodelet *parent):
+  rp3d::RaycastCallback(),
+  parent_(parent)
+{
+
+}
+
+
+rp3d::decimal CameraNodelet::RaycastCallback::notifyRaycastHit(
+  const rp3d::RaycastInfo& info) {
+  // Display the world hit point coordinates
+  // std::cout << "---" << std::endl;
+  // std::cout << "Hit point : " <<
+  //   info.worldPoint.x << " ; " <<
+  //   info.worldPoint.y << " ; " <<
+  //   info.worldPoint.z <<
+  //   std::endl;
+
+  // std::cout << info.body->getAABB().getMin().x << " ; "
+  //           << info.body->getAABB().getMin().y << " ; "
+  //           << info.body->getAABB().getMin().z << std::endl;
+  // std::cout << info.body->getAABB().getMax().x << " ; "
+  //           << info.body->getAABB().getMax().y << " ; "
+  //           << info.body->getAABB().getMax().z << std::endl;
+
+  for (unsigned int k = 0; k < parent_->coll_bodies_.size(); k++) {
+    if (parent_->coll_bodies_[k] == info.body)
+      std::cout << "k=" << k << std::endl;
+  }
+
+  // Return a fraction of 1.0 to gather all hits
+  return rp3d::decimal(0.0);
 }
 
 
