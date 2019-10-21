@@ -36,6 +36,8 @@ Visualization Manager:
         All Enabled: false
         base_link:
           Value: true
+        camera:
+          Value: true
         ocean:
           Value: true
         world:
@@ -49,7 +51,8 @@ Visualization Manager:
         world:
           ocean:
             base_link:
-              {}
+              camera:
+                {}
       Update Interval: 0
       Value: true
     - Alpha: 0.100000001
@@ -141,6 +144,14 @@ Visualization Manager:
       Topic: /robot_simulator/odom_output
       Unreliable: false
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /camera_markers
+      Name: CameraFOV
+      Namespaces:
+        FieldOfView: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -165,18 +176,18 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.0195798874
-        Y: 2.47981811
-        Z: 4.74068486e-07
+        X: -2.59786034
+        Y: -2.23777771
+        Z: 1.07011488e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.349797487
+      Pitch: 0.37979728
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 2.49850535
+      Yaw: 3.57853603
     Saved: ~
 Window Geometry:
   Displays:

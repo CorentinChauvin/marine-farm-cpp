@@ -9,6 +9,7 @@
 #ifndef CAMERA_HPP
 #define CAMERA_HPP
 
+#include "farm_simulator/rviz_visualisation.hpp"
 #include "farm_simulator/Algae.h"
 #include "reactphysics3d.h"
 #include <tf2_ros/transform_listener.h>
@@ -45,6 +46,7 @@ class CameraNodelet: public nodelet::Nodelet {
     ros::NodeHandle nh_;          ///<  Node handler (for topics and services)
     ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
     ros::Subscriber algae_sub_;   ///<  Subscriber for the algae of the farm
+    ros::Publisher rviz_pub_;     ///<  Publisher for Rviz markers
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
 
@@ -61,6 +63,11 @@ class CameraNodelet: public nodelet::Nodelet {
     float camera_freq_;  ///<  Frequency of the sensor
     std::string fixed_frame_;   ///<  Frame in which the pose is expressed
     std::string camera_frame_;  ///<  Frame of the camera
+    std::vector<float> fov_color_;  ///<  Color of the camera field of view Rviz marker
+    float focal_length_;    ///<  Focal length of the camera
+    float sensor_width_;    ///<  Width of the camera sensor
+    float sensor_height_;   ///<  Height of the camera sensor
+    float fov_distance_;    ///<  Maximum distance detected by the camera
 
 
     /**
@@ -93,6 +100,13 @@ class CameraNodelet: public nodelet::Nodelet {
      * \return  Whether a transform has been received
      */
     bool get_camera_tf();
+
+    /**
+     * \brief  Publishes a Rviz marker for the camera field of view
+     *
+     * \param args  Arguments for filling the ROS message
+     */
+    void publish_fov(MarkerArgs args);
 
 
 };

@@ -19,7 +19,7 @@
 
   <!-- Sensors simulation -->
   <rosparam file="$(find sensors_simulator)/config/sensors_simulator.yaml" command="load" />
-  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_base_camera" args="0 0 0 -1.5707963267948966 0 0 base_link camera" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_base_camera" args="0 0 0 0 0 1.5707963267948966 base_link camera" />
 
   <node pkg="nodelet" type="nodelet" args="load sensors_simulator/CameraNodelet simu_nodelet_manager"
     name="camera_nodelet" output="screen">

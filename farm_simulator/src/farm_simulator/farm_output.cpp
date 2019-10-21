@@ -141,7 +141,7 @@ void FarmNodelet::pop_ropes_marker(visualization_msgs::Marker &marker,
 void FarmNodelet::pop_algae_marker(visualization_msgs::Marker &marker,
   MarkerArgs args) const
 {
-  marker = rviz_marker_rect(args);
+  marker = rviz_marker_triangles(args);
   marker.points.reserve(2 * nbr_lines_ * nbr_algae_);
 
   for (unsigned int i = 0; i < nbr_lines_; i++) {

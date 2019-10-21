@@ -1,4 +1,10 @@
 camera_nodelet:
   camera_freq: 1.0  # Frequency of the camera (Hz)
   fixed_frame: "ocean"
-  robot_frame: "camera"
+  camera_frame: "camera"
+  fov_color: [0.0, 0.5, 0.5, 0.5]  # color of the camera field of view Rivz marker
+
+  focal_length: 2.8e-3    # focal length of the camera
+  sensor_width: 6.4e-3    # width of the camera sensor
+  sensor_height: 3.84e-3  # height of the camera sensor
+  fov_distance: 2.0  # maximum distance detected by the camera

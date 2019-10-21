@@ -115,7 +115,23 @@ visualization_msgs::Marker rviz_marker_rect(const MarkerArgs &common_args)
   marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
   marker.action = visualization_msgs::Marker::ADD;
 
-  marker.color.a = 1.0;
+  marker.scale.x = 1;
+  marker.scale.y = 1;
+  marker.scale.z = 1;
+
+  return marker;
+}
+
+
+visualization_msgs::Marker rviz_marker_triangles(const MarkerArgs &common_args)
+{
+  visualization_msgs::Marker marker;
+  fill_marker_header(marker, common_args);
+  marker.color = common_args.color;
+
+  marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
+  marker.action = visualization_msgs::Marker::ADD;
+
   marker.scale.x = 1;
   marker.scale.y = 1;
   marker.scale.z = 1;

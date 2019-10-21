@@ -86,6 +86,15 @@ namespace mfcpp {
     float height, const MarkerArgs &common_args);
 
   /**
+   * \brief  Creates a blank Rviz marker to display triangles
+   *
+   * \param common_args   Common arguments to fill ROS message
+   * \return  Corresponding Rviz marker
+   */
+  visualization_msgs::Marker rviz_marker_triangles(const MarkerArgs &common_args);
+
+
+  /**
    * \brief  Creates a blank Rviz marker to display rectangles
    *
    * The rectangles will be made of two triangles
