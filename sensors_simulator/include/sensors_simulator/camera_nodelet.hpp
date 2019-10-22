@@ -29,7 +29,7 @@ typedef std::unique_ptr<rp3d::BoxShape> box_shape_ptr;
  * \brief  Nodelet for a simulated camera
  *
  * For each pixel, the simulated sensor casts a ray. If the ray touches an alga,
- * the sensor will return the point position, and the corresponding value of
+ * the sensor will return the hit position, and the corresponding value of
  * the alga disease heatmap.
  *
  * To improve performance, two collision worlds are created:
@@ -149,9 +149,14 @@ class CameraNodelet: public nodelet::Nodelet {
     void algae_cb(const farm_simulator::AlgaeConstPtr msg);
 
     /**
-     * \brief  Updates the collision world
+     * \brief  Initialise the collision world
      */
-    void update_coll_world();
+    void init_coll_world();
+
+    /**
+     * \brief  Updates algae in the collision world
+     */
+    void update_algae();
 
     /**
      * \brief  Gets tf transform from fixed frame to camera
@@ -164,6 +169,22 @@ class CameraNodelet: public nodelet::Nodelet {
      * \brief  Publishes a Rviz marker for the camera field of view
      */
     void publish_rviz_fov();
+
+    /**
+     * \brief  Selects algae that are in field of view of the camera
+     */
+    void overlap_fov();
+
+    /**
+     * \brief  Casts a ray to get alga disease value at hit point
+     *
+     * \param aim_pt   Point towards which casting the ray (in camera frame)
+     * \param disease  Disease value of the alga on the particular hit point
+     * \param hit_pt   Hit point
+     * \return  Whether an alga has been hit
+     */
+    bool raycast_alga(const tf2::Vector3 &aim_pt, float &disease,
+      tf2::Vector3 &hit_pt);
 
     /**
      * \brief  Publishes camera output

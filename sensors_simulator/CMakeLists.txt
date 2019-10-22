@@ -3,6 +3,8 @@ project(sensors_simulator)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
+# set(CMAKE_CXX_FLAGS_DEBUG "-g -fno-omit-frame-pointer")
+# set(ROS_BUILD_TYPE Debug)
 
 
 ########################
@@ -35,6 +37,8 @@ include_directories(
 # Camera nodelet
 add_library(camera_nodelet
   src/sensors_simulator/camera_nodelet.cpp
+  src/sensors_simulator/collision.cpp
+  src/sensors_simulator/output.cpp
 )
 
 add_dependencies(camera_nodelet ${catkin_EXPORTED_TARGETS})
