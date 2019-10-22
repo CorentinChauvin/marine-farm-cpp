@@ -42,7 +42,8 @@ ros::Timer CameraNodelet::main_timer_ = ros::Timer();
  */
 CameraNodelet::CameraNodelet():
   tf_listener_(tf_buffer_),
-  raycast_cb_(this)
+  raycast_cb_(this),
+  overlap_cb_(this)
 {
 
 }
@@ -106,7 +107,7 @@ void CameraNodelet::main_cb(const ros::TimerEvent &timer_event)
 
   cout <<  "Update time: " << double(clock() - begin) / CLOCKS_PER_SEC << endl;
   begin = clock();
-  if (get_camera_tf()) {
+  if (world_init_ && get_camera_tf()) {
     publish_rviz_fov();
     publish_output();
   }
@@ -130,18 +131,28 @@ void CameraNodelet::algae_cb(const farm_simulator::AlgaeConstPtr msg)
 
 void CameraNodelet::update_coll_world()
 {
-  // Clean collision world (FIXME: probably not optimal)
-  // unsigned int n = coll_bodies_.size();
-  //
-  // for (unsigned int k = 0; k < n; k++) {
-  //   coll_world_.destroyCollisionBody(coll_bodies_[k]);
-  // }
-
   // Add bodies to collision world if world not initialised
   if (!world_init_) {
+    // Add camera FOV
+    fov_body_ = coll_world_.createCollisionBody(rp3d::Transform::identity());
+
+    float x = sensor_width_ * fov_distance_
+            / (2 * sqrt(pow(focal_length_, 2) + pow(sensor_width_, 2)/4));
+    float y = sensor_width_ * fov_distance_
+            / (2 * sqrt(pow(focal_length_, 2) + pow(sensor_height_, 2)/4));
+
+    rp3d::Vector3 fov_half_extents(x, y, fov_distance_/2);
+    fov_shape_ = unique_ptr<rp3d::BoxShape>(new rp3d::BoxShape(fov_half_extents));
+
+    rp3d::Vector3 fov_pos(0, 0, fov_distance_/2);
+    rp3d::Quaternion fov_orient(0, 0, 0, 1);
+    rp3d::Transform fov_transform(fov_pos, fov_orient);
+    fov_body_->addCollisionShape(fov_shape_.get(), fov_transform);
+
+    // Add algae
     unsigned int n = last_algae_msg_->algae.size();
-    coll_bodies_.resize(n);
-    coll_shapes_.resize(n);
+    algae_bodies_.resize(n);
+    algae_shapes_.resize(n);
 
     for (unsigned int k = 0; k < n; k++) {
       const farm_simulator::Alga *al = &last_algae_msg_->algae[k];
@@ -153,19 +164,19 @@ void CameraNodelet::update_coll_world()
 
       rp3d::Transform transform(pos, orient);
       rp3d::CollisionBody* body = coll_world_.createCollisionBody(transform);
-      coll_bodies_[k] = body;
+      algae_bodies_[k] = body;
 
       // Adding a collision shape to the body
       rp3d::Vector3 half_extents(al->dimensions.x/2, al->dimensions.y/2,
         al->dimensions.z/2);
-      coll_shapes_[k] = unique_ptr<rp3d::BoxShape>(new rp3d::BoxShape(half_extents));
-      body->addCollisionShape(coll_shapes_[k].get(), rp3d::Transform::identity());
+      algae_shapes_[k] = unique_ptr<rp3d::BoxShape>(new rp3d::BoxShape(half_extents));
+      body->addCollisionShape(algae_shapes_[k].get(), rp3d::Transform::identity());
     }
 
     world_init_ = true;
   }
 
-  // Update bodies' position if world already initialised
+  // Update bodies position if world already initialised
   else {
     unsigned int n = last_algae_msg_->algae.size();
 
@@ -178,7 +189,7 @@ void CameraNodelet::update_coll_world()
         al->orientation.z, al->orientation.w);
 
       rp3d::Transform transform(pos, orient);
-      coll_bodies_[k]->setTransform(transform);
+      algae_bodies_[k]->setTransform(transform);
     }
   }
 
@@ -266,6 +277,30 @@ void CameraNodelet::publish_rviz_fov()
 
 void CameraNodelet::publish_output()
 {
+  clock_t begin = clock();
+
+  // Update fov body transform
+  rp3d::Vector3 pos(camera_tf_.transform.translation.x,
+    camera_tf_.transform.translation.y,
+    camera_tf_.transform.translation.z);
+  rp3d::Quaternion orient(camera_tf_.transform.rotation.x,
+    camera_tf_.transform.rotation.y,
+    camera_tf_.transform.rotation.z,
+    camera_tf_.transform.rotation.w);
+
+  rp3d::Transform transform(pos, orient);
+  fov_body_->setTransform(transform);
+
+  // Check for overlaps between fov body and algae and update ray_world_
+  unsigned int n = ray_bodies_.size();
+  for (unsigned int k = 0; k < n; k++) {
+    ray_world_.destroyCollisionBody(ray_bodies_[k]);
+  }
+  ray_bodies_.resize(0);
+  ray_shapes_.resize(0);
+
+  coll_world_.testOverlap(fov_body_, &overlap_cb_);
+
   // Get line in camera frame
   tf2::Vector3 tf_origin(0, 0, 0);
   tf2::Vector3 tf_p(0, 0, 2);
@@ -288,7 +323,7 @@ void CameraNodelet::publish_output()
   rp3d::Vector3 end_point(p.position.x, p.position.y, p.position.z);
   rp3d::Ray ray(start_point, end_point);
 
-  coll_world_.raycast(ray, &raycast_cb_);
+  ray_world_.raycast(ray, &raycast_cb_);
 }
 
 
@@ -318,13 +353,43 @@ rp3d::decimal CameraNodelet::RaycastCallback::notifyRaycastHit(
   //           << info.body->getAABB().getMax().y << " ; "
   //           << info.body->getAABB().getMax().z << std::endl;
 
-  for (unsigned int k = 0; k < parent_->coll_bodies_.size(); k++) {
-    if (parent_->coll_bodies_[k] == info.body)
+  for (unsigned int k = 0; k < parent_->ray_bodies_.size(); k++) {
+    if (parent_->ray_bodies_[k] == info.body) {
       std::cout << "k=" << k << std::endl;
+    }
   }
 
   // Return a fraction of 1.0 to gather all hits
   return rp3d::decimal(0.0);
+}
+
+
+CameraNodelet::OverlapCallback::OverlapCallback(CameraNodelet *parent):
+  rp3d::OverlapCallback(),
+  parent_(parent)
+{
+
+}
+
+
+void CameraNodelet::OverlapCallback:: notifyOverlap(
+  rp3d::CollisionBody *body)
+{
+  for (unsigned int k = 0; k < parent_->algae_bodies_.size(); k++) {
+    if (parent_->algae_bodies_[k] == body) {
+      rp3d::Transform transform = body->getTransform();
+      rp3d::CollisionBody* new_body = parent_->ray_world_.createCollisionBody(transform);
+      parent_->ray_bodies_.emplace_back(new_body);
+
+      rp3d::Vector3 half_extents = parent_->algae_shapes_[k]->getExtent();
+      box_shape_ptr new_shape = box_shape_ptr(new rp3d::BoxShape(half_extents));
+
+      parent_->ray_shapes_.emplace_back(std::move(new_shape));
+      new_body->addCollisionShape(parent_->ray_shapes_.back().get(), rp3d::Transform::identity());
+
+      return;
+    }
+  }
 }
 
 
