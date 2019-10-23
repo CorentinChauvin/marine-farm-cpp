@@ -8,3 +8,5 @@ camera_nodelet:
   sensor_width: 6.4e-3    # width of the camera sensor
   sensor_height: 3.84e-3  # height of the camera sensor
   fov_distance: 2.0  # maximum distance detected by the camera
+  n_pxl_height: 20  # nbr of pixels along sensor height
+  n_pxl_width: 40   # nbr of pixels along sensor width

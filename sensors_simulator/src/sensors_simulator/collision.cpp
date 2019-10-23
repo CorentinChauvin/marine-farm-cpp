@@ -33,6 +33,8 @@ void CameraNodelet::OverlapCallback:: notifyOverlap(
 {
   for (unsigned int k = 0; k < parent_->algae_bodies_.size(); k++) {
     if (parent_->algae_bodies_[k] == body) {
+      parent_->corr_algae_.emplace_back(k);
+
       rp3d::Transform transform = body->getTransform();
       rp3d::CollisionBody* new_body = parent_->ray_world_.createCollisionBody(transform);
       parent_->ray_bodies_.emplace_back(new_body);
@@ -50,29 +52,18 @@ void CameraNodelet::OverlapCallback:: notifyOverlap(
 
 
 rp3d::decimal CameraNodelet::RaycastCallback::notifyRaycastHit(
-  const rp3d::RaycastInfo& info) {
-  // Display the world hit point coordinates
-  // std::cout << "---" << std::endl;
-  // std::cout << "Hit point : " <<
-  //   info.worldPoint.x << " ; " <<
-  //   info.worldPoint.y << " ; " <<
-  //   info.worldPoint.z <<
-  //   std::endl;
-
-  // std::cout << info.body->getAABB().getMin().x << " ; "
-  //           << info.body->getAABB().getMin().y << " ; "
-  //           << info.body->getAABB().getMin().z << std::endl;
-  // std::cout << info.body->getAABB().getMax().x << " ; "
-  //           << info.body->getAABB().getMax().y << " ; "
-  //           << info.body->getAABB().getMax().z << std::endl;
-
+  const rp3d::RaycastInfo& info)
+{
   for (unsigned int k = 0; k < parent_->ray_bodies_.size(); k++) {
     if (parent_->ray_bodies_[k] == info.body) {
-      std::cout << "k=" << k << std::endl;
+      alga_hit_ = true;
+      hit_pt_ = tf2::Vector3(info.worldPoint.x, info.worldPoint.y,
+        info.worldPoint.z);
+      alga_idx_ = k;
     }
   }
 
-  // Return a fraction of 1.0 to gather all hits
+  // Stop the raycasting
   return rp3d::decimal(0.0);
 }
 
@@ -98,17 +89,17 @@ void CameraNodelet::overlap_fov()
   }
   ray_bodies_.resize(0);
   ray_shapes_.resize(0);
+  corr_algae_.resize(0);
 
   coll_world_.testOverlap(fov_body_, &overlap_cb_);
 }
 
 
-bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, float &disease,
-  tf2::Vector3 &hit_pt)
+bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, tf2::Vector3 &hit_pt,
+  int &alga_idx)
 {
-  tf2::Vector3 tf_origin(0, 0, 0);
-
   // Transform the ray into fixed frame
+  tf2::Vector3 tf_origin(0, 0, 0);
   geometry_msgs::Pose p_origin;
   geometry_msgs::Pose p_p;
   tf2::toMsg(tf_origin, p_origin.position);
@@ -122,13 +113,22 @@ bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, float &disease,
   tf2::doTransform(p_p, p, camera_tf_);
 
   // Raycast
+  raycast_cb_.alga_hit_ = false;
   rp3d::Vector3 start_point(origin.position.x, origin.position.y, origin.position.z);
   rp3d::Vector3 end_point(p.position.x, p.position.y, p.position.z);
   rp3d::Ray ray(start_point, end_point);
 
   ray_world_.raycast(ray, &raycast_cb_);
 
-  return true;
+  if (raycast_cb_.alga_hit_) {
+    hit_pt = raycast_cb_.hit_pt_;
+    alga_idx = raycast_cb_.alga_idx_;
+
+    return true;
+  }
+  else {
+    return false;
+  }
 }
 
 

@@ -72,6 +72,8 @@ void CameraNodelet::onInit()
   private_nh_.param<float>("sensor_width", sensor_width_, 0.0064);
   private_nh_.param<float>("sensor_height", sensor_height_, 0.00384);
   private_nh_.param<float>("fov_distance", fov_distance_, 2.0);
+  private_nh_.param<int>("n_pxl_height", n_pxl_height_, 480);
+  private_nh_.param<int>("n_pxl_width", n_pxl_width_, 800);
 
   // ROS subscribers
   algae_sub_ = private_nh_.subscribe<farm_simulator::Algae>("algae", 1,
@@ -156,6 +158,7 @@ void CameraNodelet::init_coll_world()
   unsigned int n = last_algae_msg_->algae.size();
   algae_bodies_.resize(n);
   algae_shapes_.resize(n);
+  heatmaps_.resize(n);
 
   for (unsigned int k = 0; k < n; k++) {
     const farm_simulator::Alga *al = &last_algae_msg_->algae[k];
@@ -174,6 +177,17 @@ void CameraNodelet::init_coll_world()
       al->dimensions.z/2);
     algae_shapes_[k] = unique_ptr<rp3d::BoxShape>(new rp3d::BoxShape(half_extents));
     body->addCollisionShape(algae_shapes_[k].get(), rp3d::Transform::identity());
+
+    // Storing disease heatmap
+    unsigned int a = al->disease_heatmap.size();
+    unsigned int b = al->disease_heatmap[0].array.size();
+    heatmaps_[k].resize(a, vector<float>(b));
+
+    for (unsigned int i = 0; i < a; i++) {
+      for (unsigned int j = 0; j < b; j++) {
+        heatmaps_[k][i][j] = al->disease_heatmap[i].array[j];
+      }
+    }
   }
 }
 

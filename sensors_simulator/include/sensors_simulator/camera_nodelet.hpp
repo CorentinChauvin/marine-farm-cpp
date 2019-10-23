@@ -13,6 +13,7 @@
 #include "farm_simulator/Algae.h"
 #include "reactphysics3d.h"
 #include <tf2_ros/transform_listener.h>
+#include <tf2/LinearMath/Vector3.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
@@ -61,9 +62,11 @@ class CameraNodelet: public nodelet::Nodelet {
         RaycastCallback(CameraNodelet *parent);
         virtual rp3d::decimal notifyRaycastHit(const rp3d::RaycastInfo& info);
 
+        bool alga_hit_;         ///<  Whether an alga has been hit
+        tf2::Vector3 hit_pt_;   ///<  Hit point
+        int alga_idx_;          ///<  Index of the hit alga in the ray_bodies_ vector
       private:
-        /// Parent CameraNodelet instance
-        CameraNodelet *parent_;
+        CameraNodelet *parent_;  ///<  Parent CameraNodelet instance
     };
 
     /**
@@ -97,6 +100,8 @@ class CameraNodelet: public nodelet::Nodelet {
     farm_simulator::AlgaeConstPtr last_algae_msg_;  ///<  Last algae message
     bool algae_msg_received_;  ///<  Whether an algae message has been received
     geometry_msgs::TransformStamped camera_tf_;  ///<  Transform from fixed frame to camera
+    std::vector<std::vector<std::vector<float>>> heatmaps_;  ///<  Disease heatmatps for all the algae
+    std::vector<int> corr_algae_;  ///<  Correspondance between the algae used for raytracing and all the others
 
     /// \name  Collision members
     ///@{
@@ -126,6 +131,8 @@ class CameraNodelet: public nodelet::Nodelet {
     float sensor_width_;    ///<  Width of the camera sensor
     float sensor_height_;   ///<  Height of the camera sensor
     float fov_distance_;    ///<  Maximum distance detected by the camera
+    int n_pxl_height_;      ///<  Nbr of pixels along sensor height
+    int n_pxl_width_;       ///<  Nbr of pixels along sensor width
     ///@}
 
 
@@ -178,13 +185,13 @@ class CameraNodelet: public nodelet::Nodelet {
     /**
      * \brief  Casts a ray to get alga disease value at hit point
      *
-     * \param aim_pt   Point towards which casting the ray (in camera frame)
-     * \param disease  Disease value of the alga on the particular hit point
-     * \param hit_pt   Hit point
+     * \param aim_pt    Point towards which casting the ray (in camera frame)
+     * \param hit_pt    Hit point
+     * \param alga_idx  Index of the hit alga in the ray_bodies_ vector
      * \return  Whether an alga has been hit
      */
-    bool raycast_alga(const tf2::Vector3 &aim_pt, float &disease,
-      tf2::Vector3 &hit_pt);
+    bool raycast_alga(const tf2::Vector3 &aim_pt, tf2::Vector3 &hit_pt,
+      int &alga_idx);
 
     /**
      * \brief  Publishes camera output
