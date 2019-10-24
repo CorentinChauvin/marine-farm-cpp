@@ -306,16 +306,18 @@ void FarmNodelet::pub_algae()
       float H = al->algae[l].length;
       float W = al->algae[l].width;
 
-      tf2::Vector3 x3 = -cos(psi)*x1 + sin(psi)*y1;
+      tf2::Vector3 x3 = -cos(psi)*x1 + sin(-psi)*y1;
       tf2::Vector3 y3 = y1;
-      tf2::Vector3 z3 = -cos(psi)*z1 - sin(psi)*x1;
+      tf2::Vector3 z3 = -cos(psi)*z1 - sin(-psi)*x1;
 
-      tf2::Matrix3x3 rotation;
-      rotation.setValue(x3.getX(), y3.getX(), z3.getX(),
-                        x3.getY(), y3.getY(), z3.getY(),
-                        x3.getZ(), y3.getZ(), z3.getZ());
+
+      tf2::Matrix3x3 rotation(x3.getX(), x3.getY(), x3.getZ(),
+                              y3.getX(), y3.getY(), y3.getZ(),
+                              z3.getX(), z3.getY(), z3.getZ());
       tf2::Quaternion quati;
-      rotation.getRotation(quati);
+      double R, P, Y;
+      rotation.getRPY(R, P, Y, 2);
+      quati.setRPY(R, -P, Y);
       alga.orientation = tf2::toMsg(quati);
 
       // Set the position of the alga

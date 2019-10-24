@@ -120,27 +120,34 @@ void CameraNodelet::publish_output()
 
   // Get their position and dimension, and compute their axes
   int n = ray_bodies_.size();
-  vector<tf2::Vector3> origin_algae(n);  // top left corner of algae
-  vector<float> inc_y3(n);  // increment along y3 axis of algae
-  vector<float> inc_z3(n);  // increment along z3 axis of algae
+  vector<float> w_algae(n);  // width of algae
+  vector<float> h_algae(n);  // height of algae
+  vector<float> inc_y3(n);   // increment along y3 axis of algae
+  vector<float> inc_z3(n);   // increment along z3 axis of algae
+  vector<geometry_msgs::TransformStamped> tf_algae(n);  // transforms of local frames
 
   float n_height = heatmaps_[0].size();    // height of the heatmap
   float n_width = heatmaps_[0][0].size();  // width of the heatmap
 
   for (int k = 0; k < n; k++) {
-    rp3d::Vector3 pos = ray_bodies_[k]->getTransform().getPosition();
-    rp3d::Quaternion quati = ray_bodies_[k]->getTransform().getOrientation();
-    tf2::Matrix3x3 rotation(tf2::Quaternion(quati.x, quati.y, quati.z, quati.w));
+    // Compute the alga inverse transform
+    rp3d::Transform inverse_tf = ray_bodies_[k]->getTransform().getInverse();
+    rp3d::Vector3 pos = inverse_tf.getPosition();
+    rp3d::Quaternion quati = inverse_tf.getOrientation();
+    tf_algae[k].transform.translation.x = pos.x;
+    tf_algae[k].transform.translation.y = pos.y;
+    tf_algae[k].transform.translation.z = pos.z;
+    tf_algae[k].transform.rotation.x = quati.x;
+    tf_algae[k].transform.rotation.y = quati.y;
+    tf_algae[k].transform.rotation.z = quati.z;
+    tf_algae[k].transform.rotation.w = quati.w;
 
-    tf2::Vector3 y3 = rotation.getColumn(1);
-    tf2::Vector3 z3 = rotation.getColumn(2);
-    float w_alga = 2*ray_shapes_[k]->getExtent().y;
-    float h_alga = 2*ray_shapes_[k]->getExtent().z;
+    // Get dimensions and increments
+    w_algae[k] = 2*ray_shapes_[k]->getExtent().y;
+    h_algae[k] = 2*ray_shapes_[k]->getExtent().z;
 
-    origin_algae[k] = tf2::Vector3(pos.x, pos.y, pos.z) - w_alga/2*y3 - h_alga/2*z3;
-
-    inc_y3[k] = w_alga / n_width;
-    inc_z3[k] = h_alga / n_height * tf2::tf2Dot(z3, tf2::Vector3(0, 0, 1));
+    inc_y3[k] = w_algae[k] / n_width;
+    inc_z3[k] = h_algae[k] / n_height;
   }
 
   // For each pixel
@@ -158,10 +165,21 @@ void CameraNodelet::publish_output()
       bool alga_hit = raycast_alga(p, hit_pt, alga_idx);
 
       if (alga_hit) {
+        int idx = corr_algae_[alga_idx];
+
+        // Transform hit point in alga frame
+        geometry_msgs::Pose hit_pose, tf_pose;
+        hit_pose.position.x = hit_pt.getX();
+        hit_pose.position.y = hit_pt.getY();
+        hit_pose.position.z = hit_pt.getZ();
+        tf2::doTransform(hit_pose, tf_pose, tf_algae[corr_algae_[alga_idx]]);
+        float z = tf_pose.position.z + h_algae[idx]/2;
+        float y = tf_pose.position.y + w_algae[idx]/2;
+
         // Get alga disease value
-        int k = (hit_pt.getZ() - origin_algae[alga_idx].getZ()) / inc_z3[alga_idx];
-        int l = (hit_pt.getY() - origin_algae[alga_idx].getY()) / inc_y3[alga_idx];
-        float value = heatmaps_[corr_algae_[alga_idx]][k][l];
+        int k = z / inc_z3[alga_idx];
+        int l = y / inc_y3[alga_idx];
+        float value = heatmaps_[idx][k][l];
 
         // Fill point marker
         geometry_msgs::Point pt;
