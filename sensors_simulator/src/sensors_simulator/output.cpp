@@ -165,21 +165,19 @@ void CameraNodelet::publish_output()
       bool alga_hit = raycast_alga(p, hit_pt, alga_idx);
 
       if (alga_hit) {
-        int idx = corr_algae_[alga_idx];
-
         // Transform hit point in alga frame
         geometry_msgs::Pose hit_pose, tf_pose;
         hit_pose.position.x = hit_pt.getX();
         hit_pose.position.y = hit_pt.getY();
         hit_pose.position.z = hit_pt.getZ();
-        tf2::doTransform(hit_pose, tf_pose, tf_algae[corr_algae_[alga_idx]]);
-        float z = tf_pose.position.z + h_algae[idx]/2;
-        float y = tf_pose.position.y + w_algae[idx]/2;
+        tf2::doTransform(hit_pose, tf_pose, tf_algae[alga_idx]);
+        float z = tf_pose.position.z + h_algae[alga_idx]/2;
+        float y = tf_pose.position.y + w_algae[alga_idx]/2;
 
         // Get alga disease value
         int k = z / inc_z3[alga_idx];
         int l = y / inc_y3[alga_idx];
-        float value = heatmaps_[idx][k][l];
+        float value = heatmaps_[corr_algae_[alga_idx]][k][l];
 
         // Fill point marker
         geometry_msgs::Point pt;

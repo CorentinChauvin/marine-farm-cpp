@@ -22,8 +22,6 @@
 #include <string>
 #include <iostream>
 
-#include <ctime>
-
 using namespace std;
 
 PLUGINLIB_EXPORT_CLASS(mfcpp::CameraNodelet, nodelet::Nodelet)
@@ -100,7 +98,6 @@ void CameraNodelet::onInit()
 
 void CameraNodelet::main_cb(const ros::TimerEvent &timer_event)
 {
-  clock_t begin = clock();
   if (!ros::ok() || ros::isShuttingDown() || b_sigint_)
     return;
 
@@ -112,14 +109,10 @@ void CameraNodelet::main_cb(const ros::TimerEvent &timer_event)
     algae_msg_received_ = false;
   }
 
-  cout <<  "Update time: " << double(clock() - begin) / CLOCKS_PER_SEC << endl;
-  begin = clock();
   if (world_init_ && get_camera_tf()) {
     publish_rviz_fov();
     publish_output();
   }
-
-  cout <<  "Collision time: " << double(clock() - begin) / CLOCKS_PER_SEC << endl;
 }
 
 
