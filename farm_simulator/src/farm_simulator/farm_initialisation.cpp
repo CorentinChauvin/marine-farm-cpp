@@ -128,7 +128,7 @@ void FarmNodelet::init_algae(AlgaeLine &line)
       for (int i = 0; i < height_disease_heatmap_; i++) {
         for (int j = 0; j < width_disease_heatmap_; j++) {
           float value = perlin_.evaluate(i, j);
-          alga.disease_heatmap[i][j] = disease_ratio_*perlin_.accentuate(value);
+          alga.disease_heatmap[i][j] = disease_ratio_*value;
         }
       }
 

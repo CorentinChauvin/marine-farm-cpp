@@ -17,14 +17,14 @@ farm_nodelet:
   randomise_lines: false  # whether to randomise the position of each line
   phi_lines: 0.0          # mean of the 1st angle for the 1st point of each line
   theta_lines: 0.0        # mean of the 2nd angle for the 1st point of each line
-  bnd_phi_lines: 0.3      # bound such that phi is sampled in [mean-bnd, mean+bnd]
-  bnd_theta_lines: 0.3    # same for theta
-  bnd_gamma_lines: 0.0    # same for gamma (angle for the 2nd point of each line)
+  bnd_phi_lines: 0.8      # bound such that phi is sampled in [mean-bnd, mean+bnd]
+  bnd_theta_lines: 0.8    # same for theta
+  bnd_gamma_lines: 0.5    # same for gamma (angle for the 2nd point of each line)
 
   # Algae generation
-  randomise_algae: false   # whether to randomise the size and orientation of algae
+  randomise_algae: false  # whether to randomise the size and orientation of algae
   alga_miss_rate: 0.2     # probability to have a missing alga
-  nbr_algae: 1000          # max nbr of algae per line
+  nbr_algae: 1000         # max nbr of algae per line
   width_algae: 0.2        # mean of the width of an alga
   length_algae: 2.0       # mean of the length of an alga
   thickness_algae: 0.01   # thickness of an alga (for collision detection)
