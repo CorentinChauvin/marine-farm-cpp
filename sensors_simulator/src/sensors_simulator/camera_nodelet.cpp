@@ -7,6 +7,7 @@
  */
 
 #include "camera_nodelet.hpp"
+#include "sensors_simulator/CameraOutput.h"
 #include "farm_simulator/rviz_visualisation.hpp"
 #include "farm_simulator/Algae.h"
 #include "reactphysics3d.h"
@@ -30,7 +31,7 @@ PLUGINLIB_EXPORT_CLASS(mfcpp::CameraNodelet, nodelet::Nodelet)
 namespace mfcpp {
 
 /*
- * Definition of static varibles
+ * Definition of static variables
  */
 sig_atomic_t volatile CameraNodelet::b_sigint_ = 0;
 ros::Timer CameraNodelet::main_timer_ = ros::Timer();
@@ -78,6 +79,7 @@ void CameraNodelet::onInit()
     boost::bind(&CameraNodelet::algae_cb, this, _1));
 
   // ROS publishers
+  out_pub_ = nh_.advertise<sensors_simulator::CameraOutput>("camera_out", 0);
   rviz_pub_ = nh_.advertise<visualization_msgs::Marker>("camera_markers", 0);
 
 

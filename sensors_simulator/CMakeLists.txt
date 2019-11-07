@@ -18,11 +18,22 @@ find_package(catkin REQUIRED COMPONENTS
   farm_simulator
   tf2
   tf2_ros
+  message_generation
+)
+
+add_message_files(
+  FILES
+    CameraOutput.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+    std_msgs
 )
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS nodelet roscpp
+  CATKIN_DEPENDS nodelet roscpp message_runtime
 )
 
 ###########
@@ -40,6 +51,8 @@ add_library(camera_nodelet
   src/sensors_simulator/collision.cpp
   src/sensors_simulator/output.cpp
 )
-
-add_dependencies(camera_nodelet ${catkin_EXPORTED_TARGETS})
+add_dependencies(camera_nodelet
+  ${catkin_EXPORTED_TARGETS}
+  sensors_simulator_generate_messages_cpp
+)
 target_link_libraries(camera_nodelet ${catkin_LIBRARIES})

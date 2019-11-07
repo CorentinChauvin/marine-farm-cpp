@@ -93,6 +93,7 @@ class CameraNodelet: public nodelet::Nodelet {
     ros::NodeHandle nh_;          ///<  Node handler (for topics and services)
     ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
     ros::Subscriber algae_sub_;   ///<  Subscriber for the algae of the farm
+    ros::Publisher out_pub_;      ///<  Publisher for the camera output
     ros::Publisher rviz_pub_;     ///<  Publisher for Rviz markers
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;

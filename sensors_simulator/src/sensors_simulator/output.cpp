@@ -7,6 +7,7 @@
  */
 
 #include "camera_nodelet.hpp"
+#include "sensors_simulator/CameraOutput.h"
 #include "farm_simulator/farm_common.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <visualization_msgs/Marker.h>
@@ -83,6 +84,17 @@ void CameraNodelet::publish_rviz_fov()
 
 void CameraNodelet::publish_output()
 {
+  // Prepare output message
+  sensors_simulator::CameraOutput out_msg;
+  out_msg.header.stamp = ros::Time::now();
+  out_msg.header.frame_id = camera_frame_;
+
+  int nbr_pts = n_pxl_height_*n_pxl_width_;
+  out_msg.x.reserve(nbr_pts);
+  out_msg.y.reserve(nbr_pts);
+  out_msg.z.reserve(nbr_pts);
+  out_msg.value.reserve(nbr_pts);
+
   // Prepare Rviz marker for displaying rays
   visualization_msgs::Marker ray_marker;
   ray_marker.header.stamp = ros::Time::now();
@@ -96,7 +108,7 @@ void CameraNodelet::publish_output()
   ray_marker.type = visualization_msgs::Marker::LINE_LIST;
   ray_marker.action = visualization_msgs::Marker::ADD;
   ray_marker.scale.x = 0.01;
-  ray_marker.points.reserve(n_pxl_height_*n_pxl_width_);
+  ray_marker.points.reserve(nbr_pts);
 
   // Prepare Rviz marker for displaying hit points
   visualization_msgs::Marker pts_marker;
@@ -112,8 +124,8 @@ void CameraNodelet::publish_output()
   pts_marker.action = visualization_msgs::Marker::ADD;
   pts_marker.scale.x = 0.02;
   pts_marker.scale.y = 0.02;
-  pts_marker.points.reserve(n_pxl_height_*n_pxl_width_);
-  pts_marker.colors.reserve(n_pxl_height_*n_pxl_width_);
+  pts_marker.points.reserve(nbr_pts);
+  pts_marker.colors.reserve(nbr_pts);
 
   // Selects algae that are in field of view of the camera
   overlap_fov();
@@ -179,6 +191,12 @@ void CameraNodelet::publish_output()
         int l = y / inc_y3[alga_idx];
         float value = heatmaps_[corr_algae_[alga_idx]][k][l];
 
+        // Fill output message
+        out_msg.x.emplace_back(hit_pt.getX());
+        out_msg.y.emplace_back(hit_pt.getY());
+        out_msg.z.emplace_back(hit_pt.getZ());
+        out_msg.value.emplace_back(value);
+
         // Fill point marker
         geometry_msgs::Point pt;
         pt.x = hit_pt.getX();
@@ -208,6 +226,7 @@ void CameraNodelet::publish_output()
   }
 
   // Publish markers
+  out_pub_.publish(out_msg);
   rviz_pub_.publish(pts_marker);
   rviz_pub_.publish(ray_marker);
 }

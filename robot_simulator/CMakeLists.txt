@@ -47,6 +47,8 @@ include_directories(
 add_executable(robot_simulator
   src/robot_simulator/robot_simulator.cpp
 )
-add_dependencies(robot_simulator ${catkin_EXPORTED_TARGETS} robot_simulator_generate_messages_cpp)
-
+add_dependencies(robot_simulator
+  ${catkin_EXPORTED_TARGETS}
+  robot_simulator_generate_messages_cpp
+)
 target_link_libraries(robot_simulator ${catkin_LIBRARIES})

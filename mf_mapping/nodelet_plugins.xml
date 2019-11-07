@@ -1,0 +1,7 @@
+<library path="lib/libgp_nodelet">
+    <class name="mf_mapping/GPNodelet" type="mfcpp::GPNodelet" base_class_type="nodelet::Nodelet">
+        <description>
+            Nodelet for mapping an algae wall through Gaussian Process
+        </description>
+    </class>
+</library>
