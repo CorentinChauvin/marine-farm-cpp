@@ -100,7 +100,8 @@ class CameraNodelet: public nodelet::Nodelet {
 
     farm_simulator::AlgaeConstPtr last_algae_msg_;  ///<  Last algae message
     bool algae_msg_received_;  ///<  Whether an algae message has been received
-    geometry_msgs::TransformStamped camera_tf_;  ///<  Transform from fixed frame to camera
+    geometry_msgs::TransformStamped fixed_camera_tf_;  ///<  Transform from fixed frame to camera
+    geometry_msgs::TransformStamped camera_fixed_tf_;  ///<  Transform from camera to fixed frame
     std::vector<std::vector<std::vector<float>>> heatmaps_;  ///<  Disease heatmatps for all the algae
     std::vector<int> corr_algae_;  ///<  Correspondance between the algae used for raytracing and all the others
 

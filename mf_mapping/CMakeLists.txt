@@ -13,6 +13,9 @@ find_package(catkin REQUIRED COMPONENTS
   nodelet
   roscpp
   sensors_simulator
+  tf2
+  tf2_ros
+  geometry_msgs
 )
 
 catkin_package(

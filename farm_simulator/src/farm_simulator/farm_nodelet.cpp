@@ -137,6 +137,8 @@ void FarmNodelet::sigint_handler(int s) {
   b_sigint_ = 1;
   init_timer_.stop();
   main_timer_.stop();
+
+  raise(SIGTERM);
 }
 
 

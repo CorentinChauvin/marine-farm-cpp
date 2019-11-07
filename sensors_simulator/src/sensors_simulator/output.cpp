@@ -191,10 +191,14 @@ void CameraNodelet::publish_output()
         int l = y / inc_y3[alga_idx];
         float value = heatmaps_[corr_algae_[alga_idx]][k][l];
 
+        // Transform hit point in camera frame
+        geometry_msgs::Pose out_pose;
+        tf2::doTransform(hit_pose, out_pose, camera_fixed_tf_);
+
         // Fill output message
-        out_msg.x.emplace_back(hit_pt.getX());
-        out_msg.y.emplace_back(hit_pt.getY());
-        out_msg.z.emplace_back(hit_pt.getZ());
+        out_msg.x.emplace_back(out_pose.position.x);
+        out_msg.y.emplace_back(out_pose.position.y);
+        out_msg.z.emplace_back(out_pose.position.z);
         out_msg.value.emplace_back(value);
 
         // Fill point marker

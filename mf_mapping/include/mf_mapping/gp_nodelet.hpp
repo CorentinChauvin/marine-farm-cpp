@@ -11,9 +11,11 @@
 #define GP_NODELET_HPP
 
 #include "sensors_simulator/CameraOutput.h"
+#include <tf2_ros/transform_listener.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
 #include <csignal>
+#include <string>
 #include <vector>
 
 
@@ -45,6 +47,8 @@ class GPNodelet: public nodelet::Nodelet {
     ros::NodeHandle nh_;          ///<  Node handler (for topics and services)
     ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
     ros::Subscriber camera_sub_;  ///<  Subscriber for the camera
+    tf2_ros::Buffer tf_buffer_;   ///<  Tf2 buffer for getting tf transforms
+    tf2_ros::TransformListener tf_listener_;  ///<  Tf2 listener for getting tf transforms
 
     bool gp_initialised_;  ///<  Whether the Gaussian Process is initialised
     bool camera_msg_available_;  ///<  Whether a new camera message is available
@@ -53,6 +57,7 @@ class GPNodelet: public nodelet::Nodelet {
 
     // ROS parameters
     float main_freq_;  ///<  Frequency of the main loop
+    std::string wall_frame_;  ///<  Name of the wall frame
 
     /**
      * \brief  Main callback which is called by a timer
@@ -76,15 +81,19 @@ class GPNodelet: public nodelet::Nodelet {
     /**
      * \brief  Transforms points from camera frame to wall frame
      *
-     * \param x_in  X coordinate of the input point
-     * \param y_in  Y coordinate of the input point
-     * \param z_in  Z coordinate of the input point
-     * \param x_out  X coordinate of the transformed point
-     * \param y_out  Y coordinate of the transformed point
-     * \param z_out  Z coordinate of the transformed point
+     * \param x_in      X coordinate of the input point
+     * \param y_in      Y coordinate of the input point
+     * \param z_in      Z coordinate of the input point
+     * \param x_out     X coordinate of the transformed point
+     * \param y_out     Y coordinate of the transformed point
+     * \param z_out     Z coordinate of the transformed point
+     * \param frame_in  Frame of the input point
+     *
+     * \return  Whether the points could be transformed
      */
-    void transform_points(const vec_f &x_in, const vec_f &y_in, const vec_f &z_in,
-      vec_f &x_out, vec_f &y_out, vec_f &z_out);
+    bool transform_points(const vec_f &x_in, const vec_f &y_in, const vec_f &z_in,
+      vec_f &x_out, vec_f &y_out, vec_f &z_out,
+      std::string frame_in, std::string frame_out);
 
     /**
      * \brief  Initialises the Gaussian Process

@@ -71,13 +71,13 @@ rp3d::decimal CameraNodelet::RaycastCallback::notifyRaycastHit(
 void CameraNodelet::overlap_fov()
 {
   // Update fov body transform
-  rp3d::Vector3 pos(camera_tf_.transform.translation.x,
-    camera_tf_.transform.translation.y,
-    camera_tf_.transform.translation.z);
-  rp3d::Quaternion orient(camera_tf_.transform.rotation.x,
-    camera_tf_.transform.rotation.y,
-    camera_tf_.transform.rotation.z,
-    camera_tf_.transform.rotation.w);
+  rp3d::Vector3 pos(fixed_camera_tf_.transform.translation.x,
+    fixed_camera_tf_.transform.translation.y,
+    fixed_camera_tf_.transform.translation.z);
+  rp3d::Quaternion orient(fixed_camera_tf_.transform.rotation.x,
+    fixed_camera_tf_.transform.rotation.y,
+    fixed_camera_tf_.transform.rotation.z,
+    fixed_camera_tf_.transform.rotation.w);
 
   rp3d::Transform transform(pos, orient);
   fov_body_->setTransform(transform);
@@ -109,8 +109,8 @@ bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, tf2::Vector3 &hit_p
 
   geometry_msgs::Pose origin;
   geometry_msgs::Pose p;
-  tf2::doTransform(p_origin, origin, camera_tf_);
-  tf2::doTransform(p_p, p, camera_tf_);
+  tf2::doTransform(p_origin, origin, fixed_camera_tf_);
+  tf2::doTransform(p_p, p, fixed_camera_tf_);
 
   // Raycast
   raycast_cb_.alga_hit_ = false;

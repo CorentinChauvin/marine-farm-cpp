@@ -1,2 +1,3 @@
 gp_nodelet:
   main_freq: 20.0
+  wall_frame: "wall"

@@ -121,6 +121,8 @@ void CameraNodelet::main_cb(const ros::TimerEvent &timer_event)
 void CameraNodelet::sigint_handler(int s) {
   b_sigint_ = 1;
   main_timer_.stop();
+
+  raise(SIGTERM);
 }
 
 
@@ -207,17 +209,19 @@ void CameraNodelet::update_algae()
 
 bool CameraNodelet::get_camera_tf()
 {
-  geometry_msgs::TransformStamped tf;
+  geometry_msgs::TransformStamped tf1, tf2;
 
   try {
-    tf = tf_buffer_.lookupTransform(fixed_frame_, camera_frame_, ros::Time(0));
+    tf1 = tf_buffer_.lookupTransform(fixed_frame_, camera_frame_, ros::Time(0));
+    tf2 = tf_buffer_.lookupTransform(camera_frame_, fixed_frame_, ros::Time(0));
   }
   catch (tf2::TransformException &ex) {
     NODELET_WARN("%s",ex.what());
     return false;
   }
 
-  camera_tf_ = tf;
+  fixed_camera_tf_ = tf1;
+  camera_fixed_tf_ = tf2;
   return true;
 }
 
