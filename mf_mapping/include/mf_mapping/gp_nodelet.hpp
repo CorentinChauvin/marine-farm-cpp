@@ -46,10 +46,11 @@ class GPNodelet: public nodelet::Nodelet {
     static ros::Timer main_timer_;   ///<  Timer callback for the main function
 
     // Private members
-    ros::NodeHandle nh_;          ///<  Node handler (for topics and services)
-    ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
-    ros::Subscriber camera_sub_;  ///<  Subscriber for the camera
-    tf2_ros::Buffer tf_buffer_;   ///<  Tf2 buffer for getting tf transforms
+    ros::NodeHandle nh_;            ///<  Node handler (for topics and services)
+    ros::NodeHandle private_nh_;    ///<  Private node handler (for parameters)
+    ros::Subscriber camera_sub_;    ///<  Subscriber for the camera
+    ros::Publisher wall_img_pub_;   ///< Publisher for an image of the wall GP
+    tf2_ros::Buffer tf_buffer_;     ///<  Tf2 buffer for getting tf transforms
     tf2_ros::TransformListener tf_listener_;  ///<  Tf2 listener for getting tf transforms
 
     bool gp_initialised_;  ///<  Whether the Gaussian Process is initialised
@@ -75,6 +76,7 @@ class GPNodelet: public nodelet::Nodelet {
 
     float matern_length_;  ///<  Lengthscale of the Matern kernel
     float matern_var_;     ///<  Signal variance of the Matern kernel
+    float gp_init_mean_;   ///<  Initial mean values of the Gaussian Process
     float gp_noise_var_;   ///<  Noise variance of the Gaussian Process
 
     float size_wall_x_;   ///<  Size (m) of the algae wall in the x direction
@@ -157,6 +159,11 @@ class GPNodelet: public nodelet::Nodelet {
      */
     void update_gp(const vec_f &x_meas, const vec_f &y_meas,
       const vec_f &distance, const vec_f &values);
+
+    /**
+     * \brief  Publishes an image of the GP of an algae wall
+     */
+    void publish_wall_img();
 
 };
 

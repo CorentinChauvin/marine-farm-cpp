@@ -9,6 +9,7 @@
 
 #include "gp_nodelet.hpp"
 #include "sensors_simulator/CameraOutput.h"
+#include <sensor_msgs/Image.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -62,6 +63,7 @@ void GPNodelet::onInit()
   private_nh_.param<float>("camera_decay", camera_decay_, 1.0);
   private_nh_.param<float>("matern_length", matern_length_, 1.0);
   private_nh_.param<float>("matern_var", matern_var_, 1.0);
+  private_nh_.param<float>("gp_init_mean", gp_init_mean_, 1.0);
   private_nh_.param<float>("gp_noise_var", gp_noise_var_, 1.0);
   private_nh_.param<float>("size_wall_x", size_wall_x_, 2.0);
   private_nh_.param<float>("size_wall_y", size_wall_y_, 30.0);
@@ -79,12 +81,10 @@ void GPNodelet::onInit()
   size_gp_ = size_gp_x_ * size_gp_y_;
 
   // ROS subscribers
-  // algae_sub_ = private_nh_.subscribe<farm_simulator::Algae>("algae", 1,
-  //   boost::bind(&CameraNodelet::algae_cb, this, _1));
   camera_sub_ = nh_.subscribe<sensors_simulator::CameraOutput>("camera_out", 1, &GPNodelet::camera_cb, this);
 
   // ROS publishers
-  // out_pub_ = nh_.advertise<sensors_simulator::CameraOutput>("camera_out", 0);
+  wall_img_pub_ = nh_.advertise<sensor_msgs::Image>("gp_img", 0);
 
 
   // Main loop
@@ -114,10 +114,11 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
     clock_t begin = clock();
 
     update_gp(x, y, camera_msg_->z, camera_msg_->value);
+    cout << " -> update done in: " << double(clock() - begin) / CLOCKS_PER_SEC <<  endl;
+    begin = clock();
 
-    clock_t end = clock();
-    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-    cout << " -> update done in: " << elapsed_secs <<  endl;
+    publish_wall_img();
+    cout << " -> publish done in: " << double(clock() - begin) / CLOCKS_PER_SEC <<  endl;
 
     camera_msg_available_ = false;
   }

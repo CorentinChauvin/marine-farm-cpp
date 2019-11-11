@@ -38,5 +38,5 @@ farm_nodelet:
   disease_ratio: 1.0    # ratio of alga disease (0->fully sane, 1->fully sick)
   height_disease_heatmap: 50  # height of the algae disease heatmap
   width_disease_heatmap: 10   # width of the algae disease heatmap
-  height_grid_heatmap: 6      # height of the grid for perlin noise generation
-  width_grid_heatmap: 2       # width of the grid for perlin noise generation
+  height_grid_heatmap: 4      # height of the grid for perlin noise generation
+  width_grid_heatmap: 1       # width of the grid for perlin noise generation

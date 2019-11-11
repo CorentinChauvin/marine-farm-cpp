@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_ros
   geometry_msgs
+  sensor_msgs
 )
 
 catkin_package(
@@ -41,6 +42,7 @@ include_directories(${Eigen_INCLUDE_DIRS})
 add_library(gp_nodelet
   src/mf_mapping/gp_nodelet.cpp
   src/mf_mapping/gp.cpp
+  src/mf_mapping/gp_output.cpp
 )
 add_dependencies(gp_nodelet
   ${catkin_EXPORTED_TARGETS}
