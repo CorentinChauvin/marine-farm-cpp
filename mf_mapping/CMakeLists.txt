@@ -3,7 +3,8 @@ project(mf_mapping)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
-
+# set(CMAKE_CXX_FLAGS_DEBUG "-g -fno-omit-frame-pointer")
+# set(ROS_BUILD_TYPE Debug)
 
 ########################
 ##  Configure Catkin  ##
@@ -32,6 +33,9 @@ include_directories(
   include/mf_mapping
   ${catkin_INCLUDE_DIRS}
 )
+
+find_package(Eigen3 REQUIRED)
+include_directories(${Eigen_INCLUDE_DIRS})
 
 # Gaussian Process nodelet
 add_library(gp_nodelet

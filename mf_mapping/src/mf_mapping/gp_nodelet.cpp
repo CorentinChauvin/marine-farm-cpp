@@ -58,10 +58,25 @@ void GPNodelet::onInit()
   // ROS parameters
   private_nh_.param<float>("main_freq", main_freq_, 1.0);
   private_nh_.param<string>("wall_frame", wall_frame_, "");
+  private_nh_.param<float>("camera_var", camera_var_, 1.0);
+  private_nh_.param<float>("camera_decay", camera_decay_, 1.0);
+  private_nh_.param<float>("matern_length", matern_length_, 1.0);
+  private_nh_.param<float>("matern_var", matern_var_, 1.0);
+  private_nh_.param<float>("gp_noise_var", gp_noise_var_, 1.0);
+  private_nh_.param<float>("size_wall_x", size_wall_x_, 2.0);
+  private_nh_.param<float>("size_wall_y", size_wall_y_, 30.0);
+  private_nh_.param<int>("size_gp_x", size_gp_x_, 2);
+  private_nh_.param<int>("size_gp_y", size_gp_y_, 30);
+  private_nh_.param<int>("size_img_x", size_img_x_, 40);
+  private_nh_.param<int>("size_img_y", size_img_y_, 600);
+  private_nh_.param<int>("batch_size", batch_size_, 1);
 
   // Other variables
   camera_msg_available_ = false;
   gp_initialised_ = false;
+  delta_x_ = size_wall_x_ / size_gp_x_;
+  delta_y_ = size_wall_y_ / size_gp_y_;
+  size_gp_ = size_gp_x_ * size_gp_y_;
 
   // ROS subscribers
   // algae_sub_ = private_nh_.subscribe<farm_simulator::Algae>("algae", 1,
@@ -87,12 +102,24 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
   if (!gp_initialised_) {
     init_gp();
     gp_initialised_ = true;
+
+    NODELET_INFO("[gp_nodelet] Gaussian Process initialised.");
   }
   else if (camera_msg_available_) {
     vector<float> x, y, z;
     transform_points(camera_msg_->x, camera_msg_->y, camera_msg_->z,
       x, y, z, camera_msg_->header.frame_id, wall_frame_);
-    update_gp(x, y, z, camera_msg_->value);
+
+    cout << "Starting update..." << endl;
+    clock_t begin = clock();
+
+    update_gp(x, y, camera_msg_->z, camera_msg_->value);
+
+    clock_t end = clock();
+    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+    cout << " -> update done in: " << elapsed_secs <<  endl;
+
+    camera_msg_available_ = false;
   }
 }
 
