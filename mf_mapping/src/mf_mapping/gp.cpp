@@ -62,44 +62,25 @@ void GPNodelet::init_gp()
 }
 
 
-void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
-  const vec_f &z, const vec_f &distances, const vec_f &values)
+void GPNodelet::pop_reordered_idx(
+  unsigned int size_obs, unsigned int size_nobs,
+  float min_x, float max_x, float min_y, float max_y,
+  vector<unsigned int> &idx_obs , vector<unsigned int> &idx_nobs)
 {
-  // Select the observed part of the state wich is concerned by update
-  // Asumption: the state is not affected far from the measurements
-  float min_x = *std::min_element(x_meas.begin(), x_meas.end());
-  float min_y = *std::min_element(y_meas.begin(), y_meas.end());
-  float max_x = *std::max_element(x_meas.begin(), x_meas.end());
-  float max_y = *std::max_element(y_meas.begin(), y_meas.end());
+  idx_obs.resize(size_obs);
+  idx_nobs.resize(size_nobs);
 
-  float added_distance = -matern_length_/sqrt(3)
-                       * log(matern_thresh_/pow(matern_var_, 2));
-
-  min_x = max(float(0), min_x - added_distance);  // area on the wall affected by the update
-  max_x = min(float(size_wall_x_ - delta_x_), max_x + added_distance);
-  min_y = max(float(0), min_y - added_distance);
-  max_y = min(float(size_wall_y_ - delta_y_), max_y + added_distance);
-
-  unsigned int min_obs_x = min_x / delta_x_;  // indices in the original state
-  unsigned int max_obs_x = max_x / delta_x_;
-  unsigned int min_obs_y = min_y / delta_y_;
-  unsigned int max_obs_y = max_y / delta_y_;
-  unsigned int size_obs_x = max_obs_x - min_obs_x + 1;  // sizes of the selected state
-  unsigned int size_obs_y = max_obs_y - min_obs_y + 1;
-  unsigned int size_obs = size_obs_x * size_obs_y;
-  unsigned int size_nobs = size_gp_ - size_obs;
-
-  vector<unsigned int> idx_obs(size_obs);  // indices correspondance to the observed state
-  vector<unsigned int> idx_nobs(size_nobs);  // complementary to the previous one
+  // Populate observed states indices
   unsigned int k = 0;
 
-  for (unsigned int i = min_obs_x; i <= max_obs_x; i++) {
-    for (unsigned int j = min_obs_y; j <= max_obs_y; j++) {
+  for (unsigned int i = min_x; i <= max_x; i++) {
+    for (unsigned int j = min_y; j <= max_y; j++) {
       idx_obs[k] = i*size_gp_y_ + j;
       k++;
     }
   }
 
+  // Populate not observed states indices
   k = 0;               // will go through idx_obs
   unsigned int l = 0;  // will go through idx_nobs
   unsigned int m = 0;  // will go through the original state
@@ -120,9 +101,13 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
 
     m++;
   }
+}
 
-  // Notify changing pixels
-  k = 0;
+
+void GPNodelet::notif_changing_pxls(float min_x, float max_x, float min_y,
+  float max_y)
+{
+  unsigned int k = 0;
   float delta_x = size_wall_x_ / size_img_x_;
   float delta_y = size_wall_y_ / size_img_y_;
   float x = 0, y = 0;
@@ -140,17 +125,18 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
     x += delta_x;
     y = 0;
   }
+}
 
-  // Build mathematical objects that are need for Kalman update
-  VectorXf mu(size_gp_);      // reordered state
-  VectorXf mu_obs(size_obs);  // observed part of the state
-  MatrixXf P(size_gp_, size_gp_);      // reordered covariance
-  MatrixXf P_obs(size_obs, size_obs);  // observed part of the covariance
-  MatrixXf B(size_obs, size_nobs);  // off diagonal block matrix in the covariance
-  MatrixXf C(size_obs, size_obs);
-  MatrixXf C_inv(size_obs, size_obs);
-  VectorXf x_coord(size_obs);
-  VectorXf y_coord(size_obs);
+
+void GPNodelet::build_Kalman_objects(
+  vector<unsigned int> idx_obs, vector<unsigned int> idx_nobs,
+  VectorXf &mu, VectorXf &mu_obs,
+  MatrixXf &P, MatrixXf &P_obs, MatrixXf &B,
+  MatrixXf &C, MatrixXf &C_inv,
+  VectorXf &x_coord, VectorXf &y_coord)
+{
+  unsigned int size_obs = x_coord.size();
+  unsigned int size_nobs = size_gp_ - size_obs;
 
   for (unsigned int k = 0; k < size_obs; k++) {
     mu_obs(k) = gp_mean_(idx_obs[k]);
@@ -195,6 +181,58 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
   }
 
   C_inv = C.inverse();
+}
+
+
+
+void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
+  const vec_f &z, const vec_f &distances, const vec_f &values)
+{
+  // Select the observed part of the state wich is concerned by update
+  // Asumption: the state is not affected far from the measurements
+  float min_x = *std::min_element(x_meas.begin(), x_meas.end());
+  float min_y = *std::min_element(y_meas.begin(), y_meas.end());
+  float max_x = *std::max_element(x_meas.begin(), x_meas.end());
+  float max_y = *std::max_element(y_meas.begin(), y_meas.end());
+
+  float added_distance = -matern_length_/sqrt(3)
+                       * log(matern_thresh_/pow(matern_var_, 2));
+
+  min_x = max(float(0), min_x - added_distance);  // area on the wall affected by the update
+  max_x = min(float(size_wall_x_ - delta_x_), max_x + added_distance);
+  min_y = max(float(0), min_y - added_distance);
+  max_y = min(float(size_wall_y_ - delta_y_), max_y + added_distance);
+
+  unsigned int min_obs_x = min_x / delta_x_;  // indices in the original state
+  unsigned int max_obs_x = max_x / delta_x_;
+  unsigned int min_obs_y = min_y / delta_y_;
+  unsigned int max_obs_y = max_y / delta_y_;
+  unsigned int size_obs_x = max_obs_x - min_obs_x + 1;  // sizes of the selected state
+  unsigned int size_obs_y = max_obs_y - min_obs_y + 1;
+  unsigned int size_obs = size_obs_x * size_obs_y;
+  unsigned int size_nobs = size_gp_ - size_obs;
+
+  vector<unsigned int> idx_obs(size_obs, 0);
+  vector<unsigned int> idx_nobs(size_nobs, 0);  // complementary to the previous one
+  pop_reordered_idx(size_obs, size_nobs, min_obs_x, max_obs_x, min_obs_y, max_obs_y,
+    idx_obs, idx_nobs);
+
+  // Notify changing pixels
+  notif_changing_pxls(min_x, max_x, min_y, max_y);
+
+  // Build mathematical objects that are needed for Kalman update
+  VectorXf mu(size_gp_);      // reordered state
+  VectorXf mu_obs(size_obs);  // observed part of the state
+  MatrixXf P(size_gp_, size_gp_);      // reordered covariance
+  MatrixXf P_obs(size_obs, size_obs);  // observed part of the covariance
+  MatrixXf B(size_obs, size_nobs);  // off diagonal block matrix in the covariance
+  MatrixXf C(size_obs, size_obs);
+  MatrixXf C_inv(size_obs, size_obs);
+  VectorXf x_coord(size_obs);
+  VectorXf y_coord(size_obs);
+
+  build_Kalman_objects(idx_obs, idx_nobs, mu, mu_obs, P, P_obs, B, C, C_inv,
+    x_coord, y_coord);
 
   // Batch updates
   int input_idx = 0;  // index in the input vectors
@@ -233,17 +271,8 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
 
     PHt = P_obs * H_obs.transpose();
     BtHt = B.transpose() * H_obs.transpose();
-
-    for (unsigned int k = 0; k < size_obs; k++) {
-      for (unsigned int l = 0; l < size_meas; l++) {
-        L(k, l) = PHt(k, l);
-      }
-    }
-    for (unsigned int k = 0; k < size_nobs; k++) {
-      for (unsigned int l = 0; l < size_meas; l++) {
-        L(k + size_obs, l) = BtHt(k, l);
-      }
-    }
+    L << PHt,
+         BtHt;
 
     MatrixXf S = H_obs * PHt + R;
     MatrixXf S_inv = S.inverse();

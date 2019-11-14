@@ -70,7 +70,8 @@ class GPNodelet: public nodelet::Nodelet {
     std::vector<float> out_values_;  ///<  Output values of the Gaussian Process
     std::vector<bool> changed_pxl_;  ///<  Whether an output pixel has been updated
 
-    // ROS parameters
+    /// \name  ROS parameters
+    ///@{
     float main_freq_;         ///<  Frequency of the main loop
     std::string wall_frame_;  ///<  Name of the wall frame
 
@@ -91,6 +92,7 @@ class GPNodelet: public nodelet::Nodelet {
     int size_img_x_;  ///<  Size of the output image in the x direction
     int size_img_y_;  ///<  Size of the output image in the y direction
     int batch_size_;  ///<  Batch size for the Kalman update of the GP
+    ///@}
 
     /**
      * \brief  Main callback which is called by a timer
@@ -153,6 +155,62 @@ class GPNodelet: public nodelet::Nodelet {
      * \param y2  Y coordinate of the second point
      */
     inline double matern_kernel(double x1, double y1, double x2, double y2);
+
+    /**
+     * \brief  Populates indices correspondance for reordered states
+     *
+     * Used to reorder the state by putting observed states at the beginning
+     * and not observed states at the end.
+     *
+     * \param[in] size_obs   Size of the observed state
+     * \param[in] size_nobs  Size of the non observed state
+     * \param[in] min_x      Minimal x index of the observed states
+     * \param[in] max_x      Maximal x index of the observed states
+     * \param[in] min_y      Minimal y index of the observed states
+     * \param[in] max_y      Maximal y index of the observed states     *
+     * \param[out] idx_obs   Array of corr. indices for obs states to populate
+     * \param[out] idx_nobs  Array of corr. indices for not obs states to populate
+     */
+    void pop_reordered_idx(
+      unsigned int size_obs, unsigned int size_nobs,
+      float min_x, float max_x, float min_y, float max_y,
+      std::vector<unsigned int> &idx_obs, std::vector<unsigned int> &idx_nobs
+    );
+
+    /**
+     * \brief  Notifies changing pixels during GP update
+     *
+     * \param min_x      Minimal x index of the observed states
+     * \param max_x      Maximal x index of the observed states
+     * \param min_y      Minimal y index of the observed states
+     * \param max_y      Maximal y index of the observed states
+     */
+    void notif_changing_pxls(float min_x, float max_x, float min_y, float max_y);
+
+    /**
+     * \brief  Builds vectors and matrices needed during Kalman update
+     *
+     * \note  It assumes the following objects are already of the right size
+     *
+     * \param[in] idx_obs   Array of corresponding indices for obs states
+     * \param[in] idx_nobs  Array of corresponding indices for non obs states
+     * \param[out] mu       Reordered state
+     * \param[out] mu_obs   Observed part of the state
+     * \param[out] P        Reordered covariance
+     * \param[out] P_obs    Observed part of the covariance
+     * \param[out] B        Off diagonal block matrix in the covariance
+     * \param[out] C        Covariance matrix of the Gaussian Process
+     * \param[out] C_inv    Inverse of C
+     * \param[out] x_coord  X coordinates of the reordered state
+     * \param[out] y_coord  Y coordinates of the reordered state
+     */
+    void build_Kalman_objects(
+      std::vector<unsigned int> idx_obs, std::vector<unsigned int> idx_nobs,
+      Eigen::VectorXf &mu, Eigen::VectorXf &mu_obs,
+      Eigen::MatrixXf &P, Eigen::MatrixXf &P_obs, Eigen::MatrixXf &B,
+      Eigen::MatrixXf &C, Eigen::MatrixXf &C_inv,
+      Eigen::VectorXf &x_coord, Eigen::VectorXf &y_coord
+    );
 
     /**
      * \brief  Updates the Gaussian Process given measured data points
