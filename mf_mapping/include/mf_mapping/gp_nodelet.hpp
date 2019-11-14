@@ -58,7 +58,8 @@ class GPNodelet: public nodelet::Nodelet {
     sensors_simulator::CameraOutput::ConstPtr camera_msg_;  ///<  Last camera message
     float delta_x_;  ///<  Increment (m) in the x direction
     float delta_y_;  ///<  Increment (m) in the y direction
-    unsigned int size_gp_;  ///<  Total size of the Gaussian Process
+    unsigned int size_gp_;    ///<  Total size of the Gaussian Process
+    unsigned int size_img_;   ///<  Total size of the image
 
     Eigen::VectorXf gp_mean_;     ///<  Mean of the Gaussian Process
     Eigen::MatrixXf gp_cov_;      ///<  Covariance of the Gaussian Process
@@ -66,6 +67,8 @@ class GPNodelet: public nodelet::Nodelet {
     Eigen::MatrixXf gp_C_inv_;    ///<  Inverse of gp_C_
     Eigen::VectorXf x_coord_;     ///<  X coordinate on the wall
     Eigen::VectorXf y_coord_;     ///<  Y coordinate on the wall
+    std::vector<float> out_values_;  ///<  Output values of the Gaussian Process
+    std::vector<bool> changed_pxl_;  ///<  Whether an output pixel has been updated
 
     // ROS parameters
     float main_freq_;         ///<  Frequency of the main loop
@@ -79,6 +82,7 @@ class GPNodelet: public nodelet::Nodelet {
     float matern_thresh_;  ///< Threshold to consider that the kernel value is 0
     float gp_init_mean_;   ///<  Initial mean values of the Gaussian Process
     float gp_noise_var_;   ///<  Noise variance of the Gaussian Process
+    float gp_cov_thresh_;  ///<  Threshold to consider a value as 0 in the covariance
 
     float size_wall_x_;   ///<  Size (m) of the algae wall in the x direction
     float size_wall_y_;   ///<  Size (m) of the algae wall in the y direction

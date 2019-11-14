@@ -121,6 +121,26 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
     m++;
   }
 
+  // Notify changing pixels
+  k = 0;
+  float delta_x = size_wall_x_ / size_img_x_;
+  float delta_y = size_wall_y_ / size_img_y_;
+  float x = 0, y = 0;
+
+  for (unsigned int i = 0; i < size_img_x_; i++) {
+    for (unsigned int j = 0; j < size_img_y_; j++) {
+      if (x >= min_x && x <= max_x && y >= min_y && y <= max_y) {
+        changed_pxl_[k] = true;
+      }
+
+      y += delta_y;
+      k++;
+    }
+
+    x += delta_x;
+    y = 0;
+  }
+
   // Build mathematical objects that are need for Kalman update
   VectorXf mu(size_gp_);      // reordered state
   VectorXf mu_obs(size_obs);  // observed part of the state
@@ -251,8 +271,14 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
         else
           corr_l = idx_nobs[l - size_obs];
 
-        gp_cov_(corr_k, corr_l) = P(k, l);
-        gp_cov_(corr_l, corr_k) = P(l, k);
+        if (P(k, l) > gp_cov_thresh_) {
+          gp_cov_(corr_k, corr_l) = P(k, l);
+          gp_cov_(corr_l, corr_k) = P(l, k);
+        } else {
+          // Threshold low values to optimise multiplication performances
+          gp_cov_(corr_k, corr_l) = 0;
+          gp_cov_(corr_l, corr_k) = 0;
+        }
       }
     }
 

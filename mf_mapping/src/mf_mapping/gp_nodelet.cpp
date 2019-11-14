@@ -66,6 +66,7 @@ void GPNodelet::onInit()
   private_nh_.param<float>("matern_thresh", matern_thresh_, 0.001);
   private_nh_.param<float>("gp_init_mean", gp_init_mean_, 1.0);
   private_nh_.param<float>("gp_noise_var", gp_noise_var_, 1.0);
+  private_nh_.param<float>("gp_cov_thresh", gp_cov_thresh_, 0.0);
   private_nh_.param<float>("size_wall_x", size_wall_x_, 2.0);
   private_nh_.param<float>("size_wall_y", size_wall_y_, 30.0);
   private_nh_.param<int>("size_gp_x", size_gp_x_, 2);
@@ -80,6 +81,9 @@ void GPNodelet::onInit()
   delta_x_ = size_wall_x_ / size_gp_x_;
   delta_y_ = size_wall_y_ / size_gp_y_;
   size_gp_ = size_gp_x_ * size_gp_y_;
+  size_img_ = size_img_x_ * size_img_y_;
+  out_values_.resize(size_img_, 0.5);
+  changed_pxl_.resize(size_img_, false);
 
   // ROS subscribers
   camera_sub_ = nh_.subscribe<sensors_simulator::CameraOutput>("camera_out", 1, &GPNodelet::camera_cb, this);
@@ -143,8 +147,10 @@ void GPNodelet::sigint_handler(int s) {
 
 void GPNodelet::camera_cb(const sensors_simulator::CameraOutput::ConstPtr &msg)
 {
-  camera_msg_ = msg;
-  camera_msg_available_ = true;
+  if (msg->x.size() > 0) {
+    camera_msg_ = msg;
+    camera_msg_available_ = true;
+  }
 }
 
 

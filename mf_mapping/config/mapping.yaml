@@ -12,12 +12,13 @@ gp_nodelet:
   matern_thresh: 0.001  # threshold to consider that the kernel value is 0
   gp_init_mean: 1.0     # initial mean values of the Gaussian Process
   gp_noise_var: 0.2     # noise variance of the Gaussian Process
+  gp_cov_thresh: 0.001  # threshold to consider a value as 0 in the covariance
 
   # Dimensions
   size_wall_x: 2.0    # size (m) of the algae wall in the x direction
-  size_wall_y: 10.0   # size (m) of the algae wall in the y direction
+  size_wall_y: 30.0   # size (m) of the algae wall in the y direction
   size_gp_x: 10       # size of the Gaussian Process mean in the x direction
-  size_gp_y: 50       # size of the Gaussian Process mean in the y direction
-  size_img_x: 40      # size of the output image in the x direction
-  size_img_y: 100     # size of the output image in the y direction
+  size_gp_y: 150       # size of the Gaussian Process mean in the y direction
+  size_img_x: 80      # size of the output image in the x direction
+  size_img_y: 600     # size of the output image in the y direction
   batch_size: 1000      # batch size for the Kalman update of the GP
