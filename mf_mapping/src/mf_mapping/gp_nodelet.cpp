@@ -73,7 +73,6 @@ void GPNodelet::onInit()
   private_nh_.param<int>("size_gp_y", size_gp_y_, 30);
   private_nh_.param<int>("size_img_x", size_img_x_, 40);
   private_nh_.param<int>("size_img_y", size_img_y_, 600);
-  private_nh_.param<int>("batch_size", batch_size_, 1);
 
   // Other variables
   camera_msg_available_ = false;

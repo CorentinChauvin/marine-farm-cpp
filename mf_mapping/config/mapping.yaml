@@ -21,4 +21,3 @@ gp_nodelet:
   size_gp_y: 150       # size of the Gaussian Process mean in the y direction
   size_img_x: 80      # size of the output image in the x direction
   size_img_y: 600     # size of the output image in the y direction
-  batch_size: 1000      # batch size for the Kalman update of the GP

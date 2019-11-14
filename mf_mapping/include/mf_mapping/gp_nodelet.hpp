@@ -91,7 +91,6 @@ class GPNodelet: public nodelet::Nodelet {
     int size_gp_y_;   ///<  Size of the Gaussian Process mean in the y direction
     int size_img_x_;  ///<  Size of the output image in the x direction
     int size_img_y_;  ///<  Size of the output image in the y direction
-    int batch_size_;  ///<  Batch size for the Kalman update of the GP
     ///@}
 
     /**
@@ -205,11 +204,26 @@ class GPNodelet: public nodelet::Nodelet {
      * \param[out] y_coord  Y coordinates of the reordered state
      */
     void build_Kalman_objects(
-      std::vector<unsigned int> idx_obs, std::vector<unsigned int> idx_nobs,
+      const std::vector<unsigned int> &idx_obs,
+      const std::vector<unsigned int> &idx_nobs,
       Eigen::VectorXf &mu, Eigen::VectorXf &mu_obs,
       Eigen::MatrixXf &P, Eigen::MatrixXf &P_obs, Eigen::MatrixXf &B,
       Eigen::MatrixXf &C, Eigen::MatrixXf &C_inv,
       Eigen::VectorXf &x_coord, Eigen::VectorXf &y_coord
+    );
+
+    /**
+     * \brief  Fills GP mean and covariance from reordered objects
+     *
+     * \param idx_obs   Array of corresponding indices for obs states
+     * \param idx_nobs  Array of corresponding indices for non obs states
+     * \param mu        Reordered state
+     * \param P         Reordered covariance
+     */
+    void update_reordered_gp(
+      const std::vector<unsigned int> &idx_obs,
+      const std::vector<unsigned int> &idx_nobs,
+      Eigen::VectorXf &mu, const Eigen::MatrixXf &P
     );
 
     /**

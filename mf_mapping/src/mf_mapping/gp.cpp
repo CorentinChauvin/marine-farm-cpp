@@ -129,7 +129,8 @@ void GPNodelet::notif_changing_pxls(float min_x, float max_x, float min_y,
 
 
 void GPNodelet::build_Kalman_objects(
-  vector<unsigned int> idx_obs, vector<unsigned int> idx_nobs,
+  const vector<unsigned int> &idx_obs,
+  const vector<unsigned int> &idx_nobs,
   VectorXf &mu, VectorXf &mu_obs,
   MatrixXf &P, MatrixXf &P_obs, MatrixXf &B,
   MatrixXf &C, MatrixXf &C_inv,
@@ -184,9 +185,47 @@ void GPNodelet::build_Kalman_objects(
 }
 
 
+void GPNodelet::update_reordered_gp(
+  const vector<unsigned int> &idx_obs,
+  const vector<unsigned int> &idx_nobs,
+  VectorXf &mu, const MatrixXf &P)
+{
+  unsigned int size_obs = idx_obs.size();
+  unsigned int size_nobs = idx_nobs.size();
+
+  for (unsigned int k = 0; k < size_gp_; k++) {
+    unsigned int corr_k;
+
+    if (k < size_obs)
+      corr_k = idx_obs[k];
+    else
+      corr_k = idx_nobs[k - size_obs];
+
+    gp_mean_(corr_k) = mu(k);
+
+    for (unsigned int l = 0; l <= k; l++) {
+      unsigned int corr_l;
+
+      if (l < size_obs)
+        corr_l = idx_obs[l];
+      else
+        corr_l = idx_nobs[l - size_obs];
+
+      if (P(k, l) > gp_cov_thresh_) {
+        gp_cov_(corr_k, corr_l) = P(k, l);
+        gp_cov_(corr_l, corr_k) = P(l, k);
+      } else {
+        // Threshold low values to optimise multiplication performances
+        gp_cov_(corr_k, corr_l) = 0;
+        gp_cov_(corr_l, corr_k) = 0;
+      }
+    }
+  }
+}
+
 
 void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
-  const vec_f &z, const vec_f &distances, const vec_f &values)
+  const vec_f &z_meas, const vec_f &distances, const vec_f &values)
 {
   // Select the observed part of the state wich is concerned by update
   // Asumption: the state is not affected far from the measurements
@@ -234,88 +273,51 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
   build_Kalman_objects(idx_obs, idx_nobs, mu, mu_obs, P, P_obs, B, C, C_inv,
     x_coord, y_coord);
 
-  // Batch updates
-  int input_idx = 0;  // index in the input vectors
-  int total_size_meas = values.size();
+  // Process input data
+  int size_meas = values.size();
+  VectorXf z(size_meas);  // measurement vector
+  MatrixXf R = MatrixXf::Zero(size_meas, size_meas);  // covariance on the measurents
 
-  while (input_idx < total_size_meas) {
-    // Prepare a batch of measurement data to process
-    int size_meas = min(batch_size_, total_size_meas - input_idx);
-
-    VectorXf z(size_meas);  // measurement vector
-    MatrixXf R = MatrixXf::Zero(size_meas, size_meas);  // covariance on the measurents
-
-    for (unsigned int k = 0; k < size_meas; k++) {
-      z(k) = values[input_idx + k];
-      R(k, k) = camera_noise(distances[input_idx + k]);
-    }
-
-    // Compute innovation
-    MatrixXf k_meas(size_meas, size_obs);
-
-    for (unsigned int i = 0; i < size_meas; i++) {
-      for (unsigned int j = 0; j < size_obs; j++) {
-        k_meas(i, j) = matern_kernel(
-          x_meas[input_idx + i], y_meas[input_idx + i], x_coord(j), y_coord(j)
-        );
-      }
-    }
-
-    MatrixXf H_obs = k_meas * C_inv;
-    VectorXf v = z - H_obs * mu_obs;
-
-    // Compute Kalman gain
-    MatrixXf PHt(size_obs, size_meas);
-    MatrixXf BtHt(size_nobs, size_meas);
-    MatrixXf L(size_gp_, size_meas);
-
-    PHt = P_obs * H_obs.transpose();
-    BtHt = B.transpose() * H_obs.transpose();
-    L << PHt,
-         BtHt;
-
-    MatrixXf S = H_obs * PHt + R;
-    MatrixXf S_inv = S.inverse();
-    MatrixXf K = L * S_inv;
-
-    // Update mean and covariance
-    mu += K * v;
-    P = P - L * S_inv * L.transpose();
-
-    for (unsigned int k = 0; k < size_gp_; k++) {
-      unsigned int corr_k;
-
-      if (k < size_obs)
-        corr_k = idx_obs[k];
-      else
-        corr_k = idx_nobs[k - size_obs];
-
-      gp_mean_(corr_k) = mu(k);
-
-      for (unsigned int l = 0; l <= k; l++) {
-        unsigned int corr_l;
-
-        if (l < size_obs)
-          corr_l = idx_obs[l];
-        else
-          corr_l = idx_nobs[l - size_obs];
-
-        if (P(k, l) > gp_cov_thresh_) {
-          gp_cov_(corr_k, corr_l) = P(k, l);
-          gp_cov_(corr_l, corr_k) = P(l, k);
-        } else {
-          // Threshold low values to optimise multiplication performances
-          gp_cov_(corr_k, corr_l) = 0;
-          gp_cov_(corr_l, corr_k) = 0;
-        }
-      }
-    }
-
-    // Update batch index
-    input_idx += batch_size_;
+  for (unsigned int k = 0; k < size_meas; k++) {
+    z(k) = values[k];
+    R(k, k) = camera_noise(distances[k]);
   }
-}
 
+  // Compute innovation
+  MatrixXf k_meas(size_meas, size_obs);
+
+  for (unsigned int i = 0; i < size_meas; i++) {
+    for (unsigned int j = 0; j < size_obs; j++) {
+      k_meas(i, j) = matern_kernel(
+        x_meas[i], y_meas[i], x_coord(j), y_coord(j)
+      );
+    }
+  }
+
+  MatrixXf H_obs = k_meas * C_inv;
+  VectorXf v = z - H_obs * mu_obs;
+
+  // Compute Kalman gain
+  MatrixXf PHt(size_obs, size_meas);
+  MatrixXf BtHt(size_nobs, size_meas);
+  MatrixXf L(size_gp_, size_meas);
+
+  PHt = P_obs * H_obs.transpose();
+  BtHt = B.transpose() * H_obs.transpose();
+  L << PHt,
+       BtHt;
+
+  MatrixXf S = H_obs * PHt + R;
+  MatrixXf S_inv = S.inverse();
+  MatrixXf K = L * S_inv;
+
+  // Update mean and covariance
+  mu += K * v;
+  P = P - L * S_inv * L.transpose();
+
+  update_reordered_gp(idx_obs, idx_nobs, mu, P);
+
+}
 
 
 };
