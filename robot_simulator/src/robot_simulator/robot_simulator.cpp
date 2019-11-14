@@ -128,8 +128,8 @@ void RobotSimulator::publish_state()
   // Publish odometry
   nav_msgs::Odometry odom;
   odom.header.stamp = ros::Time::now();
-  odom.header.frame_id = "ocean";
-  odom.child_frame_id = "base_link";
+  odom.header.frame_id = fixed_frame_;
+  odom.child_frame_id = robot_frame_;
   odom.pose.pose.position.x = state_[0];
   odom.pose.pose.position.y = state_[1];
   odom.pose.pose.position.z = state_[2];

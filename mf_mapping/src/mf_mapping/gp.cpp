@@ -8,8 +8,7 @@
 
 #include "gp_nodelet.hpp"
 #include <iostream>
-
-#include <ctime>
+#include <cmath>
 
 using namespace std;
 using Eigen::VectorXf;
@@ -64,8 +63,120 @@ void GPNodelet::init_gp()
 
 
 void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
-  const vec_f &distance, const vec_f &values)
+  const vec_f &z, const vec_f &distances, const vec_f &values)
 {
+  // Select the observed part of the state wich is concerned by update
+  // Asumption: the state is not affected far from the measurements
+  float min_x = *std::min_element(x_meas.begin(), x_meas.end());
+  float min_y = *std::min_element(y_meas.begin(), y_meas.end());
+  float max_x = *std::max_element(x_meas.begin(), x_meas.end());
+  float max_y = *std::max_element(y_meas.begin(), y_meas.end());
+
+  float added_distance = -matern_length_/sqrt(3)
+                       * log(matern_thresh_/pow(matern_var_, 2));
+
+  min_x = max(float(0), min_x - added_distance);  // area on the wall affected by the update
+  max_x = min(float(size_wall_x_ - delta_x_), max_x + added_distance);
+  min_y = max(float(0), min_y - added_distance);
+  max_y = min(float(size_wall_y_ - delta_y_), max_y + added_distance);
+
+  unsigned int min_obs_x = min_x / delta_x_;  // indices in the original state
+  unsigned int max_obs_x = max_x / delta_x_;
+  unsigned int min_obs_y = min_y / delta_y_;
+  unsigned int max_obs_y = max_y / delta_y_;
+  unsigned int size_obs_x = max_obs_x - min_obs_x + 1;  // sizes of the selected state
+  unsigned int size_obs_y = max_obs_y - min_obs_y + 1;
+  unsigned int size_obs = size_obs_x * size_obs_y;
+  unsigned int size_nobs = size_gp_ - size_obs;
+
+  vector<unsigned int> idx_obs(size_obs);  // indices correspondance to the observed state
+  vector<unsigned int> idx_nobs(size_nobs);  // complementary to the previous one
+  unsigned int k = 0;
+
+  for (unsigned int i = min_obs_x; i <= max_obs_x; i++) {
+    for (unsigned int j = min_obs_y; j <= max_obs_y; j++) {
+      idx_obs[k] = i*size_gp_y_ + j;
+      k++;
+    }
+  }
+
+  k = 0;               // will go through idx_obs
+  unsigned int l = 0;  // will go through idx_nobs
+  unsigned int m = 0;  // will go through the original state
+
+  while (m < size_gp_) {
+    if (k < size_obs) {
+      if (idx_obs[k] > m) {
+        idx_nobs[l] = m;
+        l++;
+      } else {
+        k++;
+      }
+    }
+    else {
+      idx_nobs[l] = m;
+      l++;
+    }
+
+    m++;
+  }
+
+  // Build mathematical objects that are need for Kalman update
+  VectorXf mu(size_gp_);      // reordered state
+  VectorXf mu_obs(size_obs);  // observed part of the state
+  MatrixXf P(size_gp_, size_gp_);      // reordered covariance
+  MatrixXf P_obs(size_obs, size_obs);  // observed part of the covariance
+  MatrixXf B(size_obs, size_nobs);  // off diagonal block matrix in the covariance
+  MatrixXf C(size_obs, size_obs);
+  MatrixXf C_inv(size_obs, size_obs);
+  VectorXf x_coord(size_obs);
+  VectorXf y_coord(size_obs);
+
+  for (unsigned int k = 0; k < size_obs; k++) {
+    mu_obs(k) = gp_mean_(idx_obs[k]);
+
+    for (unsigned int l = 0; l <= k; l++) {
+      P_obs(k, l) = gp_cov_(idx_obs[k], idx_obs[l]);
+      P_obs(l, k) = P_obs(k, l);
+
+      C(k, l) = gp_C_(idx_obs[k], idx_obs[l]);
+      C(l, k) = C(k, l);
+    }
+
+    for (unsigned int l = 0; l < size_nobs; l++) {
+      B(k, l) = gp_cov_(idx_obs[k], idx_nobs[l]);
+    }
+
+    x_coord(k) = x_coord_(idx_obs[k]);
+    y_coord(k) = y_coord_(idx_obs[k]);
+  }
+
+  for (unsigned int k = 0; k < size_gp_; k++) {
+    unsigned int corr_k;
+
+    if (k < size_obs)
+      corr_k = idx_obs[k];
+    else
+      corr_k = idx_nobs[k - size_obs];
+
+    mu(k) = gp_mean_(corr_k);
+
+    for (unsigned int l = 0; l <= k; l++) {
+      unsigned int corr_l;
+
+      if (l < size_obs)
+        corr_l = idx_obs[l];
+      else
+        corr_l = idx_nobs[l - size_obs];
+
+      P(k, l) = gp_cov_(corr_k, corr_l);
+      P(l, k) = P(k, l);
+    }
+  }
+
+  C_inv = C.inverse();
+
+  // Batch updates
   int input_idx = 0;  // index in the input vectors
   int total_size_meas = values.size();
 
@@ -78,30 +189,72 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
 
     for (unsigned int k = 0; k < size_meas; k++) {
       z(k) = values[input_idx + k];
-      R(k, k) = camera_noise(distance[input_idx + k]);
+      R(k, k) = camera_noise(distances[input_idx + k]);
     }
 
     // Compute innovation
-    MatrixXf k_meas(size_meas, size_gp_);
+    MatrixXf k_meas(size_meas, size_obs);
 
     for (unsigned int i = 0; i < size_meas; i++) {
-      for (unsigned int j = 0; j < size_gp_; j++) {
+      for (unsigned int j = 0; j < size_obs; j++) {
         k_meas(i, j) = matern_kernel(
-          x_meas[input_idx + i], y_meas[input_idx + i], x_coord_(j), y_coord_(j)
+          x_meas[input_idx + i], y_meas[input_idx + i], x_coord(j), y_coord(j)
         );
       }
     }
 
-    MatrixXf H = k_meas * gp_C_inv_;
-    VectorXf v = z - H * gp_mean_;
+    MatrixXf H_obs = k_meas * C_inv;
+    VectorXf v = z - H_obs * mu_obs;
 
     // Compute Kalman gain
-    MatrixXf S = H * gp_cov_ * H.transpose() + R;
-    MatrixXf K = gp_cov_ * H.transpose() * S.inverse();
+    MatrixXf PHt(size_obs, size_meas);
+    MatrixXf BtHt(size_nobs, size_meas);
+    MatrixXf L(size_gp_, size_meas);
+
+    PHt = P_obs * H_obs.transpose();
+    BtHt = B.transpose() * H_obs.transpose();
+
+    for (unsigned int k = 0; k < size_obs; k++) {
+      for (unsigned int l = 0; l < size_meas; l++) {
+        L(k, l) = PHt(k, l);
+      }
+    }
+    for (unsigned int k = 0; k < size_nobs; k++) {
+      for (unsigned int l = 0; l < size_meas; l++) {
+        L(k + size_obs, l) = BtHt(k, l);
+      }
+    }
+
+    MatrixXf S = H_obs * PHt + R;
+    MatrixXf S_inv = S.inverse();
+    MatrixXf K = L * S_inv;
 
     // Update mean and covariance
-    gp_mean_ += K * v;
-    gp_cov_ = gp_cov_ - K * H * gp_cov_;
+    mu += K * v;
+    P = P - L * S_inv * L.transpose();
+
+    for (unsigned int k = 0; k < size_gp_; k++) {
+      unsigned int corr_k;
+
+      if (k < size_obs)
+        corr_k = idx_obs[k];
+      else
+        corr_k = idx_nobs[k - size_obs];
+
+      gp_mean_(corr_k) = mu(k);
+
+      for (unsigned int l = 0; l <= k; l++) {
+        unsigned int corr_l;
+
+        if (l < size_obs)
+          corr_l = idx_obs[l];
+        else
+          corr_l = idx_nobs[l - size_obs];
+
+        gp_cov_(corr_k, corr_l) = P(k, l);
+        gp_cov_(corr_l, corr_k) = P(l, k);
+      }
+    }
 
     // Update batch index
     input_idx += batch_size_;

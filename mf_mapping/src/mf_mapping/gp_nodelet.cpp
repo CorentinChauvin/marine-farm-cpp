@@ -63,6 +63,7 @@ void GPNodelet::onInit()
   private_nh_.param<float>("camera_decay", camera_decay_, 1.0);
   private_nh_.param<float>("matern_length", matern_length_, 1.0);
   private_nh_.param<float>("matern_var", matern_var_, 1.0);
+  private_nh_.param<float>("matern_thresh", matern_thresh_, 0.001);
   private_nh_.param<float>("gp_init_mean", gp_init_mean_, 1.0);
   private_nh_.param<float>("gp_noise_var", gp_noise_var_, 1.0);
   private_nh_.param<float>("size_wall_x", size_wall_x_, 2.0);
@@ -110,10 +111,17 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
     transform_points(camera_msg_->x, camera_msg_->y, camera_msg_->z,
       x, y, z, camera_msg_->header.frame_id, wall_frame_);
 
+    vector<float> distances(x.size());
+    for (unsigned int k = 0; k < x.size(); k++) {
+      distances[k] = Eigen::Vector3d(camera_msg_->x[k],
+                                     camera_msg_->y[k],
+                                     camera_msg_->z[k]).norm();
+    }
+
     cout << "Starting update..." << endl;
     clock_t begin = clock();
 
-    update_gp(x, y, camera_msg_->z, camera_msg_->value);
+    update_gp(x, y, z, distances, camera_msg_->value);
     cout << " -> update done in: " << double(clock() - begin) / CLOCKS_PER_SEC <<  endl;
     begin = clock();
 

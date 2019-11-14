@@ -64,18 +64,19 @@ class GPNodelet: public nodelet::Nodelet {
     Eigen::MatrixXf gp_cov_;      ///<  Covariance of the Gaussian Process
     Eigen::MatrixXf gp_C_;  ///<  Covariance of the values of the mean of the GP
     Eigen::MatrixXf gp_C_inv_;    ///<  Inverse of gp_C_
-    Eigen::VectorXf x_coord_;  ///<  X coordinate on the wall
-    Eigen::VectorXf y_coord_;  ///<  Y coordinate on the wall
+    Eigen::VectorXf x_coord_;     ///<  X coordinate on the wall
+    Eigen::VectorXf y_coord_;     ///<  Y coordinate on the wall
 
     // ROS parameters
-    float main_freq_;     ///<  Frequency of the main loop
+    float main_freq_;         ///<  Frequency of the main loop
     std::string wall_frame_;  ///<  Name of the wall frame
 
-    float camera_var_;    ///<  Max variance on camera measurements
-    float camera_decay_;  ///<  Exponential decay rate on camera measurements
+    float camera_var_;     ///<  Max variance on camera measurements
+    float camera_decay_;   ///<  Exponential decay rate on camera measurements
 
     float matern_length_;  ///<  Lengthscale of the Matern kernel
     float matern_var_;     ///<  Signal variance of the Matern kernel
+    float matern_thresh_;  ///< Threshold to consider that the kernel value is 0
     float gp_init_mean_;   ///<  Initial mean values of the Gaussian Process
     float gp_noise_var_;   ///<  Noise variance of the Gaussian Process
 
@@ -152,13 +153,14 @@ class GPNodelet: public nodelet::Nodelet {
     /**
      * \brief  Updates the Gaussian Process given measured data points
      *
-     * \param x_meas    X coordinate of the measured data points
-     * \param y_meas    Y coordinate of the measured data points
-     * \param distance  Distance to the measured points
+     * \param x_meas     X coordinate of the measured data points
+     * \param y_meas     Y coordinate of the measured data points
+     * \param z_meas     Z coordinate of the measured data points
+     * \param distances  Distances to the measured points
      * \param value     Value of the points at coordinates (x, y)
      */
     void update_gp(const vec_f &x_meas, const vec_f &y_meas,
-      const vec_f &distance, const vec_f &values);
+      const vec_f &z, const vec_f &distances, const vec_f &values);
 
     /**
      * \brief  Publishes an image of the GP of an algae wall
