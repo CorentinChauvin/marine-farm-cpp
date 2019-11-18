@@ -50,6 +50,7 @@ class GPNodelet: public nodelet::Nodelet {
     ros::NodeHandle private_nh_;    ///<  Private node handler (for parameters)
     ros::Subscriber camera_sub_;    ///<  Subscriber for the camera
     ros::Publisher wall_img_pub_;   ///< Publisher for an image of the wall GP
+    ros::Publisher cov_img_pub_;    ///< Publisher for an image of the GP covariance
     tf2_ros::Buffer tf_buffer_;     ///<  Tf2 buffer for getting tf transforms
     tf2_ros::TransformListener tf_listener_;  ///<  Tf2 listener for getting tf transforms
 
@@ -85,6 +86,8 @@ class GPNodelet: public nodelet::Nodelet {
     float gp_init_mean_;   ///<  Initial mean values of the Gaussian Process
     float gp_noise_var_;   ///<  Noise variance of the Gaussian Process
     float gp_cov_thresh_;  ///<  Threshold to consider a value as 0 in the covariance
+    float out_scale_;      ///<  Exponential scale factor for the output
+                           ///<  (higher value implies sharper transition between 0 and 1)
 
     float size_wall_x_;   ///<  Size (m) of the algae wall in the x direction
     float size_wall_y_;   ///<  Size (m) of the algae wall in the y direction

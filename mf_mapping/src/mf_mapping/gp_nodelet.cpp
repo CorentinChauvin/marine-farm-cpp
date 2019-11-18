@@ -67,6 +67,7 @@ void GPNodelet::onInit()
   private_nh_.param<float>("gp_init_mean", gp_init_mean_, 1.0);
   private_nh_.param<float>("gp_noise_var", gp_noise_var_, 1.0);
   private_nh_.param<float>("gp_cov_thresh", gp_cov_thresh_, 0.0);
+  private_nh_.param<float>("out_scale", out_scale_, 1.0);
   private_nh_.param<float>("size_wall_x", size_wall_x_, 2.0);
   private_nh_.param<float>("size_wall_y", size_wall_y_, 30.0);
   private_nh_.param<int>("size_gp_x", size_gp_x_, 2);
@@ -89,6 +90,7 @@ void GPNodelet::onInit()
 
   // ROS publishers
   wall_img_pub_ = nh_.advertise<sensor_msgs::Image>("gp_img", 0);
+  cov_img_pub_ = nh_.advertise<sensor_msgs::Image>("gp_cov", 0);
 
 
   // Main loop
@@ -104,6 +106,7 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
     return;
 
   if (!gp_initialised_) {
+    NODELET_INFO("[gp_nodelet] Initialisation of Gaussian Process...");
     init_gp();
     gp_initialised_ = true;
 

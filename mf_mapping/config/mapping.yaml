@@ -3,16 +3,19 @@ gp_nodelet:
   wall_frame: "wall"
 
   # Sensor model
-  camera_var: 0.2     # max variance on camera measurements
-  camera_decay: 0.5   # exponential decay rate (m) on camera measurements
+  camera_var: 10.0    # max variance on camera measurements
+  camera_decay: 0.3   # exponential decay rate (m) on camera measurements
 
   # Gaussian Process behaviour
   matern_length: 0.2    # lengthscale of the Matern kernel
   matern_var: 2.0       # signal variance of the Matern kernel
   matern_thresh: 0.001  # threshold to consider that the kernel value is 0
-  gp_init_mean: 1.0     # initial mean values of the Gaussian Process
-  gp_noise_var: 0.2     # noise variance of the Gaussian Process
+  gp_init_mean: 0.5     # initial mean values of the Gaussian Process
+  gp_noise_var: 2.0     # noise variance of the Gaussian Process
   gp_cov_thresh: 0.001  # threshold to consider a value as 0 in the covariance
+  out_scale: 5.0        # exponential scale factor for the output
+                        # (higher value implies sharper transition between 0 and 1)
+
 
   # Dimensions
   size_wall_x: 2.0    # size (m) of the algae wall in the x direction

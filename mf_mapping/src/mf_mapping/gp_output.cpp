@@ -62,11 +62,6 @@ void GPNodelet::publish_wall_img()
         }
 
         out_values_[k] = k_obs.dot(W);
-        if (out_values_[k] > 1.0)
-          out_values_[k] = 1.0;
-        else if (out_values_[k] < 0.0)
-          out_values_[k] = 0.0;
-
         changed_pxl_[k] = false;
       }
 
@@ -88,10 +83,25 @@ void GPNodelet::publish_wall_img()
   img.data.resize(size_img_);
 
   for (unsigned int k = 0; k < size_img_; k++) {
-    img.data[k] = out_values_[k] * 255;
+    img.data[k] = 255 * (1/(1 + exp(-out_scale_*(out_values_[k] - 0.5))));
   }
 
   wall_img_pub_.publish(img);
+
+  // Fill covariance image
+  img.header.stamp = ros::Time::now();
+  img.height = size_gp_x_;
+  img.width = size_gp_y_;
+  img.encoding = sensor_msgs::image_encodings::MONO8;
+  img.is_bigendian = false;
+  img.step = size_gp_y_;
+  img.data.resize(size_gp_);
+
+  for (unsigned int k = 0; k < size_gp_; k++) {
+    img.data[k] = (1 - gp_cov_(k, k)*gp_noise_var_) * 255;
+  }
+
+  cov_img_pub_.publish(img);
 }
 
 

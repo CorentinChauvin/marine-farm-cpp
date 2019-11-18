@@ -236,11 +236,17 @@ void GPNodelet::update_reordered_gp(
       else
         corr_l = idx_nobs[l - size_obs];
 
-      if (P(k, l) > gp_cov_thresh_) {
+      if (corr_k == corr_l  && P(k, l) > gp_cov_thresh_) {
         gp_cov_(corr_k, corr_l) = P(k, l);
         gp_cov_(corr_l, corr_k) = P(l, k);
-      } else {
-        // Threshold low values to optimise multiplication performances
+      }
+      else if (corr_k == corr_l) {
+        // Prevent the covariance from dropping too low
+        gp_cov_(corr_k, corr_l) = gp_cov_thresh_;
+        gp_cov_(corr_l, corr_k) = gp_cov_thresh_;
+      }
+      else {
+        // Threshold low off-diagonal values to optimise multiplication performances
         gp_cov_(corr_k, corr_l) = 0;
         gp_cov_(corr_l, corr_k) = 0;
       }
