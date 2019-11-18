@@ -65,8 +65,9 @@ class GPNodelet: public nodelet::Nodelet {
     Eigen::MatrixXf gp_cov_;      ///<  Covariance of the Gaussian Process
     Eigen::MatrixXf gp_C_;  ///<  Covariance of the values of the mean of the GP
     Eigen::MatrixXf gp_C_inv_;    ///<  Inverse of gp_C_
-    Eigen::VectorXf x_coord_;     ///<  X coordinate on the wall
-    Eigen::VectorXf y_coord_;     ///<  Y coordinate on the wall
+    std::vector<unsigned int> idx_obs_;  ///<  Array of corresponding indices for observed states
+    Eigen::VectorXf x_coord_;     ///<  X coordinates of the state on the wall
+    Eigen::VectorXf y_coord_;     ///<  Y coordinates of the state on the wall
     std::vector<float> out_values_;  ///<  Output values of the Gaussian Process
     std::vector<bool> changed_pxl_;  ///<  Whether an output pixel has been updated
 
@@ -172,7 +173,7 @@ class GPNodelet: public nodelet::Nodelet {
      */
     void pop_reordered_idx(
       unsigned int size_obs, unsigned int size_nobs,
-      float min_x, float max_x, float min_y, float max_y,
+      unsigned int min_x, unsigned int max_x, unsigned int min_y, unsigned int max_y,
       std::vector<unsigned int> &idx_obs, std::vector<unsigned int> &idx_nobs
     );
 
@@ -191,15 +192,15 @@ class GPNodelet: public nodelet::Nodelet {
      *
      * \note  It assumes the following objects are already of the right size
      *
-     * \param[in] idx_obs   Array of corresponding indices for obs states
-     * \param[in] idx_nobs  Array of corresponding indices for non obs states
-     * \param[out] mu       Reordered state
-     * \param[out] mu_obs   Observed part of the state
-     * \param[out] P        Reordered covariance
-     * \param[out] P_obs    Observed part of the covariance
-     * \param[out] B        Off diagonal block matrix in the covariance
-     * \param[out] C        Covariance matrix of the Gaussian Process
-     * \param[out] C_inv    Inverse of C
+     * \param[in] idx_obs     Array of corresponding indices for obs states
+     * \param[in] idx_nobs    Array of corresponding indices for non obs states
+     * \param[out] mu         Reordered state
+     * \param[out] mu_obs     Observed part of the state
+     * \param[out] P          Reordered covariance
+     * \param[out] P_obs      Observed part of the covariance
+     * \param[out] B          Off diagonal block matrix in the covariance
+     * \param[out] C_obs      Covariance matrix of the GP for obs states
+     * \param[out] C_obs_inv  Inverse of C_obs
      * \param[out] x_coord  X coordinates of the reordered state
      * \param[out] y_coord  Y coordinates of the reordered state
      */
@@ -208,8 +209,25 @@ class GPNodelet: public nodelet::Nodelet {
       const std::vector<unsigned int> &idx_nobs,
       Eigen::VectorXf &mu, Eigen::VectorXf &mu_obs,
       Eigen::MatrixXf &P, Eigen::MatrixXf &P_obs, Eigen::MatrixXf &B,
-      Eigen::MatrixXf &C, Eigen::MatrixXf &C_inv,
+      Eigen::MatrixXf &C_obs, Eigen::MatrixXf &C_obs_inv,
       Eigen::VectorXf &x_coord, Eigen::VectorXf &y_coord
+    );
+
+    /**
+     * \brief  Builds vectors and matrices needed during GP evaluation
+     *
+     * \note  It assumes the following objects are already of the right size
+     *
+     * \param[in] idx_obs     Array of corresponding indices for obs states
+     * \param[in] idx_nobs    Array of corresponding indices for non obs states
+     * \param[out] mu_nobs    Not observed part of the state
+     * \param[out] C_nobs     Covariance matrix of the GP for not obs states
+     * \param[out] E          Off diagonal block matrix in gp_C_
+     */
+    void build_eval_objects(
+      const std::vector<unsigned int> &idx_obs,
+      const std::vector<unsigned int> &idx_nobs,
+      Eigen::VectorXf &mu_nobs, Eigen::MatrixXf &C_nobs, Eigen::MatrixXf &E
     );
 
     /**

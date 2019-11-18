@@ -77,8 +77,8 @@ void GPNodelet::onInit()
   // Other variables
   camera_msg_available_ = false;
   gp_initialised_ = false;
-  delta_x_ = size_wall_x_ / size_gp_x_;
-  delta_y_ = size_wall_y_ / size_gp_y_;
+  delta_x_ = size_wall_x_ / (size_gp_x_-1);
+  delta_y_ = size_wall_y_ / (size_gp_y_-1);
   size_gp_ = size_gp_x_ * size_gp_y_;
   size_img_ = size_img_x_ * size_img_y_;
   out_values_.resize(size_img_, 0.5);

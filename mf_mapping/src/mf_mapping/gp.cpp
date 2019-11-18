@@ -39,7 +39,7 @@ void GPNodelet::init_gp()
     y_coord_(k) = y;
     y += delta_y_;
 
-    if (y >= size_wall_y_) {
+    if (y > size_wall_y_ + 0.01) {
       y = 0;
       x += delta_x_;
     }
@@ -64,7 +64,7 @@ void GPNodelet::init_gp()
 
 void GPNodelet::pop_reordered_idx(
   unsigned int size_obs, unsigned int size_nobs,
-  float min_x, float max_x, float min_y, float max_y,
+  unsigned int min_x, unsigned int max_x, unsigned int min_y, unsigned int max_y,
   vector<unsigned int> &idx_obs , vector<unsigned int> &idx_nobs)
 {
   idx_obs.resize(size_obs);
@@ -108,8 +108,8 @@ void GPNodelet::notif_changing_pxls(float min_x, float max_x, float min_y,
   float max_y)
 {
   unsigned int k = 0;
-  float delta_x = size_wall_x_ / size_img_x_;
-  float delta_y = size_wall_y_ / size_img_y_;
+  float delta_x = size_wall_x_ / (size_img_x_-1);
+  float delta_y = size_wall_y_ / (size_img_y_-1);
   float x = 0, y = 0;
 
   for (unsigned int i = 0; i < size_img_x_; i++) {
@@ -133,11 +133,11 @@ void GPNodelet::build_Kalman_objects(
   const vector<unsigned int> &idx_nobs,
   VectorXf &mu, VectorXf &mu_obs,
   MatrixXf &P, MatrixXf &P_obs, MatrixXf &B,
-  MatrixXf &C, MatrixXf &C_inv,
+  MatrixXf &C_obs, MatrixXf &C_obs_inv,
   VectorXf &x_coord, VectorXf &y_coord)
 {
-  unsigned int size_obs = x_coord.size();
-  unsigned int size_nobs = size_gp_ - size_obs;
+  unsigned int size_obs = idx_obs.size();
+  unsigned int size_nobs = idx_nobs.size();
 
   for (unsigned int k = 0; k < size_obs; k++) {
     mu_obs(k) = gp_mean_(idx_obs[k]);
@@ -146,8 +146,8 @@ void GPNodelet::build_Kalman_objects(
       P_obs(k, l) = gp_cov_(idx_obs[k], idx_obs[l]);
       P_obs(l, k) = P_obs(k, l);
 
-      C(k, l) = gp_C_(idx_obs[k], idx_obs[l]);
-      C(l, k) = C(k, l);
+      C_obs(k, l) = gp_C_(idx_obs[k], idx_obs[l]);
+      C_obs(l, k) = C_obs(k, l);
     }
 
     for (unsigned int l = 0; l < size_nobs; l++) {
@@ -181,7 +181,32 @@ void GPNodelet::build_Kalman_objects(
     }
   }
 
-  C_inv = C.inverse();
+  C_obs_inv = C_obs.inverse();
+}
+
+
+void GPNodelet::build_eval_objects(
+  const vector<unsigned int> &idx_obs,
+  const vector<unsigned int> &idx_nobs,
+  VectorXf &mu_nobs, MatrixXf &C_nobs, MatrixXf &E)
+{
+  unsigned int size_obs = idx_obs.size();
+  unsigned int size_nobs = idx_nobs.size();
+
+  for (unsigned int k = 0; k < size_nobs; k++) {
+    mu_nobs(k) = gp_mean_(idx_nobs[k]);
+
+    for (unsigned int l = 0; l <= k; l++) {
+      C_nobs(k, l) = gp_C_(idx_nobs[k], idx_nobs[l]);
+      C_nobs(l, k) = C_nobs(k, l);
+    }
+  }
+
+  for (unsigned int k = 0; k < size_obs; k++) {
+    for (unsigned int l = 0; l < size_nobs; l++) {
+      E(k, l) = gp_C_(idx_obs[k], idx_nobs[l]);
+    }
+  }
 }
 
 
@@ -238,9 +263,9 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
                        * log(matern_thresh_/pow(matern_var_, 2));
 
   min_x = max(float(0), min_x - added_distance);  // area on the wall affected by the update
-  max_x = min(float(size_wall_x_ - delta_x_), max_x + added_distance);
+  max_x = min(float(size_wall_x_), max_x + added_distance);
   min_y = max(float(0), min_y - added_distance);
-  max_y = min(float(size_wall_y_ - delta_y_), max_y + added_distance);
+  max_y = min(float(size_wall_y_), max_y + added_distance);
 
   unsigned int min_obs_x = min_x / delta_x_;  // indices in the original state
   unsigned int max_obs_x = max_x / delta_x_;
@@ -265,12 +290,12 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
   MatrixXf P(size_gp_, size_gp_);      // reordered covariance
   MatrixXf P_obs(size_obs, size_obs);  // observed part of the covariance
   MatrixXf B(size_obs, size_nobs);  // off diagonal block matrix in the covariance
-  MatrixXf C(size_obs, size_obs);
-  MatrixXf C_inv(size_obs, size_obs);
+  MatrixXf C_obs(size_obs, size_obs);
+  MatrixXf C_obs_inv(size_obs, size_obs);
   VectorXf x_coord(size_obs);
   VectorXf y_coord(size_obs);
 
-  build_Kalman_objects(idx_obs, idx_nobs, mu, mu_obs, P, P_obs, B, C, C_inv,
+  build_Kalman_objects(idx_obs, idx_nobs, mu, mu_obs, P, P_obs, B, C_obs, C_obs_inv,
     x_coord, y_coord);
 
   // Process input data
@@ -294,7 +319,7 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
     }
   }
 
-  MatrixXf H_obs = k_meas * C_inv;
+  MatrixXf H_obs = k_meas * C_obs_inv;
   VectorXf v = z - H_obs * mu_obs;
 
   // Compute Kalman gain
@@ -316,6 +341,23 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
   P = P - L * S_inv * L.transpose();
 
   update_reordered_gp(idx_obs, idx_nobs, mu, P);
+
+  // Storing correspondance indices for evaluation
+  min_x = max(float(0), min_x - added_distance);  // area on the wall affected by the update
+  max_x = min(float(size_wall_x_), max_x + added_distance);
+  min_y = max(float(0), min_y - added_distance);
+  max_y = min(float(size_wall_y_), max_y + added_distance);
+
+  min_obs_x = min_x / delta_x_;  // indices in the original state
+  max_obs_x = max_x / delta_x_;
+  min_obs_y = min_y / delta_y_;
+  max_obs_y = max_y / delta_y_;
+
+  size_obs = (max_obs_x - min_obs_x + 1) * (max_obs_y - min_obs_y + 1);
+  size_nobs = size_gp_ - size_obs;
+
+  pop_reordered_idx(size_obs, size_nobs, min_obs_x, max_obs_x, min_obs_y, max_obs_y, idx_obs, idx_nobs);
+  idx_obs_ = idx_obs;
 
 }
 
