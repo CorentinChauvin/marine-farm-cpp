@@ -9,6 +9,7 @@
 #include "robot_simulator.hpp"
 #include "robot_model/robot_model.hpp"
 #include "robot_simulator/Command.h"
+#include "robot_simulator/CartesianCommand.h"
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -58,9 +59,13 @@ void RobotSimulator::init_node()
 
   // ROS subscribers
   input_sub_ = nh_.subscribe<robot_simulator::Command>("input", 1, &RobotSimulator::input_cb, this);
+  cart_input_sub_ = nh_.subscribe<robot_simulator::CartesianCommand>(
+    "cart_input", 1, &RobotSimulator::cart_input_cb, this
+  );
 
   // Simulator initialisation
   input_ = {0, 0, 0, 0};
+  cart_input_ = {0, 0, 0};
   robot_model_ = RobotModel(model_csts);
 
 }
@@ -111,6 +116,14 @@ void RobotSimulator::input_cb(const robot_simulator::Command::ConstPtr &msg)
 }
 
 
+void RobotSimulator::cart_input_cb(const robot_simulator::CartesianCommand::ConstPtr &msg)
+{
+  cart_input_[0] = msg->v_x;
+  cart_input_[1] = msg->v_y;
+  cart_input_[2] = msg->v_z;
+}
+
+
 void RobotSimulator::update_state(float dt)
 {
   // Integrate the model
@@ -120,6 +133,12 @@ void RobotSimulator::update_state(float dt)
   if (abs(state_[12]) >= bnd_delta_m_) {
     state_[12] = copysign(bnd_delta_m_, state_[12]);
   }
+
+  // Apply the debug cartesian control signal
+  state_[0] += cart_input_[0] * dt;
+  state_[1] += cart_input_[1] * dt;
+  state_[2] += cart_input_[2] * dt;
+
 }
 
 

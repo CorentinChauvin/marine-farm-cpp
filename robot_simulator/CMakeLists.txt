@@ -22,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
     Command.msg
+    CartesianCommand.msg
 )
 
 generate_messages(
