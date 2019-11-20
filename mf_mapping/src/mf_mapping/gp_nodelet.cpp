@@ -8,7 +8,7 @@
  */
 
 #include "gp_nodelet.hpp"
-#include "sensors_simulator/CameraOutput.h"
+#include "mf_sensors_simulator/CameraOutput.h"
 #include <sensor_msgs/Image.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Pose.h>
@@ -86,7 +86,7 @@ void GPNodelet::onInit()
   changed_pxl_.resize(size_img_, false);
 
   // ROS subscribers
-  camera_sub_ = nh_.subscribe<sensors_simulator::CameraOutput>("camera_out", 1, &GPNodelet::camera_cb, this);
+  camera_sub_ = nh_.subscribe<mf_sensors_simulator::CameraOutput>("camera_out", 1, &GPNodelet::camera_cb, this);
 
   // ROS publishers
   wall_img_pub_ = nh_.advertise<sensor_msgs::Image>("gp_img", 0);
@@ -147,7 +147,7 @@ void GPNodelet::sigint_handler(int s) {
 }
 
 
-void GPNodelet::camera_cb(const sensors_simulator::CameraOutput::ConstPtr &msg)
+void GPNodelet::camera_cb(const mf_sensors_simulator::CameraOutput::ConstPtr &msg)
 {
   if (msg->x.size() > 0) {
     camera_msg_ = msg;

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>mf_experiments</name>
+  <version>0.0.0</version>
+  <description>
+    Files to launch the different experiments, visualisation tools and metrics
+    implementation.
+  </description>
+  <maintainer email="corentin.chauvin@gmail.com">Corentin Chauvin-Hameau</maintainer>
+  <author email="corentin.chauvin@gmail.com">Corentin Chauvin-Hameau</author>
+  <url type="website">https://github.com/CorentinChauvin/marine-farm-cpp</url>
+  <license>LGPLv3</license>
+
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+  </export>
+</package>

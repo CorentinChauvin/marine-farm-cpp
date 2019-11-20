@@ -1,7 +1,0 @@
-<library path="lib/libfarm_nodelet">
-    <class name="farm_simulator/FarmNodelet" type="mfcpp::FarmNodelet" base_class_type="nodelet::Nodelet">
-        <description>
-            Nodelet for marine farm simulation
-        </description>
-    </class>
-</library>

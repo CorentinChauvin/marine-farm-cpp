@@ -18,7 +18,7 @@ set(ROS_BUILD_TYPE Release)
 find_package(catkin REQUIRED COMPONENTS
   nodelet
   roscpp
-  sensors_simulator
+  mf_sensors_simulator
   tf2
   tf2_ros
   geometry_msgs
@@ -51,6 +51,6 @@ add_library(gp_nodelet
 )
 add_dependencies(gp_nodelet
   ${catkin_EXPORTED_TARGETS}
-  sensors_simulator_generate_messages_cpp
+  mf_sensors_simulator_generate_messages_cpp
 )
 target_link_libraries(gp_nodelet ${catkin_LIBRARIES})

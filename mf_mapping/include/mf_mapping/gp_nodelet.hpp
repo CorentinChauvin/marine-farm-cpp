@@ -10,7 +10,7 @@
 #ifndef GP_NODELET_HPP
 #define GP_NODELET_HPP
 
-#include "sensors_simulator/CameraOutput.h"
+#include "mf_sensors_simulator/CameraOutput.h"
 #include <tf2_ros/transform_listener.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
@@ -56,7 +56,7 @@ class GPNodelet: public nodelet::Nodelet {
 
     bool gp_initialised_;  ///<  Whether the Gaussian Process is initialised
     bool camera_msg_available_;  ///<  Whether a new camera message is available
-    sensors_simulator::CameraOutput::ConstPtr camera_msg_;  ///<  Last camera message
+    mf_sensors_simulator::CameraOutput::ConstPtr camera_msg_;  ///<  Last camera message
     float delta_x_;  ///<  Increment (m) in the x direction
     float delta_y_;  ///<  Increment (m) in the y direction
     unsigned int size_gp_;    ///<  Total size of the Gaussian Process
@@ -114,7 +114,7 @@ class GPNodelet: public nodelet::Nodelet {
      *
      * \param msg  Pointer to the camera message
      */
-    void camera_cb(const sensors_simulator::CameraOutputConstPtr &msg);
+    void camera_cb(const mf_sensors_simulator::CameraOutputConstPtr &msg);
 
     /**
      * \brief  Transforms points from camera frame to wall frame

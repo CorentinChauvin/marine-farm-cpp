@@ -1,0 +1,43 @@
+#
+# Configuration for the one wall experiment
+#
+
+simu:
+
+  # Parameters changed from farm_simulator
+  farm_nodelet:
+    # Algae lines generation
+    nbr_lines: 1            # number of algae lines
+    length_lines: 30        # length (m) of each line
+
+    # Randomisation of algae lines' position
+    randomise_lines: false  # whether to randomise the position of each line
+    phi_lines: 0.0          # mean of the 1st angle for the 1st point of each line
+    theta_lines: 0.0        # mean of the 2nd angle for the 1st point of each line
+
+    # Algae generation
+    randomise_algae: false   # whether to randomise the size and orientation of algae
+    alga_miss_rate: 0.0      # probability to have a missing alga
+    nbr_algae: 1          # max nbr of algae per line
+    width_algae: 30        # mean of the width of an alga
+    length_algae: 2.0       # mean of the length of an alga
+    thickness_algae: 0.01   # thickness of an alga (for collision detection)
+    psi_algae: 0.0          # mean of the algae orientation
+
+    # Algae disease
+    disp_disease: true   # whether to display the disease heatmaps
+    disease_ratio: 1.0    # ratio of alga disease (0->fully sane, 1->fully sick)
+    height_disease_heatmap: 100  # height of the algae disease heatmap
+    width_disease_heatmap: 1000  # width of the algae disease heatmap
+    height_grid_heatmap: 2  # height of the grid for perlin noise generation
+    width_grid_heatmap: 30  # width of the grid for perlin noise generation
+
+
+  # Parameters changed from robot_simulator
+  robot_simulator:
+    # Model parameters
+    init_state: [1.0, -3, 3,  # x, y, z (position)
+                 0, 0, -1.5707963,  # phi, theta, psi (orientation)
+                 0, 0, 0,  # u, v, w (linear speed)
+                 0, 0, 0,  # p, q, r (angular speed)
+                 0.0]      # delta_m (ballast)
