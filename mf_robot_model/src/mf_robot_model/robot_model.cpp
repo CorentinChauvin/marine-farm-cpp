@@ -14,8 +14,6 @@
 using Eigen::Vector3d;
 using Eigen::Matrix3d;
 
-#include <iostream>
-
 using namespace std;
 namespace pl = std::placeholders;
 

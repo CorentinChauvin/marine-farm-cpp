@@ -1,8 +1,8 @@
 <launch>
   <!-- Launchfile arguments -->
-  <arg name="rviz" value="true" />
-  <arg name="display_img_gp" value="true" />
-  <arg name="display_cov_gp" value="true" />
+  <arg name="rviz" value="false" />
+  <arg name="display_img_gp" value="false" />
+  <arg name="display_cov_gp" value="false" />
 
   <!-- ROS parameters -->
   <rosparam file="$(find mf_farm_simulator)/config/farm_simulator.yaml" command="load" ns="simu" />
@@ -38,6 +38,10 @@
     <node pkg="nodelet" type="nodelet" args="load mf_mapping/GPNodelet nav_nodelet_manager"
       name="gp_nodelet" output="screen">
       <remap from="camera_out" to="/simu/camera_out" />
+    </node>
+
+    <node pkg="nodelet" type="nodelet" args="load mf_planning/PlanningNodelet nav_nodelet_manager"
+      name="planning_nodelet" output="screen">
     </node>
   </group>
 

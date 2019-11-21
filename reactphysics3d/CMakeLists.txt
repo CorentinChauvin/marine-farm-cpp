@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8.3)
 project(reactphysics3d)
 
 add_compile_options(-std=c++11)
+set(ROS_BUILD_TYPE Release)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 find_package(catkin REQUIRED)
 
 catkin_package(

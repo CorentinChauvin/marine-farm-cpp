@@ -7,6 +7,9 @@ add_compile_options(-std=c++11)
 # set(ROS_BUILD_TYPE Debug)
 # set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
 
+set(ROS_BUILD_TYPE Release)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -Wall")
+
 
 ########################
 ##  Configure Catkin  ##

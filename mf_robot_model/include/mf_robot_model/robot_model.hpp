@@ -12,6 +12,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <eigen3/Eigen/Dense>
 #include <vector>
+#include <cmath>
 
 
 namespace mfcpp {
@@ -21,19 +22,25 @@ namespace mfcpp {
  * \brief  Class defining the robot model
  *
  * The state is as follow:
- * - \f$ x_0 = X      \f$
- * - \f$ x_1 = Y      \f$
- * - \f$ x_2 = Z      \f$
- * - \f$ x_3 = V      \f$
- * - \f$ x_4 = \gamma \f$
- * - \f$ x_5 = \chi   \f$
- * - \f$ x_6 = \alpha \f$
- * - \f$ x_7 = \mu    \f$
- * - \f$ x_8 = T      \f$
- * - \f$ x_9 = M      \f$
+ * - \f$ x_0 = x         \f$
+ * - \f$ x_1 = y         \f$
+ * - \f$ x_2 = z         \f$
+ * - \f$ x_3 = \Phi      \f$
+ * - \f$ x_4 = \theta    \f$
+ * - \f$ x_5 = \psi      \f$
+ * - \f$ x_6 = u         \f$
+ * - \f$ x_7 = v         \f$
+ * - \f$ x_8 = w         \f$
+ * - \f$ x_9 = p         \f$
+ * - \f$ x_{10} = q        \f$
+ * - \f$ x_{11} = r        \f$
+ * - \f$ x_{12} = \Delta m \f$
  *
  * The inputs are as follow:
- * - TODO
+ * - \f$ u_0 = n        \f$
+ * - \f$ u_1 = \delta_r \f$
+ * - \f$ u_2 = \delta_e \f$
+ * - \f$ u_3 = P        \f$
  */
 class RobotModel
 {
@@ -65,6 +72,31 @@ class RobotModel
      */
     void integrate(state_type &state, const input_type &input, double t1,
       double t2, double init_step);
+
+    /**
+     * \brief  Computes the horizontal speed in steady state
+     *
+     * \note  This assumes the propeller speed is constant and the robot is
+     *        horizontal
+     * \param n  Rotational speed of the propeller
+     */
+    double inline steady_speed(double n);
+
+    /**
+     * \brief  Computes the lateral turning radius
+     *
+     * \param u        Speed of the robot
+     * \param delta_r  Angle of the lateral rudder
+     */
+    double inline lat_turn_radius(double u, double delta_r);
+
+    /**
+     * \brief  Computes the elevation turning radius
+     *
+     * \param u        Speed of the robot
+     * \param delta_e  Angle of the elevation rudder
+     */
+    double inline elev_turn_radius(double u, double delta_e);
 
   private:
     /// \brief  Model constants
@@ -115,8 +147,35 @@ class RobotModel
 
 };
 
-}  // namespace mfcpp
 
+inline double RobotModel::steady_speed(double propeller_speed)
+{
+  double delta = pow(c_[1], 2) - 4*c_[2]*c_[3]*pow(propeller_speed, 2);
+  return -(c_[1] - sqrt(delta)) / (2*c_[2]);
+}
+
+
+double inline RobotModel::lat_turn_radius(double u, double delta_r)
+{
+  double K = -4 * c_[9] * c_[10] * delta_r;
+  double r = (-c_[8] - sqrt(pow(c_[8], 2) + K*pow(u, 2))) / (2*c_[9]);
+  double R_squared = -c_[10]*delta_r / (c_[8]/r + c_[9]);
+
+  return sqrt(R_squared);
+}
+
+
+double inline RobotModel::elev_turn_radius(double u, double delta_e)
+{
+  double K = -4 * c_[5] * c_[7] * delta_e;
+  double r = (-c_[4] - sqrt(pow(c_[4], 2) + K*pow(u, 2))) / (2*c_[5]);
+  double R_squared = -c_[7]*delta_e / (c_[4]/r + c_[5]);
+
+  return sqrt(R_squared);
+}
+
+
+}  // namespace mfcpp
 
 
 #endif

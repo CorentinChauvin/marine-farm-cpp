@@ -41,6 +41,7 @@ class GPNodelet: public nodelet::Nodelet {
     // Typedefs
     typedef std::vector<float> vec_f;
 
+    // Static members
     // Note: the timers need to be static since stopped by the SIGINT callback
     static sig_atomic_t volatile b_sigint_;  ///<  Whether SIGINT signal has been received
     static ros::Timer main_timer_;   ///<  Timer callback for the main function
