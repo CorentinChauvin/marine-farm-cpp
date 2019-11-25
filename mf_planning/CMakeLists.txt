@@ -24,6 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   visualization_msgs
   mf_robot_model
+  mf_sensors_simulator
 )
 
 catkin_package(
@@ -51,5 +52,6 @@ add_library(planning_nodelet
 )
 add_dependencies(planning_nodelet
   ${catkin_EXPORTED_TARGETS}
+  mf_sensors_simulator_generate_messages_cpp
 )
 target_link_libraries(planning_nodelet ${catkin_LIBRARIES})

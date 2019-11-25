@@ -7,6 +7,7 @@
  */
 
 #include "planning_nodelet.hpp"
+#include "mf_sensors_simulator/MultiPoses.h"
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/Pose.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -20,17 +21,8 @@ using Eigen::Vector3d;
 
 namespace mfcpp {
 
-void PlanningNodelet::plan_trajectory()
+void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle)
 {
-  // Compute maximum angles for lattice generation
-  float lat_turn_radius = robot_model_.lat_turn_radius(plan_speed_, max_lat_rudder_);
-  float elev_turn_radius = robot_model_.elev_turn_radius(plan_speed_, max_lat_rudder_);
-
-  float max_lat_angle = plan_horizon_ / (2 * lat_turn_radius);
-  float max_elev_angle = plan_horizon_ / (2 * elev_turn_radius);
-
-  // Generate a lattice of possible waypoints (in robot frame)
-  // TODO: split that into a/several function(s)
   int n_x = plan_horizon_ / lattice_res_ + 1;  // size of the lattice in x direction
   int n_y = plan_horizon_ * sin(max_lat_angle) / lattice_res_;   // half size in y direction
   int n_z = plan_horizon_ * sin(max_elev_angle) / lattice_res_;  // half size in z direction
@@ -83,6 +75,34 @@ void PlanningNodelet::plan_trajectory()
     }
 
     x += lattice_res_;
+  }
+}
+
+
+void PlanningNodelet::plan_trajectory()
+{
+  // Compute maximum angles for lattice generation
+  float lat_turn_radius = robot_model_.lat_turn_radius(plan_speed_, max_lat_rudder_);
+  float elev_turn_radius = robot_model_.elev_turn_radius(plan_speed_, max_lat_rudder_);
+
+  float max_lat_angle = plan_horizon_ / (2 * lat_turn_radius);
+  float max_elev_angle = plan_horizon_ / (2 * elev_turn_radius);
+
+  // Generate a lattice of possible waypoints (in robot frame)
+  generate_lattice(max_lat_angle, max_elev_angle);
+
+  // Raycast
+  mf_sensors_simulator::MultiPoses srv;
+  srv.request.pose_array.header.frame_id = robot_frame_;
+  srv.request.pose_array.poses = lattice_;
+
+  if (ray_multi_client_.call(srv)) {
+    if (srv.response.is_success) {
+      // TODO: do some stuff
+      // ...
+    }
+  } else {
+    NODELET_WARN("[planning_nodelet] Failed to call raycast_multi service.");
   }
 
 }

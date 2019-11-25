@@ -44,6 +44,7 @@ class PlanningNodelet: public nodelet::Nodelet {
     // Private members
     ros::NodeHandle nh_;          ///<  Node handler (for topics and services)
     ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
+    ros::ServiceClient ray_multi_client_;  ///<  Service client for raycasting at several camera poses
     ros::Publisher lattice_pub_;  ///<  Publisher for the waypoints lattice
     ros::Publisher lattice_pose_pub_;  ///<  Publisher for the waypoints lattice poses
     tf2_ros::Buffer tf_buffer_;   ///<  Buffer for tf2
@@ -80,6 +81,13 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \brief  SINGINT (Ctrl+C) callback to stop the nodelet properly
      */
     static void sigint_handler(int s);
+
+    /**
+     * \brief  Generates a lattice of possible waypoints
+     *
+     * \note  Waypoints are expressed in robot frame
+     */
+    void generate_lattice(float max_lat_angle, float max_elev_angle);
 
     /**
      * \brief  Computes a trajectory plan

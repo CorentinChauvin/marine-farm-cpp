@@ -14,6 +14,8 @@
 #include <std_msgs/ColorRGBA.h>
 #include <vector>
 
+#include <ctime>
+
 using namespace std;
 
 
@@ -170,6 +172,7 @@ void CameraNodelet::publish_output()
   prepare_out_msgs(out_msg, ray_marker, pts_marker);
 
   // Selects algae that are in field of view of the camera
+  coll_mutex_.lock();
   overlap_fov();
 
   // Get their position and dimension, and compute their axes
@@ -229,6 +232,8 @@ void CameraNodelet::publish_output()
       add_line_to_marker(ray_marker, tf2::Vector3(0, 0, 0), p);
     }
   }
+
+  coll_mutex_.unlock();
 
   // Publish markers
   out_pub_.publish(out_msg);

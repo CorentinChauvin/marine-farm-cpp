@@ -24,7 +24,7 @@
     <node pkg="nodelet" type="nodelet" args="load mf_farm_simulator/FarmNodelet simu_nodelet_manager"
       name="farm_nodelet" output="screen" />
     <node pkg="nodelet" type="nodelet" args="load mf_sensors_simulator/CameraNodelet simu_nodelet_manager"
-      name="camera_nodelet" output="screen" required="true">
+      name="camera_nodelet" output="screen">
       <remap from="camera_nodelet/algae" to="farm_nodelet/algae" />
     </node>
 
@@ -43,6 +43,7 @@
 
     <node pkg="nodelet" type="nodelet" args="load mf_planning/PlanningNodelet nav_nodelet_manager"
       name="planning_nodelet" output="screen">
+      <remap from="raycast_multi" to="/simu/raycast_multi" />
     </node>
   </group>
 

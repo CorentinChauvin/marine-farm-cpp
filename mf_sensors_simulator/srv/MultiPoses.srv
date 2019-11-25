@@ -1,0 +1,11 @@
+#
+# Service to perform raycast for several camera poses
+#
+
+# Array of camera poses
+geometry_msgs/PoseArray pose_array
+
+---
+
+# Whether the call was successful
+bool is_success

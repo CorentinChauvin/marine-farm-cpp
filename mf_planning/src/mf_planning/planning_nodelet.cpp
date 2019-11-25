@@ -9,6 +9,7 @@
 
 #include "planning_nodelet.hpp"
 #include "mf_robot_model/robot_model.hpp"
+#include "mf_sensors_simulator/MultiPoses.h"
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/PoseArray.h>
 #include <visualization_msgs/Marker.h>
@@ -80,6 +81,9 @@ void PlanningNodelet::onInit()
   lattice_pub_ = nh_.advertise<visualization_msgs::Marker>("wp_lattice", 0);
   lattice_pose_pub_ = nh_.advertise<geometry_msgs::PoseArray>("wp_pose_array", 0);
 
+  // ROS services
+  ray_multi_client_ = nh_.serviceClient<mf_sensors_simulator::MultiPoses>("raycast_multi");
+
 
   // Main loop
   main_timer_ = private_nh_.createTimer(
@@ -93,10 +97,10 @@ void PlanningNodelet::main_cb(const ros::TimerEvent &timer_event)
   if (!ros::ok() || ros::isShuttingDown() || b_sigint_)
     return;
 
-  bool tf_received = get_tf();
-
-  if (tf_received) {
+  if (get_tf()) {
     plan_trajectory();
+
+    // Debugging display
     pub_lattice_markers();
   }
 }
@@ -155,7 +159,7 @@ bool PlanningNodelet::get_tf()
     transform = tf_buffer_.lookupTransform(wall_frame_, robot_frame_, ros::Time(0));
   }
   catch (tf2::TransformException &ex) {
-    NODELET_WARN("[planning_nodelet] %s",ex.what());
+    NODELET_WARN("[planning_nodelet] %s", ex.what());
     return false;
   }
 

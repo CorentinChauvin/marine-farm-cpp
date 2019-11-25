@@ -1,6 +1,7 @@
 camera_nodelet:
   camera_freq: 10.0  # Frequency of the camera (Hz)
   fixed_frame: "world"
+  robot_frame: "base_link"
   camera_frame: "camera"
   fov_color: [0.0, 0.5, 0.5, 0.5]  # color of the camera field of view Rivz marker
 

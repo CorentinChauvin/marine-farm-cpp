@@ -10,6 +10,7 @@
 #define CAMERA_HPP
 
 #include "mf_sensors_simulator/CameraOutput.h"
+#include "mf_sensors_simulator/MultiPoses.h"
 #include "mf_farm_simulator/rviz_visualisation.hpp"
 #include "mf_farm_simulator/Algae.h"
 #include "reactphysics3d.h"
@@ -20,6 +21,7 @@
 #include <ros/ros.h>
 #include <csignal>
 #include <string>
+#include <mutex>
 #include <vector>
 
 
@@ -95,6 +97,7 @@ class CameraNodelet: public nodelet::Nodelet {
     ros::NodeHandle nh_;          ///<  Node handler (for topics and services)
     ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
     ros::Subscriber algae_sub_;   ///<  Subscriber for the algae of the farm
+    ros::ServiceServer ray_multi_serv_;  ///<  Service for raycasting from several camera poses
     ros::Publisher out_pub_;      ///<  Publisher for the camera output
     ros::Publisher rviz_pub_;     ///<  Publisher for Rviz markers
     tf2_ros::Buffer tf_buffer_;
@@ -104,8 +107,10 @@ class CameraNodelet: public nodelet::Nodelet {
     bool algae_msg_received_;  ///<  Whether an algae message has been received
     geometry_msgs::TransformStamped fixed_camera_tf_;  ///<  Transform from fixed frame to camera
     geometry_msgs::TransformStamped camera_fixed_tf_;  ///<  Transform from camera to fixed frame
+    geometry_msgs::TransformStamped camera_robot_tf_;  ///<  Transform from camera to robot frame
     std::vector<std::vector<std::vector<float>>> heatmaps_;  ///<  Disease heatmatps for all the algae
     std::vector<int> corr_algae_;  ///<  Correspondance between the algae used for raytracing and all the others
+    std::mutex coll_mutex_;  ///<  Mutex to control access to collision variables
 
     /// \name  Collision members
     ///@{
@@ -129,6 +134,7 @@ class CameraNodelet: public nodelet::Nodelet {
     ///@{
     float camera_freq_;  ///<  Frequency of the sensor
     std::string fixed_frame_;   ///<  Frame in which the pose is expressed
+    std::string robot_frame_;  ///<  Frame of the robot
     std::string camera_frame_;  ///<  Frame of the camera
     std::vector<float> fov_color_;  ///<  Color of the camera field of view Rviz marker
     float focal_length_;    ///<  Focal length of the camera
@@ -170,11 +176,33 @@ class CameraNodelet: public nodelet::Nodelet {
     void update_algae();
 
     /**
-     * \brief  Gets tf transform from fixed frame to camera
+     * \brief  Gets tf transforms
      *
      * \return  Whether a transform has been received
      */
-    bool get_camera_tf();
+    bool get_tf();
+
+    /**
+     * \brief  Fill a collision body for multi-pose FOV overlap
+     *
+     * The collision body is the smallest AABB containing each FOV of each
+     * pose. The corresponding collision shape is also filled.
+     *
+     * \param [in] poses   Vector of poses
+     * \param [out] body   Body to fill
+     * \param [out] shape  Collision shape of the body
+     */
+    void multi_fov_body(const std::vector<geometry_msgs::Pose> &poses,
+      rp3d::CollisionBody* body, std::unique_ptr<rp3d::BoxShape> &shape);
+
+    /**
+     * \brief  Service callback for raycasting from several camera poses
+     *
+     * This service raycast one line for each corner of the camera screen. It
+     * only returns the hit points position, not the algae disease values.
+     */
+    bool ray_multi_cb(mf_sensors_simulator::MultiPoses::Request &req,
+      mf_sensors_simulator::MultiPoses::Response &res);
 
     /**
      * \brief  Publishes a Rviz marker for the camera field of view
@@ -183,8 +211,11 @@ class CameraNodelet: public nodelet::Nodelet {
 
     /**
      * \brief  Selects algae that are in field of view of the camera
+     *
+     * \param use_global_body  Whether to use the global fov collision body
+     * \param body             Optional other body to use instead
      */
-    void overlap_fov();
+    void overlap_fov(bool use_global_body = true, rp3d::CollisionBody* body = nullptr);
 
     /**
      * \brief  Gets position, dimension and axes of the algae for raycasting

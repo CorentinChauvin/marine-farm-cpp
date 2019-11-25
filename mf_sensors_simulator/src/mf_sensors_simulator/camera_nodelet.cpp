@@ -8,6 +8,7 @@
 
 #include "camera_nodelet.hpp"
 #include "mf_sensors_simulator/CameraOutput.h"
+#include "mf_sensors_simulator/MultiPoses.h"
 #include "mf_farm_simulator/rviz_visualisation.hpp"
 #include "mf_farm_simulator/Algae.h"
 #include "reactphysics3d.h"
@@ -21,6 +22,7 @@
 #include <ros/ros.h>
 #include <csignal>
 #include <string>
+#include <vector>
 #include <iostream>
 
 using namespace std;
@@ -65,6 +67,7 @@ void CameraNodelet::onInit()
   // ROS parameters
   private_nh_.param<float>("camera_freq", camera_freq_, 1.0);
   private_nh_.param<string>("fixed_frame", fixed_frame_, "ocean");
+  private_nh_.param<string>("robot_frame", robot_frame_, "base_link");
   private_nh_.param<string>("camera_frame", camera_frame_, "camera");
   private_nh_.param<vector<float>>("fov_color", fov_color_, vector<float>(4, 1.0));
   private_nh_.param<float>("focal_length", focal_length_, 0.0028);
@@ -77,6 +80,9 @@ void CameraNodelet::onInit()
   // ROS subscribers
   algae_sub_ = private_nh_.subscribe<mf_farm_simulator::Algae>("algae", 1,
     boost::bind(&CameraNodelet::algae_cb, this, _1));
+
+  // ROS services
+  ray_multi_serv_ = nh_.advertiseService("raycast_multi", &CameraNodelet::ray_multi_cb, this);
 
   // ROS publishers
   out_pub_ = nh_.advertise<mf_sensors_simulator::CameraOutput>("camera_out", 0);
@@ -111,7 +117,7 @@ void CameraNodelet::main_cb(const ros::TimerEvent &timer_event)
     algae_msg_received_ = false;
   }
 
-  if (world_init_ && get_camera_tf()) {
+  if (world_init_ && get_tf()) {
     publish_rviz_fov();
     publish_output();
   }
@@ -207,13 +213,14 @@ void CameraNodelet::update_algae()
 }
 
 
-bool CameraNodelet::get_camera_tf()
+bool CameraNodelet::get_tf()
 {
-  geometry_msgs::TransformStamped tf1, tf2;
+  geometry_msgs::TransformStamped tf1, tf2, tf3;
 
   try {
     tf1 = tf_buffer_.lookupTransform(fixed_frame_, camera_frame_, ros::Time(0));
     tf2 = tf_buffer_.lookupTransform(camera_frame_, fixed_frame_, ros::Time(0));
+    tf3 = tf_buffer_.lookupTransform(camera_frame_, robot_frame_, ros::Time(0));
   }
   catch (tf2::TransformException &ex) {
     NODELET_WARN("[camera_nodelet] %s",ex.what());
@@ -222,6 +229,57 @@ bool CameraNodelet::get_camera_tf()
 
   fixed_camera_tf_ = tf1;
   camera_fixed_tf_ = tf2;
+  camera_robot_tf_ = tf3;
+  return true;
+}
+
+
+bool CameraNodelet::ray_multi_cb(mf_sensors_simulator::MultiPoses::Request &req,
+  mf_sensors_simulator::MultiPoses::Response &res)
+{
+  // Transform the poses in camera frame
+  if (!world_init_ || !get_tf()) {
+    res.is_success = false;
+    return true;
+  }
+
+  unsigned int nbr_poses = req.pose_array.poses.size();
+  vector<geometry_msgs::Pose> poses(nbr_poses);
+
+  for (unsigned int k = 0; k < nbr_poses; k++) {
+    geometry_msgs::Pose transf_pose;
+    tf2::doTransform(req.pose_array.poses[k], transf_pose, camera_robot_tf_);
+
+    poses[k] = transf_pose;
+  }
+
+  // Creating a collision body for field of view at all poses
+  rp3d::CollisionBody* body = coll_world_.createCollisionBody(rp3d::Transform::identity());
+  unique_ptr<rp3d::BoxShape> shape;
+  multi_fov_body(poses, body, shape);
+
+  // Selects algae that are in field of view of the camera
+  coll_mutex_.lock();
+  overlap_fov(false, body);
+
+  // Get their position and dimension, and compute their axes
+  int n = ray_bodies_.size();
+  vector<float> w_algae(n);  // width of algae
+  vector<float> h_algae(n);  // height of algae
+  vector<float> inc_y3(n);   // increment along y3 axis of algae
+  vector<float> inc_z3(n);   // increment along z3 axis of algae
+  vector<geometry_msgs::TransformStamped> tf_algae(n);  // transforms of local frames
+
+  get_ray_algae_carac(w_algae, h_algae, inc_y3,  inc_z3, tf_algae);
+
+
+  // Destroy the collision body
+  coll_world_.destroyCollisionBody(body);
+
+
+  coll_mutex_.unlock();
+
+  res.is_success = true;
   return true;
 }
 
