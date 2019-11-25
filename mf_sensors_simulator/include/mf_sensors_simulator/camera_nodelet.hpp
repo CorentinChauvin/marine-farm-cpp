@@ -9,6 +9,7 @@
 #ifndef CAMERA_HPP
 #define CAMERA_HPP
 
+#include "mf_sensors_simulator/CameraOutput.h"
 #include "mf_farm_simulator/rviz_visualisation.hpp"
 #include "mf_farm_simulator/Algae.h"
 #include "reactphysics3d.h"
@@ -19,6 +20,7 @@
 #include <ros/ros.h>
 #include <csignal>
 #include <string>
+#include <vector>
 
 
 namespace mfcpp {
@@ -185,15 +187,67 @@ class CameraNodelet: public nodelet::Nodelet {
     void overlap_fov();
 
     /**
+     * \brief  Gets position, dimension and axes of the algae for raycasting
+     *
+     * \param [out] w_algae   Width of the algae
+     * \param [out] h_algae   Height of the algae
+     * \param [out] inc_y3    Increment along y3 algae axis
+     * \param [out] inc_z3    Increment along z3 algae axis
+     * \param [out] tf_algae  Transforms of algae local frames
+     */
+    void get_ray_algae_carac(
+      std::vector<float> &w_algae, std::vector<float> &h_algae,
+      std::vector<float> &inc_y3,  std::vector<float> &inc_z3,
+      std::vector<geometry_msgs::TransformStamped> &tf_algae
+    );
+
+
+    /**
      * \brief  Casts a ray to get alga disease value at hit point
      *
-     * \param aim_pt    Point towards which casting the ray (in camera frame)
-     * \param hit_pt    Hit point
-     * \param alga_idx  Index of the hit alga in the ray_bodies_ vector
+     * \param [in]  aim_pt    Point towards which casting the ray (in camera frame)
+     * \param [out] hit_pt    Hit point
+     * \param [out] alga_idx  Index of the hit alga in the ray_bodies_ vector
      * \return  Whether an alga has been hit
      */
     bool raycast_alga(const tf2::Vector3 &aim_pt, tf2::Vector3 &hit_pt,
       int &alga_idx);
+
+    /**
+     * \brief  Prepares the ROS output messages
+     *
+     * \param [out] out_msgs    Camera output message
+     * \param [out] ray_marker  Rviz marker for displaying the rays
+     * \param [out] pts_marker  Rviz marker for displaying the hit points
+     */
+    void prepare_out_msgs(
+      mf_sensors_simulator::CameraOutput &out_msg,
+      visualization_msgs::Marker &ray_marker,
+      visualization_msgs::Marker &pts_marker
+    );
+
+
+    /**
+     * \brief  Add a point to a point marker
+     *
+     * \param [out] marker   Marker to fill
+     * \param [in]  pt       Point to add to the marker
+     * \param [in]  color_r  Red channel of the point color
+     * \param [in]  color_g  Green channel of the point color
+     * \param [in]  color_b  Blue channel of the point color
+     */
+    void add_pt_to_marker(visualization_msgs::Marker &marker,
+      const tf2::Vector3 &pt, float color_r, float color_g, float color_b);
+
+    /**
+     * \brief  Add a point to a point marker
+     *
+     * \param [out] marker  Marker to fill
+     * \param [in]  pt1     First point to add to the marker
+     * \param [in]  pt2     Second point to add to the marker
+     */
+    void add_line_to_marker(visualization_msgs::Marker &marker,
+      const tf2::Vector3 &pt1, const tf2::Vector3 &pt2);
 
     /**
      * \brief  Publishes camera output

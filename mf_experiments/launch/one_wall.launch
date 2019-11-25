@@ -1,14 +1,15 @@
 <launch>
   <!-- Launchfile arguments -->
-  <arg name="rviz" value="false" />
-  <arg name="display_img_gp" value="false" />
-  <arg name="display_cov_gp" value="false" />
+  <arg name="rviz" value="true" />
+  <arg name="display_img_gp" value="true" />
+  <arg name="display_cov_gp" value="true" />
 
   <!-- ROS parameters -->
   <rosparam file="$(find mf_farm_simulator)/config/farm_simulator.yaml" command="load" ns="simu" />
   <rosparam file="$(find mf_robot_simulator)/config/robot_simulator.yaml" command="load" ns="simu" />
   <rosparam file="$(find mf_sensors_simulator)/config/sensors_simulator.yaml" command="load" ns="simu" />
   <rosparam file="$(find mf_mapping)/config/mapping.yaml" command="load" ns="nav" />
+  <rosparam file="$(find mf_planning)/config/planning.yaml" command="load" ns="nav" />
   <rosparam file="$(find mf_experiments)/config/one_wall.yaml" command="load" />
 
   <!-- Static transforms -->

@@ -19,6 +19,11 @@ set(ROS_BUILD_TYPE Release)
 find_package(catkin REQUIRED COMPONENTS
   nodelet
   roscpp
+  tf2
+  tf2_ros
+  geometry_msgs
+  visualization_msgs
+  mf_robot_model
 )
 
 catkin_package(
@@ -42,6 +47,7 @@ include_directories(${Eigen_INCLUDE_DIRS})
 # Planning nodelet
 add_library(planning_nodelet
   src/mf_planning/planning_nodelet.cpp
+  src/mf_planning/planning.cpp
 )
 add_dependencies(planning_nodelet
   ${catkin_EXPORTED_TARGETS}

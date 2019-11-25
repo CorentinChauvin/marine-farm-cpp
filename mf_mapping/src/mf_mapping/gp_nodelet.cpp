@@ -124,15 +124,8 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
                                      camera_msg_->z[k]).norm();
     }
 
-    cout << "Starting update..." << endl;
-    clock_t begin = clock();
-
     update_gp(x, y, z, distances, camera_msg_->value);
-    cout << " -> update done in: " << double(clock() - begin) / CLOCKS_PER_SEC <<  endl;
-    begin = clock();
-
     publish_wall_img();
-    cout << " -> publish done in: " << double(clock() - begin) / CLOCKS_PER_SEC <<  endl;
 
     camera_msg_available_ = false;
   }

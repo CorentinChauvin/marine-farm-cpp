@@ -55,7 +55,8 @@ class RobotSimulator {
     RobotModel::input_type input_;   ///<  Current control input
     std::vector<float> cart_input_;  ///<  Current debug cartesian control input
 
-    // ROS parameters
+    /// \name  ROS parameters
+    ///@{
     float update_freq_;   ///<  State update frequency
     std::string fixed_frame_;  ///<  Frame in which the pose is expressed
     std::string robot_frame_;  ///<  Frame of the robot
@@ -64,6 +65,7 @@ class RobotSimulator {
     int nbr_int_steps_;   ///<  Initial number of integration steps during the update
     float bnd_delta_m_;   ///<  Bound on delta_m (ballast control)
     RobotModel::input_type bnd_input_;  ///<  Bounds on the control input
+    ///@}
 
     /**
      * \brief  Callback for the control input

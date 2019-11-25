@@ -10,8 +10,13 @@
 #ifndef PLANNING_NODELET_HPP
 #define PLANNING_NODELET_HPP
 
+#include "mf_robot_model/robot_model.hpp"
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <tf2_ros/transform_listener.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
+#include <string>
 #include <csignal>
 
 namespace mfcpp {
@@ -34,15 +39,34 @@ class PlanningNodelet: public nodelet::Nodelet {
     // Static members
     // Note: the timers need to be static since stopped by the SIGINT callback
     static sig_atomic_t volatile b_sigint_;  ///<  Whether SIGINT signal has been received
-    static ros::Timer main_timer_;   ///<  Timer callback for the main function
+    static ros::Timer main_timer_;  ///<  Timer callback for the main function
 
     // Private members
-    ros::NodeHandle nh_;            ///<  Node handler (for topics and services)
-    ros::NodeHandle private_nh_;    ///<  Private node handler (for parameters)
+    ros::NodeHandle nh_;          ///<  Node handler (for topics and services)
+    ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
+    ros::Publisher lattice_pub_;  ///<  Publisher for the waypoints lattice
+    ros::Publisher lattice_pose_pub_;  ///<  Publisher for the waypoints lattice poses
+    tf2_ros::Buffer tf_buffer_;   ///<  Buffer for tf2
+    tf2_ros::TransformListener tf_listener_;  ///<  Transform listener for tf2
+
+    RobotModel robot_model_;  ///<  Robot model
+    geometry_msgs::TransformStamped wall_robot_tf_;  ///<  Transform from wall to robot frames
+    std::vector<geometry_msgs::Pose> lattice_;  ///<  Lattice of possible waypoints
 
     /// \name  ROS parameters
     ///@{
-    float main_freq_;         ///<  Frequency of the main loop
+    float main_freq_;           ///<  Frequency of the main loop
+    std::string wall_frame_;    ///<  Wall frame
+    std::string robot_frame_;   ///<  Robot frame
+
+    int nbr_int_steps_;      ///<  Initial number of model integration steps
+    float max_lat_rudder_;   ///<  Maximum angle of the lateral rudder
+    float max_elev_rudder_;  ///<  Maximum angle of the elevation rudder
+
+    float plan_speed_;     ///<  Planned speed (m/s) of the robot
+    float plan_horizon_;   ///<  Horizon (m) of the planning
+    float lattice_res_;    ///<  Resolution (m) of the waypoints lattice
+    float min_wall_dist_;  ///<  Minimum distance to the wall that can be planned
     ///@}
 
     /**
@@ -56,6 +80,24 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \brief  SINGINT (Ctrl+C) callback to stop the nodelet properly
      */
     static void sigint_handler(int s);
+
+    /**
+     * \brief  Computes a trajectory plan
+     */
+    void plan_trajectory();
+
+    /**
+     * \brief  Publishes the waypoints lattice markers
+     */
+    void pub_lattice_markers();
+
+    /**
+     * \brief  Gets tf transforms
+     *
+     * \return  Whether it could retrieve a transform
+     */
+    bool get_tf();
+
 
 };
 

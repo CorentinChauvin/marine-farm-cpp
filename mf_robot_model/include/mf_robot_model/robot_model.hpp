@@ -151,7 +151,7 @@ class RobotModel
 inline double RobotModel::steady_speed(double propeller_speed)
 {
   double delta = pow(c_[1], 2) - 4*c_[2]*c_[3]*pow(propeller_speed, 2);
-  return -(c_[1] - sqrt(delta)) / (2*c_[2]);
+  return -(c_[1] + sqrt(delta)) / (2*c_[2]);
 }
 
 

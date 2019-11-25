@@ -95,6 +95,38 @@ void CameraNodelet::overlap_fov()
 }
 
 
+void CameraNodelet::get_ray_algae_carac(
+  std::vector<float> &w_algae, std::vector<float> &h_algae,
+  std::vector<float> &inc_y3,  std::vector<float> &inc_z3,
+  std::vector<geometry_msgs::TransformStamped> &tf_algae)
+{
+  unsigned int n = w_algae.size();
+  float n_height = heatmaps_[0].size();    // height of the heatmap
+  float n_width = heatmaps_[0][0].size();  // width of the heatmap
+
+  for (int k = 0; k < n; k++) {
+    // Compute the alga inverse transform
+    rp3d::Transform inverse_tf = ray_bodies_[k]->getTransform().getInverse();
+    rp3d::Vector3 pos = inverse_tf.getPosition();
+    rp3d::Quaternion quati = inverse_tf.getOrientation();
+    tf_algae[k].transform.translation.x = pos.x;
+    tf_algae[k].transform.translation.y = pos.y;
+    tf_algae[k].transform.translation.z = pos.z;
+    tf_algae[k].transform.rotation.x = quati.x;
+    tf_algae[k].transform.rotation.y = quati.y;
+    tf_algae[k].transform.rotation.z = quati.z;
+    tf_algae[k].transform.rotation.w = quati.w;
+
+    // Get dimensions and increments
+    w_algae[k] = 2*ray_shapes_[k]->getExtent().y;
+    h_algae[k] = 2*ray_shapes_[k]->getExtent().z;
+
+    inc_y3[k] = w_algae[k] / n_width;
+    inc_z3[k] = h_algae[k] / n_height;
+  }
+}
+
+
 bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, tf2::Vector3 &hit_pt,
   int &alga_idx)
 {

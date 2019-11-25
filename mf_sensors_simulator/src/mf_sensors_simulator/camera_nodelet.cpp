@@ -216,7 +216,7 @@ bool CameraNodelet::get_camera_tf()
     tf2 = tf_buffer_.lookupTransform(camera_frame_, fixed_frame_, ros::Time(0));
   }
   catch (tf2::TransformException &ex) {
-    NODELET_WARN("%s",ex.what());
+    NODELET_WARN("[camera_nodelet] %s",ex.what());
     return false;
   }
 

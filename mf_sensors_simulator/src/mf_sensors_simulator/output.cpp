@@ -14,8 +14,6 @@
 #include <std_msgs/ColorRGBA.h>
 #include <vector>
 
-
-
 using namespace std;
 
 
@@ -82,10 +80,12 @@ void CameraNodelet::publish_rviz_fov()
 }
 
 
-void CameraNodelet::publish_output()
+void CameraNodelet::prepare_out_msgs(
+  mf_sensors_simulator::CameraOutput &out_msg,
+  visualization_msgs::Marker &ray_marker,
+  visualization_msgs::Marker &pts_marker)
 {
   // Prepare output message
-  mf_sensors_simulator::CameraOutput out_msg;
   out_msg.header.stamp = ros::Time::now();
   out_msg.header.frame_id = camera_frame_;
 
@@ -96,7 +96,6 @@ void CameraNodelet::publish_output()
   out_msg.value.reserve(nbr_pts);
 
   // Prepare Rviz marker for displaying rays
-  visualization_msgs::Marker ray_marker;
   ray_marker.header.stamp = ros::Time::now();
   ray_marker.header.frame_id = camera_frame_;
   ray_marker.ns = "Rays";
@@ -111,7 +110,6 @@ void CameraNodelet::publish_output()
   ray_marker.points.reserve(nbr_pts);
 
   // Prepare Rviz marker for displaying hit points
-  visualization_msgs::Marker pts_marker;
   pts_marker.header.stamp = ros::Time::now();
   pts_marker.header.frame_id = fixed_frame_;
   pts_marker.ns = "Hit point";
@@ -126,6 +124,50 @@ void CameraNodelet::publish_output()
   pts_marker.scale.y = 0.02;
   pts_marker.points.reserve(nbr_pts);
   pts_marker.colors.reserve(nbr_pts);
+}
+
+
+void CameraNodelet::add_pt_to_marker(visualization_msgs::Marker &marker,
+  const tf2::Vector3 &pt, float color_r, float color_g, float color_b)
+{
+  geometry_msgs::Point p;
+  p.x = pt.getX();
+  p.y = pt.getY();
+  p.z = pt.getZ();
+  marker.points.emplace_back(p);
+
+  std_msgs::ColorRGBA color;
+  color.r = color_r;
+  color.g = color_g;
+  color.b = color_b;
+  color.a = 1.0;
+  marker.colors.emplace_back(color);
+}
+
+
+void CameraNodelet::add_line_to_marker(visualization_msgs::Marker &marker,
+  const tf2::Vector3 &pt1, const tf2::Vector3 &pt2)
+{
+  geometry_msgs::Point p;
+  p.x = pt1.getX();
+  p.y = pt1.getY();
+  p.z = pt1.getZ();
+  marker.points.emplace_back(p);
+  p.x = pt2.getX();
+  p.y = pt2.getY();
+  p.z = pt2.getZ();
+  marker.points.emplace_back(p);
+}
+
+
+void CameraNodelet::publish_output()
+{
+  // Prepare output message
+  mf_sensors_simulator::CameraOutput out_msg;
+  visualization_msgs::Marker ray_marker;
+  visualization_msgs::Marker pts_marker;
+
+  prepare_out_msgs(out_msg, ray_marker, pts_marker);
 
   // Selects algae that are in field of view of the camera
   overlap_fov();
@@ -138,29 +180,7 @@ void CameraNodelet::publish_output()
   vector<float> inc_z3(n);   // increment along z3 axis of algae
   vector<geometry_msgs::TransformStamped> tf_algae(n);  // transforms of local frames
 
-  float n_height = heatmaps_[0].size();    // height of the heatmap
-  float n_width = heatmaps_[0][0].size();  // width of the heatmap
-
-  for (int k = 0; k < n; k++) {
-    // Compute the alga inverse transform
-    rp3d::Transform inverse_tf = ray_bodies_[k]->getTransform().getInverse();
-    rp3d::Vector3 pos = inverse_tf.getPosition();
-    rp3d::Quaternion quati = inverse_tf.getOrientation();
-    tf_algae[k].transform.translation.x = pos.x;
-    tf_algae[k].transform.translation.y = pos.y;
-    tf_algae[k].transform.translation.z = pos.z;
-    tf_algae[k].transform.rotation.x = quati.x;
-    tf_algae[k].transform.rotation.y = quati.y;
-    tf_algae[k].transform.rotation.z = quati.z;
-    tf_algae[k].transform.rotation.w = quati.w;
-
-    // Get dimensions and increments
-    w_algae[k] = 2*ray_shapes_[k]->getExtent().y;
-    h_algae[k] = 2*ray_shapes_[k]->getExtent().z;
-
-    inc_y3[k] = w_algae[k] / n_width;
-    inc_z3[k] = h_algae[k] / n_height;
-  }
+  get_ray_algae_carac(w_algae, h_algae, inc_y3,  inc_z3, tf_algae);
 
   // For each pixel
   for (unsigned int i = 0; i < n_pxl_height_; i++) {
@@ -202,30 +222,11 @@ void CameraNodelet::publish_output()
         out_msg.value.emplace_back(value);
 
         // Fill point marker
-        geometry_msgs::Point pt;
-        pt.x = hit_pt.getX();
-        pt.y = hit_pt.getY();
-        pt.z = hit_pt.getZ();
-        pts_marker.points.emplace_back(pt);
-
-        std_msgs::ColorRGBA color;
-        color.r = value;
-        color.g = value;
-        color.b = value;
-        color.a = 1.0;
-        pts_marker.colors.emplace_back(color);
+        add_pt_to_marker(pts_marker, hit_pt, value, value, value);
       }
 
       // Fill ray marker
-      geometry_msgs::Point pt;
-      pt.x = 0.0;
-      pt.y = 0.0;
-      pt.z = 0.0;
-      ray_marker.points.emplace_back(pt);
-      pt.x = p.getX();
-      pt.y = p.getY();
-      pt.z = p.getZ();
-      ray_marker.points.emplace_back(pt);
+      add_line_to_marker(ray_marker, tf2::Vector3(0, 0, 0), p);
     }
   }
 
