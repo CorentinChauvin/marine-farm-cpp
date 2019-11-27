@@ -173,7 +173,8 @@ void CameraNodelet::publish_output()
 
   // Selects algae that are in field of view of the camera
   coll_mutex_.lock();
-  overlap_fov();
+  update_fov_pose();
+  overlap_fov(fov_body_);
 
   // Get their position and dimension, and compute their axes
   int n = ray_bodies_.size();
@@ -189,15 +190,11 @@ void CameraNodelet::publish_output()
   for (unsigned int i = 0; i < n_pxl_height_; i++) {
     for (unsigned int j = 0; j < n_pxl_width_; j++) {
       // Perform ray casting
-      tf2::Vector3 a(sensor_width_*(-1./2 + float(j)/(n_pxl_width_-1)),
-                     sensor_height_*(-1./2 + float(i)/(n_pxl_height_-1)),
-                     focal_length_);
-      tf2::Vector3 origin(0, 0, 0);
-      tf2::Vector3 p = fov_distance_ / tf2::tf2Distance(a, origin) * a;
+      tf2::Vector3 aim_pt = get_aim_pt(i, j);
 
       int alga_idx;
       tf2::Vector3 hit_pt;
-      bool alga_hit = raycast_alga(p, hit_pt, alga_idx);
+      bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx);
 
       if (alga_hit) {
         // Transform hit point in alga frame
@@ -229,7 +226,7 @@ void CameraNodelet::publish_output()
       }
 
       // Fill ray marker
-      add_line_to_marker(ray_marker, tf2::Vector3(0, 0, 0), p);
+      add_line_to_marker(ray_marker, tf2::Vector3(0, 0, 0), aim_pt);
     }
   }
 

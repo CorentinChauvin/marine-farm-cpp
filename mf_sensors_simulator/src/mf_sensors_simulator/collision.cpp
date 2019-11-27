@@ -123,22 +123,23 @@ void CameraNodelet::multi_fov_body(const vector<geometry_msgs::Pose> &poses,
 }
 
 
-void CameraNodelet::overlap_fov(bool use_global_body, rp3d::CollisionBody* body)
+void CameraNodelet::update_fov_pose()
 {
-  // Update fov body transform
-  if (use_global_body) {
-    rp3d::Vector3 pos(fixed_camera_tf_.transform.translation.x,
-      fixed_camera_tf_.transform.translation.y,
-      fixed_camera_tf_.transform.translation.z);
-    rp3d::Quaternion orient(fixed_camera_tf_.transform.rotation.x,
-      fixed_camera_tf_.transform.rotation.y,
-      fixed_camera_tf_.transform.rotation.z,
-      fixed_camera_tf_.transform.rotation.w);
+  rp3d::Vector3 pos(fixed_camera_tf_.transform.translation.x,
+    fixed_camera_tf_.transform.translation.y,
+    fixed_camera_tf_.transform.translation.z);
+  rp3d::Quaternion orient(fixed_camera_tf_.transform.rotation.x,
+    fixed_camera_tf_.transform.rotation.y,
+    fixed_camera_tf_.transform.rotation.z,
+    fixed_camera_tf_.transform.rotation.w);
 
-    rp3d::Transform transform(pos, orient);
-    fov_body_->setTransform(transform);
-  }
+  rp3d::Transform transform(pos, orient);
+  fov_body_->setTransform(transform);
+}
 
+
+void CameraNodelet::overlap_fov(rp3d::CollisionBody* body)
+{
   // Check for overlaps between fov body and algae and update ray_world_
   unsigned int n = ray_bodies_.size();
   for (unsigned int k = 0; k < n; k++) {
@@ -147,11 +148,7 @@ void CameraNodelet::overlap_fov(bool use_global_body, rp3d::CollisionBody* body)
   ray_bodies_.resize(0);
   ray_shapes_.resize(0);
   corr_algae_.resize(0);
-
-  if (use_global_body)
-    coll_world_.testOverlap(fov_body_, &overlap_cb_);
-  else
-    coll_world_.testOverlap(body, &overlap_cb_);
+  coll_world_.testOverlap(body, &overlap_cb_);
 }
 
 
@@ -187,28 +184,47 @@ void CameraNodelet::get_ray_algae_carac(
 }
 
 
+tf2::Vector3 CameraNodelet::get_aim_pt(int pxl_h, int pxl_w, int n_pixel_h, int n_pixel_w)
+{
+  if (n_pixel_h <= 0 || n_pixel_w <= 0) {
+    n_pixel_h = n_pxl_height_;
+    n_pixel_w = n_pxl_width_;
+  }
+
+  tf2::Vector3 a(sensor_width_*(-1./2 + float(pxl_w)/(n_pixel_w-1)),
+                 sensor_height_*(-1./2 + float(pxl_h)/(n_pixel_h-1)),
+                 focal_length_);
+  tf2::Vector3 origin(0, 0, 0);
+  tf2::Vector3 aim_pt = fov_distance_ / tf2::tf2Distance(a, origin) * a;
+
+  return aim_pt;
+}
+
+
+tf2::Vector3 CameraNodelet::apply_transform(const tf2::Vector3 &in_vector,
+  const geometry_msgs::TransformStamped &transform)
+{
+  geometry_msgs::Pose pose;
+  tf2::toMsg(in_vector, pose.position);
+  pose.orientation.w = 1;
+
+  geometry_msgs::Pose transf_pose;
+  tf2::doTransform(pose, transf_pose, transform);
+
+  return tf2::Vector3(transf_pose.position.x, transf_pose.position.y, transf_pose.position.z);
+}
+
+
 bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, tf2::Vector3 &hit_pt,
-  int &alga_idx)
+  int &alga_idx, const tf2::Vector3 &origin)
 {
   // Transform the ray into fixed frame
-  tf2::Vector3 tf_origin(0, 0, 0);
-  geometry_msgs::Pose p_origin;
-  geometry_msgs::Pose p_p;
-  tf2::toMsg(tf_origin, p_origin.position);
-  tf2::toMsg(aim_pt, p_p.position);
-  p_origin.orientation.w = 1;
-  p_p.orientation.w = 1;
-
-  geometry_msgs::Pose origin;
-  geometry_msgs::Pose p;
-  tf2::doTransform(p_origin, origin, fixed_camera_tf_);
-  tf2::doTransform(p_p, p, fixed_camera_tf_);
+  tf2::Vector3 tf_origin = apply_transform(origin, fixed_camera_tf_);
+  tf2::Vector3 tf_aim_pt = apply_transform(aim_pt, fixed_camera_tf_);
 
   // Raycast
   raycast_cb_.alga_hit_ = false;
-  rp3d::Vector3 start_point(origin.position.x, origin.position.y, origin.position.z);
-  rp3d::Vector3 end_point(p.position.x, p.position.y, p.position.z);
-  rp3d::Ray ray(start_point, end_point);
+  rp3d::Ray ray(tf2_to_rp3d(tf_origin), tf2_to_rp3d(tf_aim_pt));
 
   ray_world_.raycast(ray, &raycast_cb_);
 
@@ -219,6 +235,24 @@ bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, tf2::Vector3 &hit_p
     return true;
   }
   else {
+    return false;
+  }
+}
+
+
+bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, float &distance,
+  const tf2::Vector3 &origin)
+{
+  // Perform raycast
+  int alga_idx;
+  tf2::Vector3 hit_pt;
+  bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, origin);
+
+  // Get distance to the hit alga
+  if (alga_hit) {
+    distance = tf2::tf2Distance(hit_pt, apply_transform(origin, fixed_camera_tf_));
+    return true;
+  } else {
     return false;
   }
 }

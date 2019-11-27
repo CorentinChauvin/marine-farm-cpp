@@ -16,6 +16,7 @@
 #include "reactphysics3d.h"
 #include <tf2_ros/transform_listener.h>
 #include <tf2/LinearMath/Vector3.h>
+#include <tf2/LinearMath/Transform.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
@@ -103,11 +104,16 @@ class CameraNodelet: public nodelet::Nodelet {
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
 
+    // FIXME: to remove
+    ros::Publisher test_pub_; // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
     mf_farm_simulator::AlgaeConstPtr last_algae_msg_;  ///<  Last algae message
     bool algae_msg_received_;  ///<  Whether an algae message has been received
     geometry_msgs::TransformStamped fixed_camera_tf_;  ///<  Transform from fixed frame to camera
     geometry_msgs::TransformStamped camera_fixed_tf_;  ///<  Transform from camera to fixed frame
     geometry_msgs::TransformStamped camera_robot_tf_;  ///<  Transform from camera to robot frame
+    geometry_msgs::TransformStamped robot_camera_tf_;  ///<  Transform from robot to camera frame
     std::vector<std::vector<std::vector<float>>> heatmaps_;  ///<  Disease heatmatps for all the algae
     std::vector<int> corr_algae_;  ///<  Correspondance between the algae used for raytracing and all the others
     std::mutex coll_mutex_;  ///<  Mutex to control access to collision variables
@@ -210,12 +216,19 @@ class CameraNodelet: public nodelet::Nodelet {
     void publish_rviz_fov();
 
     /**
+     * \brief  Updates pose of field of view body
+     */
+    void update_fov_pose();
+
+    /**
      * \brief  Selects algae that are in field of view of the camera
      *
-     * \param use_global_body  Whether to use the global fov collision body
-     * \param body             Optional other body to use instead
+     * The function will update `CameraNodelet::corr_algae_`, `CameraNodelet::ray_world_`,
+     * `CameraNodelet::ray_bodies_` and `CameraNodelet::ray_shapes_`.
+     *
+     * \param body  Collision body to check overlap with algae
      */
-    void overlap_fov(bool use_global_body = true, rp3d::CollisionBody* body = nullptr);
+    void overlap_fov(rp3d::CollisionBody* body);
 
     /**
      * \brief  Gets position, dimension and axes of the algae for raycasting
@@ -232,17 +245,80 @@ class CameraNodelet: public nodelet::Nodelet {
       std::vector<geometry_msgs::TransformStamped> &tf_algae
     );
 
+    /**
+     * \brief  Gets an aim point from pixel coordinates for raycasting
+     *
+     * The raycast will be performed between the camera origin and this aim
+     * point. The norm of the aim point is the field of view distance.
+     *
+     * \param pxl_h    Pixel coordinate in height axis
+     * \param pxl_w    Pixel coordinate in width axis
+     * \param n_pxl_h  Custom total number of pixels of the camera in height (defaulted to global value)
+     * \param n_pxl_w  Custom total number of pixels of the camera in width (defaulted to global value)
+     * \return  The corresponding aim point
+     */
+    tf2::Vector3 get_aim_pt(int pxl_h, int pxl_w, int n_pixel_h = -1, int n_pixel_w = -1);
 
     /**
-     * \brief  Casts a ray to get alga disease value at hit point
+     * \brief  Converts a tf2 vector to a rp3d vector
+     *
+     * \param vect  Vector to convert
+     */
+    inline rp3d::Vector3 tf2_to_rp3d(const tf2::Vector3 vect);
+
+    /**
+     * \brief  Converts a pose to a transform
+     *
+     * \warning  This doesn't take into account frame ids and doesn't fill header
+     *
+     * \param pose  Pose to convert
+     * \return  Converted transform
+     */
+    inline geometry_msgs::TransformStamped pose_to_tf(const geometry_msgs::Pose &pose);
+
+    /**
+     * \brief  Inverse a transform
+     *
+     * \warning  Doesn't fill the header
+     *
+     * \param transform  Transform to inverse
+     * \return  Inversed transform
+     */
+    inline geometry_msgs::TransformStamped inverse_tf(
+      const geometry_msgs::TransformStamped &transform);
+
+    /**
+     * \brief  Applies a transform to a vector
+     *
+     * \param [in] in_vector  Vector to transform
+     * \param [in] transform  Transform to apply
+     * return  Transformed vector
+     */
+    tf2::Vector3 apply_transform(const tf2::Vector3 &in_vector,
+      const geometry_msgs::TransformStamped &transform);
+
+    /**
+     * \brief  Casts a ray on algae and gets hit point
      *
      * \param [in]  aim_pt    Point towards which casting the ray (in camera frame)
-     * \param [out] hit_pt    Hit point
+     * \param [out] hit_pt    Hit point (in fixed frame)
      * \param [out] alga_idx  Index of the hit alga in the ray_bodies_ vector
+     * \param [in]  origin    Origin of the ray (in camera frame)
      * \return  Whether an alga has been hit
      */
     bool raycast_alga(const tf2::Vector3 &aim_pt, tf2::Vector3 &hit_pt,
-      int &alga_idx);
+      int &alga_idx, const tf2::Vector3 &origin = tf2::Vector3(0, 0, 0));
+
+    /**
+     * \brief  Casts a ray on algae and gets hit distance
+     *
+     * \param [in]  aim_pt    Point towards which casting the ray (in camera frame)
+     * \param [out] distance  Distance to the hit alga
+     * \param [in]  origin    Origin of the ray (in camera frame)
+     * \return  Whether an alga has been hit
+     */
+    bool raycast_alga(const tf2::Vector3 &aim_pt, float &distance,
+      const tf2::Vector3 &origin = tf2::Vector3(0, 0, 0));
 
     /**
      * \brief  Prepares the ROS output messages
@@ -256,7 +332,6 @@ class CameraNodelet: public nodelet::Nodelet {
       visualization_msgs::Marker &ray_marker,
       visualization_msgs::Marker &pts_marker
     );
-
 
     /**
      * \brief  Add a point to a point marker
@@ -286,6 +361,57 @@ class CameraNodelet: public nodelet::Nodelet {
     void publish_output();
 
 };
+
+
+inline rp3d::Vector3 CameraNodelet::tf2_to_rp3d(const tf2::Vector3 vect)
+{
+  return rp3d::Vector3(vect.getX(), vect.getY(), vect.getZ());
+}
+
+
+inline geometry_msgs::TransformStamped CameraNodelet::pose_to_tf(
+  const geometry_msgs::Pose &pose)
+{
+  geometry_msgs::TransformStamped transf;
+  transf.transform.translation.x = pose.position.x;
+  transf.transform.translation.y = pose.position.y;
+  transf.transform.translation.z = pose.position.z;
+  transf.transform.rotation.x = pose.orientation.x;
+  transf.transform.rotation.y = pose.orientation.y;
+  transf.transform.rotation.z = pose.orientation.z;
+  transf.transform.rotation.w = pose.orientation.w;
+
+  return transf;
+}
+
+
+inline geometry_msgs::TransformStamped CameraNodelet::inverse_tf(
+  const geometry_msgs::TransformStamped &transform)
+{
+  tf2::Vector3 trans(transform.transform.translation.x,
+                     transform.transform.translation.y,
+                     transform.transform.translation.z);
+  tf2::Quaternion orient(transform.transform.rotation.x,
+                         transform.transform.rotation.y,
+                         transform.transform.rotation.z,
+                         transform.transform.rotation.w);
+
+  tf2::Transform inverse = tf2::Transform(orient, trans).inverse();
+  trans = inverse.getOrigin();
+  orient = inverse.getRotation();
+
+  geometry_msgs::TransformStamped ret;
+  ret.transform.translation.x = trans.getX();
+  ret.transform.translation.y = trans.getY();
+  ret.transform.translation.z = trans.getZ();
+  ret.transform.rotation.x = orient.getX();
+  ret.transform.rotation.y = orient.getY();
+  ret.transform.rotation.z = orient.getZ();
+  ret.transform.rotation.w = orient.getW();
+
+  return ret;
+
+}
 
 
 }  // namespace mfcpp

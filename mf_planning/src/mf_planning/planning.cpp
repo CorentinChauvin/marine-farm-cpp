@@ -95,6 +95,8 @@ void PlanningNodelet::plan_trajectory()
   mf_sensors_simulator::MultiPoses srv;
   srv.request.pose_array.header.frame_id = robot_frame_;
   srv.request.pose_array.poses = lattice_;
+  srv.request.n_pxl_height = -1;  // take the camera default values
+  srv.request.n_pxl_width = -1;
 
   if (ray_multi_client_.call(srv)) {
     if (srv.response.is_success) {

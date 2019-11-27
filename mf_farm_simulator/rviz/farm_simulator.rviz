@@ -151,15 +151,13 @@ Visualization Manager:
       Unreliable: false
       Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /simu/camera_markers
       Name: CameraFOV
       Namespaces:
-        FieldOfView: true
-        Hit point: true
-        Rays: false
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /nav/wp_lattice
@@ -184,6 +182,14 @@ Visualization Manager:
       Topic: /nav/wp_pose_array
       Unreliable: false
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /simu/debug_markers
+      Name: Marker
+      Namespaces:
+        Hit point: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -201,25 +207,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 2.17615628
+      Distance: 1.39939666
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.251459539
-        Y: -1.30871904
+        X: -0.619707882
+        Y: 0.390991032
         Z: 1.32212563e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.25979811
+      Pitch: 0.114798181
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 3.46852064
+      Yaw: 3.52851343
     Saved: ~
 Window Geometry:
   Displays:
