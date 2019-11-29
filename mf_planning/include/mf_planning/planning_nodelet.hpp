@@ -68,6 +68,8 @@ class PlanningNodelet: public nodelet::Nodelet {
     float plan_horizon_;   ///<  Horizon (m) of the planning
     float lattice_res_;    ///<  Resolution (m) of the waypoints lattice
     float min_wall_dist_;  ///<  Minimum distance to the wall that can be planned
+    int camera_height_;    ///<  Number of pixels of the camera along height (-1 for actual camera size)
+    int camera_width_;     ///<  Number of pixels of the camera along width  (-1 for actual camera size)
     ///@}
 
     /**

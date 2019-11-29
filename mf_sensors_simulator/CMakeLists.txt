@@ -5,8 +5,10 @@ project(mf_sensors_simulator)
 add_compile_options(-std=c++11)
 # set(CMAKE_CXX_FLAGS_DEBUG "-g -fno-omit-frame-pointer")
 # set(ROS_BUILD_TYPE Debug)
+
+set(EIGEN_BUILD_FLAGS "-O3 -DEIGEN_NO_DEBUG")
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${EIGEN_BUILD_FLAGS}")
 set(ROS_BUILD_TYPE Release)
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -Wall")
 
 
 ########################
@@ -26,6 +28,8 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
     CameraOutput.msg
+    PixelRay.msg
+    RaycastRes.msg
 )
 
 add_service_files(
@@ -52,6 +56,9 @@ include_directories(
   include/mf_sensors_simulator
   ${catkin_INCLUDE_DIRS}
 )
+
+find_package(Eigen3 REQUIRED)
+include_directories(${Eigen_INCLUDE_DIRS})
 
 # Camera nodelet
 add_library(camera_nodelet

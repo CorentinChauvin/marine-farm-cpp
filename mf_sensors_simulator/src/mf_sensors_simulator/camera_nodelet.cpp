@@ -20,6 +20,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
+#include <eigen3/Eigen/Dense>
 #include <csignal>
 #include <string>
 #include <vector>
@@ -87,10 +88,6 @@ void CameraNodelet::onInit()
   // ROS publishers
   out_pub_ = nh_.advertise<mf_sensors_simulator::CameraOutput>("camera_out", 0);
   rviz_pub_ = nh_.advertise<visualization_msgs::Marker>("camera_markers", 0);
-
-  // FIXME: to remove
-  test_pub_ = nh_.advertise<visualization_msgs::Marker>("debug_markers", 0);
-
 
   // Other parameters
   algae_msg_received_ = false;
@@ -250,19 +247,8 @@ bool CameraNodelet::ray_multi_cb(mf_sensors_simulator::MultiPoses::Request &req,
     n_pxl_w = n_pxl_width_;
   }
 
-  // FIXME: to remove
-  n_pxl_h = 5;  //<<<<<<<<<<<<<<<<
-  n_pxl_w = 10;
-
-  int n_pixels = n_pxl_h * n_pxl_w;
   int nbr_poses = req.pose_array.poses.size();
   res.results.resize(nbr_poses);
-
-  for (int k = 0; k < nbr_poses; k++) {
-    res.results[k].x.reserve(n_pixels);
-    res.results[k].y.reserve(n_pixels);
-    res.results[k].z.reserve(n_pixels);
-  }
 
   // Transform the poses in camera frame
   if (!world_init_ || !get_tf()) {
@@ -288,129 +274,10 @@ bool CameraNodelet::ray_multi_cb(mf_sensors_simulator::MultiPoses::Request &req,
   coll_mutex_.lock();
   overlap_fov(body);
 
-  // Raycast for each pose
+  // Raycast all pixels for each pose
   for (int k = 0; k < nbr_poses; k++) {
-    geometry_msgs::TransformStamped robot_vp_tf = pose_to_tf(req.pose_array.poses[k]);  // transform from robot to view point
-    tf2::Vector3 origin(poses[k].position.x, poses[k].position.y, poses[k].position.z);
-    tf2::Vector3 hit_pt;
-    int alga_idx;
-
-    // Check the four corners
-    int x_corner[4] = {0, n_pxl_h-1, n_pxl_h-1, 0};  // position of the 4 corners in height direction
-    int y_corner[4] = {0, 0, n_pxl_w-1, n_pxl_w-1};  // position of the 4 corners in width direction
-    bool hit_all_corners = true;
-
-    for (int l = 0; l < 4; l++) {
-      // Transform aim point into camera frame
-      tf2::Vector3 aim_pt1 = get_aim_pt(x_corner[l], y_corner[l], n_pxl_h, n_pxl_w);  // aim point in view point camera frame
-      tf2::Vector3 aim_pt2 = apply_transform(aim_pt1, robot_camera_tf_);  // aim point in view point frame
-      tf2::Vector3 aim_pt3 = apply_transform(aim_pt2, robot_vp_tf);       // aim point in robot frame
-      tf2::Vector3 aim_pt  = apply_transform(aim_pt3, camera_robot_tf_);  // aim point in camera frame
-
-      // Perform raycast
-      bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, origin);
-
-      if (alga_hit) {
-        tf2::Vector3 out_pt = apply_transform(hit_pt, camera_fixed_tf_);  // transform in camera frame
-
-        res.results[k].x.emplace_back(out_pt.getX());
-        res.results[k].y.emplace_back(out_pt.getY());
-        res.results[k].z.emplace_back(out_pt.getZ());
-      } else {
-        hit_all_corners = false;
-      }
-    }
-
-    // If all corners have been hit, simply interpolate between it.
-    // This is not exact since all rays are not parallel, but it's a fair enough
-    // approximation.
-    if (hit_all_corners) {
-      tf2::Vector3 p1(res.results[k].x[0], res.results[k].y[0], res.results[k].z[0]);
-      tf2::Vector3 p2(res.results[k].x[1], res.results[k].y[1], res.results[k].z[1]);
-      tf2::Vector3 p3(res.results[k].x[2], res.results[k].y[2], res.results[k].z[2]);
-      tf2::Vector3 p4(res.results[k].x[3], res.results[k].y[3], res.results[k].z[3]);
-
-      tf2::Vector3 dx = p2 - p1;
-      tf2::Vector3 dy = p4 - p1;
-      dx /= n_pxl_h - 1;
-      dy /= n_pxl_w - 1;
-
-      for (int i = 0; i < n_pxl_h; i++) {
-        for (int j = 0; j < n_pxl_w; j++) {
-          if ((i != 0 && i != n_pxl_h-1) || (j != 0 && j != n_pxl_w-1)) {
-            tf2::Vector3 p = p1 + i * dx + j * dy;
-
-            res.results[k].x.emplace_back(p.getX());
-            res.results[k].y.emplace_back(p.getY());
-            res.results[k].z.emplace_back(p.getZ());
-          }
-        }
-      }
-    }
-
-    // Otherwise, just raycast through all pixels
-    else {
-      for (int i = 0; i < n_pxl_h; i++) {
-        for (int j = 0; j < n_pxl_w; j++) {
-          if ((i != 0 && i != n_pxl_h-1) || (j != 0 && j != n_pxl_w-1)) {
-            // Transform aim point into camera frame
-            tf2::Vector3 aim_pt1 = get_aim_pt(i, j, n_pxl_h, n_pxl_w);  // aim point in view point camera frame
-            tf2::Vector3 aim_pt2 = apply_transform(aim_pt1, robot_camera_tf_);  // aim point in view point frame
-            tf2::Vector3 aim_pt3 = apply_transform(aim_pt2, robot_vp_tf);       // aim point in robot frame
-            tf2::Vector3 aim_pt  = apply_transform(aim_pt3, camera_robot_tf_);  // aim point in camera frame
-
-            // Perform raycast
-            bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, origin);
-
-            if (alga_hit) {
-              tf2::Vector3 out_pt = apply_transform(hit_pt, camera_fixed_tf_);  // transform in camera frame
-
-              res.results[k].x.emplace_back(out_pt.getX());
-              res.results[k].y.emplace_back(out_pt.getY());
-              res.results[k].z.emplace_back(out_pt.getZ());
-            }
-          }
-        }
-      }
-    }
+    raycast_wall(req.pose_array.poses[k], n_pxl_h, n_pxl_w, res.results[k]);
   }
-
-  // FIXME: to remove
-  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  // Display the corners in Rviz to check whether it works in weird situations
-  visualization_msgs::Marker pts_marker;
-  pts_marker.header.stamp = ros::Time::now();
-  pts_marker.header.frame_id = camera_frame_;
-  pts_marker.ns = "Hit point";
-  pts_marker.lifetime = ros::Duration(1/camera_freq_);
-  pts_marker.color.r = 0.0;
-  pts_marker.color.g = 0.0;
-  pts_marker.color.b = 1.0;
-  pts_marker.color.a = 1.0;
-  pts_marker.type = visualization_msgs::Marker::POINTS;
-  pts_marker.action = visualization_msgs::Marker::ADD;
-  pts_marker.scale.x = 0.05;
-  pts_marker.scale.y = 0.05;
-  pts_marker.points.reserve(n_pixels*nbr_poses);
-  pts_marker.colors.reserve(n_pixels*nbr_poses);
-
-
-  for (int k = 0; k < nbr_poses; k++) {
-    float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-    float g = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-    float b = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-
-    for (int l = 0; l < res.results[k].x.size(); l++) {
-      tf2::Vector3 hit_pt(res.results[k].x[l], res.results[k].y[l], res.results[k].z[l]);
-
-      if (k == 5)
-        add_pt_to_marker(pts_marker, hit_pt, r, g, b);
-    }
-  }
-
-  test_pub_.publish(pts_marker);
-
-  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
   // Conclude
   coll_world_.destroyCollisionBody(body);

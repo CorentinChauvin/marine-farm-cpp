@@ -15,3 +15,6 @@ planning_nodelet:
   plan_horizon: 1.5   # horizon (m) of the planning
   lattice_res: 0.4    # resolution (m) of the waypoints lattice
   min_wall_dist: 0.2  # minimum distance to the wall that can be planned
+
+  camera_height: 5    # number of pixels of the camera along height (-1 for actual camera size)
+  camera_width: 10    # number of pixels of the camera along width  (-1 for actual camera size)

@@ -104,10 +104,6 @@ class CameraNodelet: public nodelet::Nodelet {
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
 
-    // FIXME: to remove
-    ros::Publisher test_pub_; // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-
     mf_farm_simulator::AlgaeConstPtr last_algae_msg_;  ///<  Last algae message
     bool algae_msg_received_;  ///<  Whether an algae message has been received
     geometry_msgs::TransformStamped fixed_camera_tf_;  ///<  Transform from fixed frame to camera
@@ -288,6 +284,15 @@ class CameraNodelet: public nodelet::Nodelet {
       const geometry_msgs::TransformStamped &transform);
 
     /**
+     * \brief  Combine transforms sequentially
+     *
+     * \param transforms  List of transform to combine
+     * \return  Product of all transforms
+     */
+    geometry_msgs::TransformStamped combine_transforms(
+      const std::vector<geometry_msgs::TransformStamped> &transforms);
+
+    /**
      * \brief  Applies a transform to a vector
      *
      * \param [in] in_vector  Vector to transform
@@ -319,6 +324,74 @@ class CameraNodelet: public nodelet::Nodelet {
      */
     bool raycast_alga(const tf2::Vector3 &aim_pt, float &distance,
       const tf2::Vector3 &origin = tf2::Vector3(0, 0, 0));
+
+    /*
+     * \brief  Raycast for each pixel of a camera for a specified viewpoint
+     *
+     * This method is trying to minimise the number of casted rays with some
+     * assumption. It starts by casting a ray for each corner of the camera
+     * screen. If the four rays hit something, the remaining pixels hit positions
+     * are interpolated in between. Otherwise, it casts a ray for each pixel.
+     *
+     * Therefore this method assumes that the four corners lie on a plane, which
+     * will be the case for an algae wall, but not when dealing with lots of
+     * algae.
+     *
+     * \note  The code refers to two different frames: the viewpoint frame which
+     *    is a virtual frame ; and the global camera frame which is the frame
+     *    of the actual robot camera.
+     *
+     * \note  It will transform the viewpoint in global camera frame. So it
+     *    assumes `CameraNodelet::camera_robot_tf_` is up to date.
+     *
+     * \param [in]  vp_pose     Pose of the viewpoint in robot frame
+     * \param [in]  n_pxl_h     Number of pixels of the camera in height direction
+     * \param [in]  n_pxl_w     Number of pixels of the camera in width direction
+     * \param [out] pxl_output  Hit points for all pixels
+     */
+    void raycast_wall(
+      const geometry_msgs::Pose &vp_pose,
+      int n_pxl_h, int n_pxl_w,
+      mf_sensors_simulator::CameraOutput &pxl_output
+    );
+
+    /**
+     * \brief  Interpolates a 3D quadrilateral lying on a plane
+     *
+     * It uses bilinear mapping to transform points in [-1, 1]x[-1, 1] to 3D
+     * points inside a quadrilateral defined by its four corners.
+     *
+     * For \f$ (u, v) \in [-1, 1]^2 \f$, the mapping to corresponding
+     * \f$ (x, y, z) \f$ coordinates is as follow:
+     * - \f$  x(u, v) = \alpha_0 + \alpha_1 u + \alpha_2 v + \alpha_3 u v  \f$
+     * - \f$  y(u, v) = \beta_0 + \beta_1 u + \beta_2 v + \beta_3 u v      \f$
+     * - \f$  z(u, v) = \gamma_0 + \gamma_1 u + \gamma_2 v + \gamma_3 u v  \f$
+     *
+     * Where \f$ \alpha \f$, \f$ \beta \f$ and \f$ \gamma \f$ are determined
+     * thanks to the corner points. For more information, you can refer to:
+     * _The Finite Element Method: Linear Static and Dynamic Finite Element
+     * Analysis_ by Thomas J. R. Hughes (chapter 3.2).
+     *
+     * \note  - The four corners are not added.
+     *
+     * \note  - Points will be emplaced back to the x, y, and z lists, so it
+     *    assumes that their size is already reserved before.
+     *
+     * \param [in]  p1      Top left corner of the quadrilateral
+     * \param [in]  p2      Bottom left corner of the quadrilateral
+     * \param [in]  p3      Bottom right corner of the quadrilateral
+     * \param [in]  p4      Top right corner of the quadrilateral
+     * \param [in]  n_h     Number of points to interpolate in the height direction
+     * \param [in]  n_w     Number of points to interpolate in the width direction
+     * \param [out] x_list  X coordinates of the interpolated points
+     * \param [out] y_list  Y coordinates of the interpolated points
+     * \param [out] z_list  Z coordinates of the interpolated points
+     */
+    void interpolate_quadri(
+      const tf2::Vector3 &p1, const tf2::Vector3 &p2, const tf2::Vector3 &p3, const tf2::Vector3 &p4,
+      int n_h, int n_w,
+      std::vector<float> &x_list, std::vector<float> &y_list, std::vector<float> &z_list
+    );
 
     /**
      * \brief  Prepares the ROS output messages

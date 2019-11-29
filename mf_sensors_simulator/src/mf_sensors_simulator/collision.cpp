@@ -7,7 +7,9 @@
  */
 
 #include "camera_nodelet.hpp"
+#include "mf_sensors_simulator/CameraOutput.h"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <eigen3/Eigen/Dense>
 #include <vector>
 
 using namespace std;
@@ -201,6 +203,40 @@ tf2::Vector3 CameraNodelet::get_aim_pt(int pxl_h, int pxl_w, int n_pixel_h, int 
 }
 
 
+geometry_msgs::TransformStamped CameraNodelet::combine_transforms(
+  const vector<geometry_msgs::TransformStamped> &transforms)
+{
+  tf2::Transform tf;
+  tf.setIdentity();
+
+  for (int k = 0; k < transforms.size(); k++) {
+    tf2::Vector3 trans(transforms[k].transform.translation.x,
+                       transforms[k].transform.translation.y,
+                       transforms[k].transform.translation.z);
+    tf2::Quaternion orient(transforms[k].transform.rotation.x,
+                           transforms[k].transform.rotation.y,
+                           transforms[k].transform.rotation.z,
+                           transforms[k].transform.rotation.w);
+
+    tf *= tf2::Transform(orient, trans);
+  }
+
+  tf2::Vector3 trans = tf.getOrigin();
+  tf2::Quaternion orient = tf.getRotation();
+
+  geometry_msgs::TransformStamped ret;
+  ret.transform.translation.x = trans.getX();
+  ret.transform.translation.y = trans.getY();
+  ret.transform.translation.z = trans.getZ();
+  ret.transform.rotation.x = orient.getX();
+  ret.transform.rotation.y = orient.getY();
+  ret.transform.rotation.z = orient.getZ();
+  ret.transform.rotation.w = orient.getW();
+
+  return ret;
+}
+
+
 tf2::Vector3 CameraNodelet::apply_transform(const tf2::Vector3 &in_vector,
   const geometry_msgs::TransformStamped &transform)
 {
@@ -254,6 +290,136 @@ bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, float &distance,
     return true;
   } else {
     return false;
+  }
+}
+
+
+void CameraNodelet::raycast_wall(
+  const geometry_msgs::Pose &vp_pose,
+  int n_pxl_h, int n_pxl_w,
+  mf_sensors_simulator::CameraOutput &pxl_output)
+{
+  // Prepare the output
+  int n_pixels = n_pxl_h * n_pxl_w;
+  pxl_output.x.reserve(n_pixels);
+  pxl_output.y.reserve(n_pixels);
+  pxl_output.z.reserve(n_pixels);
+
+  // Transform the viewpoint in camera frame
+  geometry_msgs::Pose transf_pose;  // position of the viewpoint in camera frame
+  tf2::doTransform(vp_pose, transf_pose, camera_robot_tf_);
+
+  // Compute transform from robot camera frame to viewpoint camera frame
+  geometry_msgs::TransformStamped robot_vp_tf = pose_to_tf(vp_pose);  // transform from robot to view point
+  tf2::Vector3 origin(transf_pose.position.x, transf_pose.position.y, transf_pose.position.z);
+
+  vector<geometry_msgs::TransformStamped> transforms = {robot_camera_tf_,
+    robot_vp_tf, camera_robot_tf_};
+
+  geometry_msgs::TransformStamped transform = combine_transforms(transforms);
+
+  // Check the four corners
+  int x_corner[4] = {0, n_pxl_h-1, n_pxl_h-1, 0};  // position of the 4 corners in height direction
+  int y_corner[4] = {0, 0, n_pxl_w-1, n_pxl_w-1};  // position of the 4 corners in width direction
+  bool hit_all_corners = true;
+
+  for (int l = 0; l < 4; l++) {
+    // Transform aim point into camera frame
+    tf2::Vector3 aim_pt1 = get_aim_pt(x_corner[l], y_corner[l], n_pxl_h, n_pxl_w);  // aim point in view point camera frame
+    tf2::Vector3 aim_pt = apply_transform(aim_pt1, transform);
+
+    // Perform raycast
+    int alga_idx;
+    tf2::Vector3 hit_pt;
+    bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, origin);
+
+    if (alga_hit) {
+      tf2::Vector3 out_pt = apply_transform(hit_pt, camera_fixed_tf_);  // transform in camera frame
+
+      pxl_output.x.emplace_back(out_pt.getX());
+      pxl_output.y.emplace_back(out_pt.getY());
+      pxl_output.z.emplace_back(out_pt.getZ());
+    } else {
+      hit_all_corners = false;
+    }
+  }
+
+  // If all corners have been hit, simply interpolate between it.
+  if (hit_all_corners) {
+    tf2::Vector3 p1(pxl_output.x[0], pxl_output.y[0], pxl_output.z[0]);
+    tf2::Vector3 p2(pxl_output.x[1], pxl_output.y[1], pxl_output.z[1]);
+    tf2::Vector3 p3(pxl_output.x[2], pxl_output.y[2], pxl_output.z[2]);
+    tf2::Vector3 p4(pxl_output.x[3], pxl_output.y[3], pxl_output.z[3]);
+
+    interpolate_quadri(p1, p2, p3, p4,
+      n_pxl_h, n_pxl_w,
+      pxl_output.x, pxl_output.y, pxl_output.z
+    );
+  }
+
+  // Otherwise, just raycast through all pixels
+  else {
+    for (int i = 0; i < n_pxl_h; i++) {
+      for (int j = 0; j < n_pxl_w; j++) {
+        if ((i != 0 && i != n_pxl_h-1) || (j != 0 && j != n_pxl_w-1)) {
+          // Transform aim point into camera frame
+          tf2::Vector3 aim_pt1 = get_aim_pt(i, j, n_pxl_h, n_pxl_w);  // aim point in view point camera frame
+          tf2::Vector3 aim_pt = apply_transform(aim_pt1, transform);
+
+          // Perform raycast
+          int alga_idx;
+          tf2::Vector3 hit_pt;
+          bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, origin);
+
+          if (alga_hit) {
+            tf2::Vector3 out_pt = apply_transform(hit_pt, camera_fixed_tf_);  // transform in camera frame
+
+            pxl_output.x.emplace_back(out_pt.getX());
+            pxl_output.y.emplace_back(out_pt.getY());
+            pxl_output.z.emplace_back(out_pt.getZ());
+          }
+        }
+      }
+    }
+  }
+}
+
+
+void CameraNodelet::interpolate_quadri(
+  const tf2::Vector3 &p1, const tf2::Vector3 &p2, const tf2::Vector3 &p3, const tf2::Vector3 &p4,
+  int n_h, int n_w,
+  vector<float> &x_list, vector<float> &y_list, vector<float> &z_list
+)
+{
+  Eigen::Vector4d X(p1.getX(), p2.getX(), p3.getX(), p4.getX());
+  Eigen::Vector4d Y(p1.getY(), p2.getY(), p3.getY(), p4.getY());
+  Eigen::Vector4d Z(p1.getZ(), p2.getZ(), p3.getZ(), p4.getZ());
+
+  Eigen::Matrix4d A;
+  A << 1, -1, -1,  1,
+       1,  1, -1, -1,
+       1,  1,  1,  1,
+       1, -1,  1, -1;
+  Eigen::Matrix4d A_inv = A.inverse();
+
+  Eigen::Vector4d alpha = A_inv * X;
+  Eigen::Vector4d beta  = A_inv * Y;
+  Eigen::Vector4d gamma = A_inv * Z;
+
+  for (int i = 0; i < n_h; i++) {
+    for (int j = 0; j < n_w; j++) {
+      if ((i != 0 && i != n_h-1) || (j != 0 && j != n_w-1)) {
+        float u = -1 + 2.0*i/(n_h-1);
+        float v = -1 + 2.0*j/(n_w-1);
+        float x = alpha[0] + alpha[1]*u + alpha[2]*v + alpha[3]*u*v;
+        float y = beta[0] + beta[1]*u + beta[2]*v + beta[3]*u*v;
+        float z = gamma[0] + gamma[1]*u + gamma[2]*v + gamma[3]*u*v;
+
+        x_list.emplace_back(x);
+        y_list.emplace_back(y);
+        z_list.emplace_back(z);
+      }
+    }
   }
 }
 

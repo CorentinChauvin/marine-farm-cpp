@@ -71,6 +71,8 @@ void PlanningNodelet::onInit()
   private_nh_.param<float>("plan_horizon", plan_horizon_, 1.0);
   private_nh_.param<float>("lattice_res", lattice_res_, 0.5);
   private_nh_.param<float>("min_wall_dist", min_wall_dist_, 0.3);
+  private_nh_.param<int>("camera_width", camera_width_, -1);
+  private_nh_.param<int>("camera_height", camera_height_, -1);
 
   // Other variables
   robot_model_ = RobotModel(model_csts);
