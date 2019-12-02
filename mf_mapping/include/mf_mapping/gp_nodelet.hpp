@@ -38,6 +38,21 @@ class GPNodelet: public nodelet::Nodelet {
     virtual void onInit();
 
   private:
+    /**
+     * \brief  2D rectangular area
+     *
+     * \param min_x      Minimal x coordinate
+     * \param max_x      Maximal x coordinate
+     * \param min_y      Minimal y coordinate
+     * \param max_y      Maximal y coordinate
+     */
+    struct RectArea {
+      float min_x;
+      float max_x;
+      float min_y;
+      float max_y;
+    };
+
     // Typedefs
     typedef std::vector<float> vec_f;
 
@@ -148,7 +163,7 @@ class GPNodelet: public nodelet::Nodelet {
      *
      * \param distance  Distance between the measured point and the camera origin
      */
-    inline float camera_noise(float distance);
+    inline float camera_noise(float distance) const;
 
     /**
      * \brief  Matern 3/2 kernel function
@@ -158,7 +173,7 @@ class GPNodelet: public nodelet::Nodelet {
      * \param x2  X coordinate of the second point
      * \param y2  Y coordinate of the second point
      */
-    inline double matern_kernel(double x1, double y1, double x2, double y2);
+    inline double matern_kernel(double x1, double y1, double x2, double y2) const;
 
     /**
      * \brief  Populates indices correspondance for reordered states
@@ -171,7 +186,7 @@ class GPNodelet: public nodelet::Nodelet {
      * \param[in] min_x      Minimal x index of the observed states
      * \param[in] max_x      Maximal x index of the observed states
      * \param[in] min_y      Minimal y index of the observed states
-     * \param[in] max_y      Maximal y index of the observed states     *
+     * \param[in] max_y      Maximal y index of the observed states
      * \param[out] idx_obs   Array of corr. indices for obs states to populate
      * \param[out] idx_nobs  Array of corr. indices for not obs states to populate
      */
@@ -179,17 +194,14 @@ class GPNodelet: public nodelet::Nodelet {
       unsigned int size_obs, unsigned int size_nobs,
       unsigned int min_x, unsigned int max_x, unsigned int min_y, unsigned int max_y,
       std::vector<unsigned int> &idx_obs, std::vector<unsigned int> &idx_nobs
-    );
+    ) const;
 
     /**
      * \brief  Notifies changing pixels during GP update
      *
-     * \param min_x      Minimal x index of the observed states
-     * \param max_x      Maximal x index of the observed states
-     * \param min_y      Minimal y index of the observed states
-     * \param max_y      Maximal y index of the observed states
+     * \param coord  Coordinates of the rectangular area of the observed state
      */
-    void notif_changing_pxls(float min_x, float max_x, float min_y, float max_y);
+    void notif_changing_pxls(const RectArea &coord);
 
     /**
      * \brief  Builds vectors and matrices needed during Kalman update
@@ -215,7 +227,7 @@ class GPNodelet: public nodelet::Nodelet {
       Eigen::MatrixXf &P, Eigen::MatrixXf &P_obs, Eigen::MatrixXf &B,
       Eigen::MatrixXf &C_obs, Eigen::MatrixXf &C_obs_inv,
       Eigen::VectorXf &x_coord, Eigen::VectorXf &y_coord
-    );
+    ) const;
 
     /**
      * \brief  Builds vectors and matrices needed during GP evaluation
@@ -237,28 +249,42 @@ class GPNodelet: public nodelet::Nodelet {
     /**
      * \brief  Fills GP mean and covariance from reordered objects
      *
-     * \param idx_obs   Array of corresponding indices for obs states
-     * \param idx_nobs  Array of corresponding indices for non obs states
-     * \param mu        Reordered state
-     * \param P         Reordered covariance
+     * \param[in]  idx_obs   Array of corresponding indices for obs states
+     * \param[in]  idx_nobs  Array of corresponding indices for non obs states
+     * \param[in]  mu        Reordered state
+     * \param[in]  P         Reordered covariance
+     * \param[out] gp_mean   GP mean to fill
+     * \param[out] gp_cov    GP covariance to fill
      */
     void update_reordered_gp(
       const std::vector<unsigned int> &idx_obs,
       const std::vector<unsigned int> &idx_nobs,
-      Eigen::VectorXf &mu, const Eigen::MatrixXf &P
-    );
+      const Eigen::VectorXf &mu, const Eigen::MatrixXf &P,
+      Eigen::VectorXf &gp_mean, Eigen::MatrixXf &gp_cov
+    ) const;
 
     /**
      * \brief  Updates the Gaussian Process given measured data points
      *
-     * \param x_meas     X coordinate of the measured data points
-     * \param y_meas     Y coordinate of the measured data points
-     * \param z_meas     Z coordinate of the measured data points
-     * \param distances  Distances to the measured points
-     * \param value     Value of the points at coordinates (x, y)
+     * \param[in]      x_meas       X coordinate of the measured data points
+     * \param[in]      y_meas       Y coordinate of the measured data points
+     * \param[in]      z_meas       Z coordinate of the measured data points
+     * \param[in]      distances    Distances to the measured points
+     * \param[in]      value        Value of the points at coordinates (x, y)
+     * \param[in, out] gp_mean      Mean of the Gaussian Process
+     * \param[in, out] gp_cov       Covariance of the Gaussian Process
+     * \param[out]     idx_obs      Array of corresponding indices for obs states
+     * \param[out]     obs_coord    Coordinates of the rectangular area of the observed state
+     * \param[in]      update_mean  Whether to update the mean
      */
-    void update_gp(const vec_f &x_meas, const vec_f &y_meas,
-      const vec_f &z, const vec_f &distances, const vec_f &values);
+    void update_gp(
+      const vec_f &x_meas, const vec_f &y_meas, const vec_f &z,
+      const vec_f &distances, const vec_f &values,
+      Eigen::VectorXf &gp_mean, Eigen::MatrixXf &gp_cov,
+      std::vector<unsigned int> &idx_obs,
+      RectArea &obs_coord,
+      bool update_mean = true
+    ) const;
 
     /**
      * \brief  Publishes an image of the GP of an algae wall
@@ -268,13 +294,13 @@ class GPNodelet: public nodelet::Nodelet {
 };
 
 
-inline float GPNodelet::camera_noise(float distance)
+inline float GPNodelet::camera_noise(float distance) const
 {
   return camera_var_ * (1 - exp(-camera_decay_ * distance));
 }
 
 
-inline double GPNodelet::matern_kernel(double x1, double y1, double x2, double y2)
+inline double GPNodelet::matern_kernel(double x1, double y1, double x2, double y2) const
 {
   double d = sqrt(pow(x1-x2, 2) + pow(y1-y2, 2));
   double term = sqrt(3) * d / matern_length_;

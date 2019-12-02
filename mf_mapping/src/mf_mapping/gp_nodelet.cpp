@@ -113,6 +113,7 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
     NODELET_INFO("[gp_nodelet] Gaussian Process initialised.");
   }
   else if (camera_msg_available_) {
+    // Prepare input data
     vector<float> x, y, z;
     transform_points(camera_msg_->x, camera_msg_->y, camera_msg_->z,
       x, y, z, camera_msg_->header.frame_id, wall_frame_);
@@ -124,7 +125,14 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
                                      camera_msg_->z[k]).norm();
     }
 
-    update_gp(x, y, z, distances, camera_msg_->value);
+    // Update the Gaussian Process
+    RectArea obs_coord;  // coordinates of the rectangular area of the observed state
+    update_gp(x, y, z, distances, camera_msg_->value, gp_mean_, gp_cov_, idx_obs_,
+      obs_coord);
+
+    notif_changing_pxls(obs_coord);  // notified changed pixels
+
+    // Publish output
     publish_wall_img();
 
     camera_msg_available_ = false;

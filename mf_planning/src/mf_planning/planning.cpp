@@ -21,22 +21,23 @@ using Eigen::Vector3d;
 
 namespace mfcpp {
 
-void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle)
+void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle,
+  float horizon, float resolution, std::vector<geometry_msgs::Pose> &lattice)
 {
-  int n_x = plan_horizon_ / lattice_res_ + 1;  // size of the lattice in x direction
-  int n_y = plan_horizon_ * sin(max_lat_angle) / lattice_res_;   // half size in y direction
-  int n_z = plan_horizon_ * sin(max_elev_angle) / lattice_res_;  // half size in z direction
+  int n_x = horizon / resolution + 1;  // size of the lattice in x direction
+  int n_y = horizon * sin(max_lat_angle) / resolution;   // half size in y direction
+  int n_z = horizon * sin(max_elev_angle) / resolution;  // half size in z direction
   unsigned int n_lattice = n_x * (2*n_y + 1) * (2*n_z + 1);      // total size of the lattice
 
-  lattice_.resize(0);
-  lattice_.reserve(n_lattice);
+  lattice.resize(0);
+  lattice.reserve(n_lattice);
   float x = 0;
 
   for (int i = 0; i < n_x; i++) {
-    float y = -n_y * lattice_res_;
+    float y = -n_y * resolution;
 
     for (int j = -n_y; j <= n_y; j++) {
-      float z = -n_z * lattice_res_;
+      float z = -n_z * resolution;
 
       for (int k = -n_z; k <= n_z; k++) {
         // Compute point angles with respect to the x axis
@@ -64,17 +65,17 @@ void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle
             tf2::convert(q_new, pose.orientation);
 
             // Add the waypoint to the lattice
-            lattice_.emplace_back(pose);
+            lattice.emplace_back(pose);
           }
         }
 
-        z += lattice_res_;
+        z += resolution;
       }
 
-      y += lattice_res_;
+      y += resolution;
     }
 
-    x += lattice_res_;
+    x += resolution;
   }
 }
 
@@ -89,7 +90,7 @@ void PlanningNodelet::plan_trajectory()
   float max_elev_angle = plan_horizon_ / (2 * elev_turn_radius);
 
   // Generate a lattice of possible waypoints (in robot frame)
-  generate_lattice(max_lat_angle, max_elev_angle);
+  generate_lattice(max_lat_angle, max_elev_angle, plan_horizon_, lattice_res_, lattice_);
 
   // Raycast
   mf_sensors_simulator::MultiPoses srv;

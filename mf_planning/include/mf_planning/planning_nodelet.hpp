@@ -85,11 +85,19 @@ class PlanningNodelet: public nodelet::Nodelet {
     static void sigint_handler(int s);
 
     /**
-     * \brief  Generates a lattice of possible waypoints
+     * \brief  Fills a lattice of possible waypoints
      *
-     * \note  Waypoints are expressed in robot frame
+     * Generates a lattice of possible waypoints in robot frame. These waypoints
+     * will be within specified limit angles and horizon distance.
+     *
+     * \param [in]  max_lat_angle   Maximum lateral angle
+     * \param [in]  max_elev_angle  Maximum elevation angle
+     * \param [in]  horizon         Maximum distance
+     * \param [in]  resolution      Spatial resolution of the lattice
+     * \param [out] lattice         Lattice to fill
      */
-    void generate_lattice(float max_lat_angle, float max_elev_angle);
+    void generate_lattice(float max_lat_angle, float max_elev_angle,
+      float horizon, float resolution, std::vector<geometry_msgs::Pose> &lattice);
 
     /**
      * \brief  Computes a trajectory plan

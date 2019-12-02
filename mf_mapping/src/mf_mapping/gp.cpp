@@ -65,7 +65,7 @@ void GPNodelet::init_gp()
 void GPNodelet::pop_reordered_idx(
   unsigned int size_obs, unsigned int size_nobs,
   unsigned int min_x, unsigned int max_x, unsigned int min_y, unsigned int max_y,
-  vector<unsigned int> &idx_obs , vector<unsigned int> &idx_nobs)
+  vector<unsigned int> &idx_obs , vector<unsigned int> &idx_nobs) const
 {
   idx_obs.resize(size_obs);
   idx_nobs.resize(size_nobs);
@@ -104,8 +104,7 @@ void GPNodelet::pop_reordered_idx(
 }
 
 
-void GPNodelet::notif_changing_pxls(float min_x, float max_x, float min_y,
-  float max_y)
+void GPNodelet::notif_changing_pxls(const RectArea &coord)
 {
   unsigned int k = 0;
   float delta_x = size_wall_x_ / (size_img_x_-1);
@@ -114,7 +113,8 @@ void GPNodelet::notif_changing_pxls(float min_x, float max_x, float min_y,
 
   for (unsigned int i = 0; i < size_img_x_; i++) {
     for (unsigned int j = 0; j < size_img_y_; j++) {
-      if (x >= min_x && x <= max_x && y >= min_y && y <= max_y) {
+      if (x >= coord.min_x && x <= coord.max_x && y >= coord.min_y
+        && y <= coord.max_y) {
         changed_pxl_[k] = true;
       }
 
@@ -134,7 +134,7 @@ void GPNodelet::build_Kalman_objects(
   VectorXf &mu, VectorXf &mu_obs,
   MatrixXf &P, MatrixXf &P_obs, MatrixXf &B,
   MatrixXf &C_obs, MatrixXf &C_obs_inv,
-  VectorXf &x_coord, VectorXf &y_coord)
+  VectorXf &x_coord, VectorXf &y_coord) const
 {
   unsigned int size_obs = idx_obs.size();
   unsigned int size_nobs = idx_nobs.size();
@@ -213,7 +213,8 @@ void GPNodelet::build_eval_objects(
 void GPNodelet::update_reordered_gp(
   const vector<unsigned int> &idx_obs,
   const vector<unsigned int> &idx_nobs,
-  VectorXf &mu, const MatrixXf &P)
+  const VectorXf &mu, const MatrixXf &P,
+  Eigen::VectorXf &gp_mean, Eigen::MatrixXf &gp_cov) const
 {
   unsigned int size_obs = idx_obs.size();
   unsigned int size_nobs = idx_nobs.size();
@@ -226,7 +227,7 @@ void GPNodelet::update_reordered_gp(
     else
       corr_k = idx_nobs[k - size_obs];
 
-    gp_mean_(corr_k) = mu(k);
+    gp_mean(corr_k) = mu(k);
 
     for (unsigned int l = 0; l <= k; l++) {
       unsigned int corr_l;
@@ -237,26 +238,31 @@ void GPNodelet::update_reordered_gp(
         corr_l = idx_nobs[l - size_obs];
 
       if (corr_k == corr_l  && P(k, l) > gp_cov_thresh_) {
-        gp_cov_(corr_k, corr_l) = P(k, l);
-        gp_cov_(corr_l, corr_k) = P(l, k);
+        gp_cov(corr_k, corr_l) = P(k, l);
+        gp_cov(corr_l, corr_k) = P(l, k);
       }
       else if (corr_k == corr_l) {
         // Prevent the covariance from dropping too low
-        gp_cov_(corr_k, corr_l) = gp_cov_thresh_;
-        gp_cov_(corr_l, corr_k) = gp_cov_thresh_;
+        gp_cov(corr_k, corr_l) = gp_cov_thresh_;
+        gp_cov(corr_l, corr_k) = gp_cov_thresh_;
       }
       else {
         // Threshold low off-diagonal values to optimise multiplication performances
-        gp_cov_(corr_k, corr_l) = 0;
-        gp_cov_(corr_l, corr_k) = 0;
+        gp_cov(corr_k, corr_l) = 0;
+        gp_cov(corr_l, corr_k) = 0;
       }
     }
   }
 }
 
 
-void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
-  const vec_f &z_meas, const vec_f &distances, const vec_f &values)
+void GPNodelet::update_gp(
+  const vec_f &x_meas, const vec_f &y_meas, const vec_f &z_meas,
+  const vec_f &distances, const vec_f &values,
+  Eigen::VectorXf &gp_mean, Eigen::MatrixXf &gp_cov,
+  vector<unsigned int> &idx_obs,
+  RectArea &obs_coord,
+  bool update_mean) const
 {
   // Select the observed part of the state wich is concerned by update
   // Asumption: the state is not affected far from the measurements
@@ -282,13 +288,16 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
   unsigned int size_obs = size_obs_x * size_obs_y;
   unsigned int size_nobs = size_gp_ - size_obs;
 
-  vector<unsigned int> idx_obs(size_obs, 0);
+  idx_obs.resize(size_obs, 0);
   vector<unsigned int> idx_nobs(size_nobs, 0);  // complementary to the previous one
   pop_reordered_idx(size_obs, size_nobs, min_obs_x, max_obs_x, min_obs_y, max_obs_y,
     idx_obs, idx_nobs);
 
   // Notify changing pixels
-  notif_changing_pxls(min_x, max_x, min_y, max_y);
+  obs_coord.min_x = min_x;
+  obs_coord.max_x = max_x;
+  obs_coord.min_y = min_y;
+  obs_coord.max_y = max_y;
 
   // Build mathematical objects that are needed for Kalman update
   VectorXf mu(size_gp_);      // reordered state
@@ -326,7 +335,10 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
   }
 
   MatrixXf H_obs = k_meas * C_obs_inv;
-  VectorXf v = z - H_obs * mu_obs;
+
+  VectorXf v;
+  if (update_mean)
+    v = z - H_obs * mu_obs;
 
   // Compute Kalman gain
   MatrixXf PHt(size_obs, size_meas);
@@ -343,10 +355,11 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
   MatrixXf K = L * S_inv;
 
   // Update mean and covariance
-  mu += K * v;
+  if (update_mean)
+    mu += K * v;
   P = P - L * S_inv * L.transpose();
 
-  update_reordered_gp(idx_obs, idx_nobs, mu, P);
+  update_reordered_gp(idx_obs, idx_nobs, mu, P, gp_mean, gp_cov);
 
   // Storing correspondance indices for evaluation
   min_x = max(float(0), min_x - added_distance);  // area on the wall affected by the update
@@ -363,7 +376,6 @@ void GPNodelet::update_gp(const vec_f &x_meas, const vec_f &y_meas,
   size_nobs = size_gp_ - size_obs;
 
   pop_reordered_idx(size_obs, size_nobs, min_obs_x, max_obs_x, min_obs_y, max_obs_y, idx_obs, idx_nobs);
-  idx_obs_ = idx_obs;
 
 }
 

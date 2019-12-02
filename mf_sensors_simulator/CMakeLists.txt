@@ -28,8 +28,6 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
     CameraOutput.msg
-    PixelRay.msg
-    RaycastRes.msg
 )
 
 add_service_files(
