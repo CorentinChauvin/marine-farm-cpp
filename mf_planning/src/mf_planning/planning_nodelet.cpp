@@ -10,6 +10,9 @@
 #include "planning_nodelet.hpp"
 #include "mf_robot_model/robot_model.hpp"
 #include "mf_sensors_simulator/MultiPoses.h"
+#include "mf_mapping/UpdateGP.h"
+#include "mf_mapping/Float32Array.h"
+#include "mf_mapping/Array2D.h"
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/PoseArray.h>
 #include <visualization_msgs/Marker.h>
@@ -76,8 +79,14 @@ void PlanningNodelet::onInit()
 
   // Other variables
   robot_model_ = RobotModel(model_csts);
+  last_gp_mean_.resize(0);
+  last_gp_cov_.resize(0);
 
   // ROS subscribers
+  gp_mean_sub_ = nh_.subscribe<mf_mapping::Float32ArrayConstPtr>("gp_mean", 1,
+    &PlanningNodelet::gp_mean_cb, this);
+  gp_cov_sub_ = nh_.subscribe<mf_mapping::Array2DConstPtr>("gp_cov", 1,
+    &PlanningNodelet::gp_cov_cb, this);
 
   // ROS publishers
   lattice_pub_ = nh_.advertise<visualization_msgs::Marker>("wp_lattice", 0);
@@ -85,6 +94,7 @@ void PlanningNodelet::onInit()
 
   // ROS services
   ray_multi_client_ = nh_.serviceClient<mf_sensors_simulator::MultiPoses>("raycast_multi");
+  update_gp_client_ = nh_.serviceClient<mf_mapping::UpdateGP>("update_gp");
 
 
   // Main loop
@@ -135,12 +145,25 @@ void PlanningNodelet::pub_lattice_markers()
   marker.scale.x = 0.05;
   marker.scale.y = 0.05;
   marker.points.resize(n);
+  marker.colors.resize(n);
 
   // Fill the message
   for (unsigned int k = 0; k < n; k++) {
     marker.points[k].x = lattice_[k].position.x;
     marker.points[k].y = lattice_[k].position.y;
     marker.points[k].z = lattice_[k].position.z;
+
+    if (k == selected_vp_) {
+      marker.colors[k].r = 0.0;
+      marker.colors[k].g = 1.0;
+      marker.colors[k].b = 0.0;
+      marker.colors[k].a = 1.0;
+    } else {
+      marker.colors[k].r = 0.0;
+      marker.colors[k].g = 0.0;
+      marker.colors[k].b = 1.0;
+      marker.colors[k].a = 1.0;
+    }
   }
 
   lattice_pub_.publish(marker);
@@ -167,6 +190,18 @@ bool PlanningNodelet::get_tf()
 
   wall_robot_tf_ = transform;
   return true;
+}
+
+
+void PlanningNodelet::gp_mean_cb(const mf_mapping::Float32ArrayConstPtr msg)
+{
+  last_gp_mean_ = msg->data;
+}
+
+
+void PlanningNodelet::gp_cov_cb(const mf_mapping::Array2DConstPtr msg)
+{
+  last_gp_cov_ = array_to_vector2D(msg->data);
 }
 
 

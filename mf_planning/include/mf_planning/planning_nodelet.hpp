@@ -11,6 +11,8 @@
 #define PLANNING_NODELET_HPP
 
 #include "mf_robot_model/robot_model.hpp"
+#include "mf_mapping/Float32Array.h"
+#include "mf_mapping/Array2D.h"
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_ros/transform_listener.h>
@@ -45,14 +47,20 @@ class PlanningNodelet: public nodelet::Nodelet {
     ros::NodeHandle nh_;          ///<  Node handler (for topics and services)
     ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
     ros::ServiceClient ray_multi_client_;  ///<  Service client for raycasting at several camera poses
-    ros::Publisher lattice_pub_;  ///<  Publisher for the waypoints lattice
+    ros::ServiceClient update_gp_client_;  ///<  Service client for updating the Gaussian Process
+    ros::Publisher lattice_pub_;       ///<  Publisher for the waypoints lattice
     ros::Publisher lattice_pose_pub_;  ///<  Publisher for the waypoints lattice poses
-    tf2_ros::Buffer tf_buffer_;   ///<  Buffer for tf2
+    ros::Subscriber gp_mean_sub_;      ///<  Subscriber for the mean of the Gaussian Process
+    ros::Subscriber gp_cov_sub_;       ///<  Subscriber for the covariance of the Gaussian Process
+    tf2_ros::Buffer tf_buffer_;        ///<  Buffer for tf2
     tf2_ros::TransformListener tf_listener_;  ///<  Transform listener for tf2
 
     RobotModel robot_model_;  ///<  Robot model
     geometry_msgs::TransformStamped wall_robot_tf_;  ///<  Transform from wall to robot frames
     std::vector<geometry_msgs::Pose> lattice_;  ///<  Lattice of possible waypoints
+    int selected_vp_;  ///<  Selected view point
+    std::vector<float> last_gp_mean_;              ///<  Last mean of the Gaussian Process
+    std::vector<std::vector<float>> last_gp_cov_;  ///<  Last covariance of the Gaussian Process
 
     /// \name  ROS parameters
     ///@{
@@ -85,6 +93,24 @@ class PlanningNodelet: public nodelet::Nodelet {
     static void sigint_handler(int s);
 
     /**
+     * \brief  Converts a 2D std vector to a custom ROS array
+     *
+     * \param  2D vector to convert
+     * \return  Converted array
+     */
+    std::vector<mf_mapping::Float32Array> vector2D_to_array(
+      const std::vector<std::vector<float>> &vector2D);
+
+    /**
+     * \brief  Converts a custom ROS array to a 2D std vector
+     *
+     * \param  The array to convert
+     * \return  Converted 2D vector
+     */
+    std::vector<std::vector<float>> array_to_vector2D(
+      const std::vector<mf_mapping::Float32Array> &array);
+
+    /**
      * \brief  Fills a lattice of possible waypoints
      *
      * Generates a lattice of possible waypoints in robot frame. These waypoints
@@ -102,7 +128,7 @@ class PlanningNodelet: public nodelet::Nodelet {
     /**
      * \brief  Computes a trajectory plan
      */
-    void plan_trajectory();
+    bool plan_trajectory();
 
     /**
      * \brief  Publishes the waypoints lattice markers
@@ -115,6 +141,16 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \return  Whether it could retrieve a transform
      */
     bool get_tf();
+
+    /**
+     * \brief Callback for Gaussian Process mean
+     */
+    void gp_mean_cb(const mf_mapping::Float32ArrayConstPtr msg);
+
+    /**
+     * \brief Callback for Gaussian Process mean
+     */
+    void gp_cov_cb(const mf_mapping::Array2DConstPtr msg);
 
 
 };

@@ -7,6 +7,8 @@
  */
 
 #include "gp_nodelet.hpp"
+#include "mf_mapping/Array2D.h"
+#include "mf_mapping/Float32Array.h"
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <ros/ros.h>
@@ -20,6 +22,30 @@ using Eigen::MatrixXf;
 
 
 namespace mfcpp {
+
+void GPNodelet::publish_gp_state()
+{
+  // Publish GP mean
+  mf_mapping::Float32Array mean_msg;
+  mean_msg.data = vector<float>(gp_mean_.data(), gp_mean_.data() + gp_mean_.size());;
+  gp_mean_pub_.publish(mean_msg);
+
+  // Publish GP covariance
+  mf_mapping::Array2D cov_msg;
+  cov_msg.data.resize(size_gp_);
+
+  for (int i = 0; i < size_gp_; i++) {
+    cov_msg.data[i].data.resize(size_gp_);
+
+    for (int j = 0; j <= i; j++) {
+      cov_msg.data[i].data[j] = gp_cov_(i, j);
+      cov_msg.data[j].data[i] = gp_cov_(i, j);
+    }
+  }
+
+  gp_cov_pub_.publish(cov_msg);
+}
+
 
 void GPNodelet::publish_wall_img()
 {

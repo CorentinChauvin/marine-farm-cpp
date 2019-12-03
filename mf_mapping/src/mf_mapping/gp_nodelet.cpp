@@ -8,10 +8,14 @@
  */
 
 #include "gp_nodelet.hpp"
+#include "mf_mapping/Array2D.h"
+#include "mf_mapping/Float32Array.h"
+#include "mf_mapping/UpdateGP.h"
 #include "mf_sensors_simulator/CameraOutput.h"
 #include <sensor_msgs/Image.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Pose.h>
+#include <std_msgs/Float32.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
@@ -89,8 +93,13 @@ void GPNodelet::onInit()
   camera_sub_ = nh_.subscribe<mf_sensors_simulator::CameraOutput>("camera_out", 1, &GPNodelet::camera_cb, this);
 
   // ROS publishers
-  wall_img_pub_ = nh_.advertise<sensor_msgs::Image>("gp_img", 0);
-  cov_img_pub_ = nh_.advertise<sensor_msgs::Image>("gp_cov", 0);
+  wall_img_pub_ = nh_.advertise<sensor_msgs::Image>("gp_wall_img", 0);
+  cov_img_pub_ = nh_.advertise<sensor_msgs::Image>("gp_cov_img", 0);
+  gp_mean_pub_ = nh_.advertise<mf_mapping::Float32Array>("gp_mean", 0);
+  gp_cov_pub_ = nh_.advertise<mf_mapping::Array2D>("gp_cov", 0);
+
+  // ROS services
+  update_gp_serv_ = nh_.advertiseService("update_gp", &GPNodelet::update_gp_cb, this);
 
 
   // Main loop
@@ -120,7 +129,7 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
 
     vector<float> distances(x.size());
     for (unsigned int k = 0; k < x.size(); k++) {
-      distances[k] = Eigen::Vector3d(camera_msg_->x[k],
+      distances[k] = Eigen::Vector3f(camera_msg_->x[k],
                                      camera_msg_->y[k],
                                      camera_msg_->z[k]).norm();
     }
@@ -133,7 +142,8 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
     notif_changing_pxls(obs_coord);  // notified changed pixels
 
     // Publish output
-    publish_wall_img();
+    publish_gp_state();  // publish mean and covariance of the GP
+    publish_wall_img();  // publish evaluated GP and covariance
 
     camera_msg_available_ = false;
   }
@@ -153,6 +163,76 @@ void GPNodelet::camera_cb(const mf_sensors_simulator::CameraOutput::ConstPtr &ms
   if (msg->x.size() > 0) {
     camera_msg_ = msg;
     camera_msg_available_ = true;
+  }
+}
+
+
+bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
+  mf_mapping::UpdateGP::Response &res)
+{
+  // Parse the input data
+  Eigen::VectorXf mean;
+
+  if (req.update_mean) {
+    if (req.use_internal_mean)
+      mean = gp_mean_;
+    else {
+      int n = req.mean.size();
+      mean = Eigen::VectorXf(n);
+
+      for (int k = 0; k < n; k++) {
+        mean(k) = req.mean[k];
+      }
+    }
+  } else {
+    mean = Eigen::VectorXf::Zero(size_gp_);
+  }
+
+  int size_cov = req.cov.size();
+  if (size_cov == 0)
+    return false;
+  Eigen::MatrixXf cov(size_cov, size_cov);
+
+  if (req.use_internal_cov)
+    cov = gp_cov_;
+  else {
+    for (int i = 0; i < size_cov; i++) {
+      for (int j = 0; j <= i; j++) {
+        cov(i, j) = req.cov[i].data[j];
+        cov(j, i) = cov(i, j);
+      }
+    }
+  }
+
+  vector<float> x_meas    = req.meas.x;
+  vector<float> y_meas    = req.meas.y;
+  vector<float> z_meas    = req.meas.z;
+  vector<float> values    = req.meas.value;
+  vector<float> distances = req.meas.distance;
+
+  // Update the given Gaussian Process
+  vector<unsigned int> idx_obs;  // won't be used
+  RectArea obs_coord;            // won't be used
+
+  update_gp(x_meas, y_meas, z_meas, distances, values,
+    mean, cov, idx_obs, obs_coord, req.update_mean);
+
+  // Prepare the output
+  if (req.update_mean) {
+    int n = req.mean.size();
+    res.new_mean.resize(n);
+    for (int k = 0; k < n; k++) {
+      res.new_mean[k] = mean(k);
+    }
+  }
+
+  res.new_cov.resize(size_cov);
+  for (int i = 0; i < size_cov; i++) {
+    res.new_cov[i].data.resize(size_cov);
+
+    for (int j = 0; j <= size_cov; j++) {
+      res.new_cov[i].data[j] = cov(i, j);
+    }
   }
 }
 

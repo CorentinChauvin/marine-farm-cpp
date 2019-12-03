@@ -382,6 +382,20 @@ void CameraNodelet::raycast_wall(
       }
     }
   }
+
+  // Compute the distances to the waypoint origin and fill fake measurements
+  int n = pxl_output.x.size();
+  pxl_output.distance.resize(n);
+  pxl_output.value.resize(n);
+
+  for (int k = 0; k < n; k++) {
+    tf2::Vector3 pt(pxl_output.x[k], pxl_output.y[k], pxl_output.z[k]);
+    pxl_output.distance[k] = tf2::tf2Distance(pt, origin);
+
+    pxl_output.value[k] = 0;
+  }
+
+
 }
 
 

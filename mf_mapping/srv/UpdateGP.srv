@@ -1,0 +1,29 @@
+#
+# Service to update a Gaussian Process
+#
+
+# Whether to update the mean
+bool update_mean
+
+# Mean of the Gaussian Process
+float32[] mean
+
+# Whether to use the internal GP mean instead
+bool use_internal_mean
+
+# Covariance of the Gaussian Process
+mf_mapping/Float32Array[] cov
+
+# Whether to use the internal GP covariance instead
+bool use_internal_cov
+
+# Camera measurements
+mf_sensors_simulator/CameraOutput meas
+
+---
+
+# Updated mean
+float32[] new_mean
+
+# Updated covariance
+mf_mapping/Float32Array[] new_cov

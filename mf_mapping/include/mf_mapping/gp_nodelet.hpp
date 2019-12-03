@@ -10,6 +10,7 @@
 #ifndef GP_NODELET_HPP
 #define GP_NODELET_HPP
 
+#include "mf_mapping/UpdateGP.h"
 #include "mf_sensors_simulator/CameraOutput.h"
 #include <tf2_ros/transform_listener.h>
 #include <nodelet/nodelet.h>
@@ -65,8 +66,11 @@ class GPNodelet: public nodelet::Nodelet {
     ros::NodeHandle nh_;            ///<  Node handler (for topics and services)
     ros::NodeHandle private_nh_;    ///<  Private node handler (for parameters)
     ros::Subscriber camera_sub_;    ///<  Subscriber for the camera
-    ros::Publisher wall_img_pub_;   ///< Publisher for an image of the wall GP
-    ros::Publisher cov_img_pub_;    ///< Publisher for an image of the GP covariance
+    ros::Publisher wall_img_pub_;   ///<  Publisher for an image of the wall GP
+    ros::Publisher cov_img_pub_;    ///<  Publisher for an image of the GP covariance
+    ros::Publisher gp_mean_pub_;    ///<  Publisher for the GP mean
+    ros::Publisher gp_cov_pub_;     ///<  Publisher for the GP covariance
+    ros::ServiceServer update_gp_serv_;  ///<  Service server for updating the GP
     tf2_ros::Buffer tf_buffer_;     ///<  Tf2 buffer for getting tf transforms
     tf2_ros::TransformListener tf_listener_;  ///<  Tf2 listener for getting tf transforms
 
@@ -131,6 +135,12 @@ class GPNodelet: public nodelet::Nodelet {
      * \param msg  Pointer to the camera message
      */
     void camera_cb(const mf_sensors_simulator::CameraOutputConstPtr &msg);
+
+    /**
+     * \brief  Service to update the Gaussian Process
+     */
+    bool update_gp_cb(mf_mapping::UpdateGP::Request &req,
+      mf_mapping::UpdateGP::Response &res);
 
     /**
      * \brief  Transforms points from camera frame to wall frame
@@ -270,7 +280,7 @@ class GPNodelet: public nodelet::Nodelet {
      * \param[in]      y_meas       Y coordinate of the measured data points
      * \param[in]      z_meas       Z coordinate of the measured data points
      * \param[in]      distances    Distances to the measured points
-     * \param[in]      value        Value of the points at coordinates (x, y)
+     * \param[in]      values       Value of the points at coordinates (x, y)
      * \param[in, out] gp_mean      Mean of the Gaussian Process
      * \param[in, out] gp_cov       Covariance of the Gaussian Process
      * \param[out]     idx_obs      Array of corresponding indices for obs states
@@ -278,7 +288,7 @@ class GPNodelet: public nodelet::Nodelet {
      * \param[in]      update_mean  Whether to update the mean
      */
     void update_gp(
-      const vec_f &x_meas, const vec_f &y_meas, const vec_f &z,
+      const vec_f &x_meas, const vec_f &y_meas, const vec_f &z_meas,
       const vec_f &distances, const vec_f &values,
       Eigen::VectorXf &gp_mean, Eigen::MatrixXf &gp_cov,
       std::vector<unsigned int> &idx_obs,
@@ -287,7 +297,12 @@ class GPNodelet: public nodelet::Nodelet {
     ) const;
 
     /**
-     * \brief  Publishes an image of the GP of an algae wall
+     * \brief  Publishes mean and covariance of the Gaussian Process
+     */
+    void publish_gp_state();
+
+    /**
+     * \brief  Publishes an image of the evaluated GP and its covariance
      */
     void publish_wall_img();
 

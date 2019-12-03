@@ -1,5 +1,5 @@
 planning_nodelet:
-  main_freq: 10
+  main_freq: 3
   wall_frame: "wall"
   robot_frame: "base_link"
 

@@ -8,6 +8,7 @@
 
 #include "planning_nodelet.hpp"
 #include "mf_sensors_simulator/MultiPoses.h"
+#include "mf_mapping/UpdateGP.h"
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/Pose.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -20,6 +21,34 @@ using Eigen::Vector3d;
 
 
 namespace mfcpp {
+
+vector<mf_mapping::Float32Array> PlanningNodelet::vector2D_to_array(
+  const vector<vector<float>> &vector2D)
+{
+  int n = vector2D.size();
+  vector<mf_mapping::Float32Array> out(n);
+
+  for (int k = 0; k < n; k++) {
+    out[k].data = vector2D[k];
+  }
+
+  return out;
+}
+
+
+vector<vector<float>> PlanningNodelet::array_to_vector2D(
+  const vector<mf_mapping::Float32Array> &array)
+{
+  int n = array.size();
+  vector<vector<float>> out(n);
+
+  for (int k = 0; k < n; k++) {
+    out[k] = array[k].data;
+  }
+
+  return out;
+}
+
 
 void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle,
   float horizon, float resolution, std::vector<geometry_msgs::Pose> &lattice)
@@ -80,8 +109,14 @@ void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle
 }
 
 
-void PlanningNodelet::plan_trajectory()
+bool PlanningNodelet::plan_trajectory()
 {
+  // Check for Gaussian Process received
+  int size_gp = last_gp_cov_.size();
+
+  if (last_gp_cov_.size() == 0 || last_gp_mean_.size() == 0)
+    return false;
+
   // Compute maximum angles for lattice generation
   float lat_turn_radius = robot_model_.lat_turn_radius(plan_speed_, max_lat_rudder_);
   float elev_turn_radius = robot_model_.elev_turn_radius(plan_speed_, max_lat_rudder_);
@@ -91,8 +126,9 @@ void PlanningNodelet::plan_trajectory()
 
   // Generate a lattice of possible waypoints (in robot frame)
   generate_lattice(max_lat_angle, max_elev_angle, plan_horizon_, lattice_res_, lattice_);
+  int size_lattice = lattice_.size();
 
-  // Raycast
+  // Get camera measurement for each viewpoint of the lattice
   mf_sensors_simulator::MultiPoses srv;
   srv.request.pose_array.header.frame_id = robot_frame_;
   srv.request.pose_array.poses = lattice_;
@@ -100,13 +136,48 @@ void PlanningNodelet::plan_trajectory()
   srv.request.n_pxl_width = camera_width_;
 
   if (ray_multi_client_.call(srv)) {
-    if (srv.response.is_success) {
-      // TODO: do some stuff
-      // ...
+    if (!srv.response.is_success) {
+      return false;
     }
   } else {
-    NODELET_WARN("[planning_nodelet] Failed to call raycast_multi service.");
+    NODELET_WARN("[planning_nodelet] Failed to call raycast_multi service");
+    return false;
   }
+
+  // Update the GP covariance for each viewpoint
+  vector<vector<vector<float>>> cov(size_lattice);
+
+  mf_mapping::UpdateGP gp_srv;
+  gp_srv.request.use_internal_mean = true;
+  gp_srv.request.use_internal_cov = false;
+  gp_srv.request.cov = vector2D_to_array(last_gp_cov_);
+  gp_srv.request.update_mean = false;
+
+  for (int k = 0; k < size_lattice; k++) {
+    gp_srv.request.meas = srv.response.results[k];
+
+    if (update_gp_client_.call(gp_srv)) {
+      cov[k] = array_to_vector2D(gp_srv.response.new_cov);
+    } else {
+      NODELET_WARN("[planning_nodelet] Failed to call update_gp service");
+      return false;
+    }
+  }
+
+  // Compute information gain and select best viewpoint
+  vector<float> info_gain(size_lattice, 0.0);
+
+  for (int k = 0; k < size_lattice; k++) {
+    for (int l = 0; l < size_gp; l++) {
+      float cov_diff = last_gp_cov_[l][l] - cov[k][l][l];
+      float weight = last_gp_mean_[l];
+
+      info_gain[k] += weight * cov_diff;
+    }
+  }
+
+  selected_vp_ = std::max_element(info_gain.begin(), info_gain.end()) - info_gain.begin();
+
 
 }
 

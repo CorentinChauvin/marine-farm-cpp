@@ -23,11 +23,29 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   geometry_msgs
   sensor_msgs
+  message_generation
+)
+
+add_message_files(
+  FILES
+    Float32Array.msg
+    Array2D.msg
+)
+
+add_service_files(
+  FILES
+    UpdateGP.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+    std_msgs
+    mf_sensors_simulator
 )
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS nodelet roscpp
+  CATKIN_DEPENDS nodelet roscpp message_runtime
 )
 
 
@@ -51,6 +69,7 @@ add_library(gp_nodelet
 )
 add_dependencies(gp_nodelet
   ${catkin_EXPORTED_TARGETS}
+  ${PROJECT_NAME}_generate_messages_cpp
   mf_sensors_simulator_generate_messages_cpp
 )
 target_link_libraries(gp_nodelet ${catkin_LIBRARIES})
