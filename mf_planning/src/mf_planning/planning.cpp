@@ -50,6 +50,20 @@ vector<vector<float>> PlanningNodelet::array_to_vector2D(
 }
 
 
+vector<vector<float>> PlanningNodelet::array_to_vector2D(
+  const mf_mapping::Array2D &array)
+{
+  int n = array.data.size();
+  vector<vector<float>> out(n);
+
+  for (int k = 0; k < n; k++) {
+    out[k] = array.data[k].data;
+  }
+
+  return out;
+}
+
+
 void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle,
   float horizon, float resolution, std::vector<geometry_msgs::Pose> &lattice)
 {
@@ -129,14 +143,14 @@ bool PlanningNodelet::plan_trajectory()
   int size_lattice = lattice_.size();
 
   // Get camera measurement for each viewpoint of the lattice
-  mf_sensors_simulator::MultiPoses srv;
-  srv.request.pose_array.header.frame_id = robot_frame_;
-  srv.request.pose_array.poses = lattice_;
-  srv.request.n_pxl_height = camera_height_;
-  srv.request.n_pxl_width = camera_width_;
+  mf_sensors_simulator::MultiPoses camera_srv;
+  camera_srv.request.pose_array.header.frame_id = robot_frame_;
+  camera_srv.request.pose_array.poses = lattice_;
+  camera_srv.request.n_pxl_height = camera_height_;
+  camera_srv.request.n_pxl_width = camera_width_;
 
-  if (ray_multi_client_.call(srv)) {
-    if (!srv.response.is_success) {
+  if (ray_multi_client_.call(camera_srv)) {
+    if (!camera_srv.response.is_success) {
       return false;
     }
   } else {
@@ -145,23 +159,26 @@ bool PlanningNodelet::plan_trajectory()
   }
 
   // Update the GP covariance for each viewpoint
-  vector<vector<vector<float>>> cov(size_lattice);
+  vector<vector<float>> cov_diag(size_lattice);  // diagonal of the updated GP for each view point
 
   mf_mapping::UpdateGP gp_srv;
   gp_srv.request.use_internal_mean = true;
-  gp_srv.request.use_internal_cov = false;
-  gp_srv.request.cov = vector2D_to_array(last_gp_cov_);
+  gp_srv.request.use_internal_cov = true;
   gp_srv.request.update_mean = false;
+  gp_srv.request.return_cov_diag = true;
 
+  gp_srv.request.meas.resize(size_lattice);
   for (int k = 0; k < size_lattice; k++) {
-    gp_srv.request.meas = srv.response.results[k];
+    gp_srv.request.meas[k] = camera_srv.response.results[k];
+  }
 
-    if (update_gp_client_.call(gp_srv)) {
-      cov[k] = array_to_vector2D(gp_srv.response.new_cov);
-    } else {
-      NODELET_WARN("[planning_nodelet] Failed to call update_gp service");
-      return false;
+  if (update_gp_client_.call(gp_srv)) {
+    for (int k = 0; k < size_lattice; k++) {
+      cov_diag[k] = gp_srv.response.new_cov_diag[k].data;
     }
+  } else {
+    NODELET_WARN("[planning_nodelet] Failed to call update_gp service");
+    return false;
   }
 
   // Compute information gain and select best viewpoint
@@ -169,7 +186,7 @@ bool PlanningNodelet::plan_trajectory()
 
   for (int k = 0; k < size_lattice; k++) {
     for (int l = 0; l < size_gp; l++) {
-      float cov_diff = last_gp_cov_[l][l] - cov[k][l][l];
+      float cov_diff = last_gp_cov_[l][l] - cov_diag[k][l];
       float weight = last_gp_mean_[l];
 
       info_gain[k] += weight * cov_diff;
@@ -177,7 +194,6 @@ bool PlanningNodelet::plan_trajectory()
   }
 
   selected_vp_ = std::max_element(info_gain.begin(), info_gain.end()) - info_gain.begin();
-
 
 }
 

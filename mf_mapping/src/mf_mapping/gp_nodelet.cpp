@@ -170,17 +170,25 @@ void GPNodelet::camera_cb(const mf_sensors_simulator::CameraOutput::ConstPtr &ms
 bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
   mf_mapping::UpdateGP::Response &res)
 {
-  // Parse the input data
-  Eigen::VectorXf mean;
+  // Check input data validity
+  if (req.update_mean && !req.use_internal_mean && req.mean.size() != size_gp_) {
+    NODELET_WARN("[gp_nodelet] Input mean of the wrong size");
+    return false;
+  }
+
+  if (!req.use_internal_cov && req.cov.size() != size_gp_) {
+    NODELET_WARN("[gp_nodelet] Input covariance of the wrong size");
+    return false;
+  }
+
+  // Parse the input GP mean and covariance
+  Eigen::VectorXf mean(size_gp_);
 
   if (req.update_mean) {
     if (req.use_internal_mean)
       mean = gp_mean_;
     else {
-      int n = req.mean.size();
-      mean = Eigen::VectorXf(n);
-
-      for (int k = 0; k < n; k++) {
+      for (int k = 0; k < size_gp_; k++) {
         mean(k) = req.mean[k];
       }
     }
@@ -188,15 +196,12 @@ bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
     mean = Eigen::VectorXf::Zero(size_gp_);
   }
 
-  int size_cov = req.cov.size();
-  if (size_cov == 0)
-    return false;
-  Eigen::MatrixXf cov(size_cov, size_cov);
+  Eigen::MatrixXf cov(size_gp_, size_gp_);
 
   if (req.use_internal_cov)
     cov = gp_cov_;
   else {
-    for (int i = 0; i < size_cov; i++) {
+    for (int i = 0; i < size_gp_; i++) {
       for (int j = 0; j <= i; j++) {
         cov(i, j) = req.cov[i].data[j];
         cov(j, i) = cov(i, j);
@@ -204,34 +209,57 @@ bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
     }
   }
 
-  vector<float> x_meas    = req.meas.x;
-  vector<float> y_meas    = req.meas.y;
-  vector<float> z_meas    = req.meas.z;
-  vector<float> values    = req.meas.value;
-  vector<float> distances = req.meas.distance;
+  // Parse the input sets of measurements
+  int n_meas = req.meas.size();  // number of sets of measurements
+  vector<vector<float>> x_meas(n_meas), y_meas(n_meas), z_meas(n_meas);
+  vector<vector<float>> values(n_meas), distances(n_meas);
 
-  // Update the given Gaussian Process
+  for (int k = 0; k < n_meas; k++) {
+    x_meas[k] = req.meas[k].x;
+    y_meas[k] = req.meas[k].y;
+    z_meas[k] = req.meas[k].z;
+    values[k] = req.meas[k].value;
+    distances[k] = req.meas[k].distance;
+  }
+
+  // Update the given Gaussian Processes
+  res.new_mean.resize(n_meas);
+  res.new_cov.resize(n_meas);
+  res.new_cov_diag.resize(n_meas);
+
   vector<unsigned int> idx_obs;  // won't be used
   RectArea obs_coord;            // won't be used
 
-  update_gp(x_meas, y_meas, z_meas, distances, values,
-    mean, cov, idx_obs, obs_coord, req.update_mean);
+  for (int k = 0; k < n_meas; k++) {
+    // Update the GP
+    update_gp(x_meas[k], y_meas[k], z_meas[k], distances[k], values[k],
+      mean, cov, idx_obs, obs_coord, req.update_mean);
 
-  // Prepare the output
-  if (req.update_mean) {
-    int n = req.mean.size();
-    res.new_mean.resize(n);
-    for (int k = 0; k < n; k++) {
-      res.new_mean[k] = mean(k);
+    // Prepare the outputs
+    if (req.update_mean) {
+      res.new_mean[k].data.resize(size_gp_);
+
+      for (int l = 0; l < size_gp_; l++) {
+        res.new_mean[k].data[l] = mean(l);
+      }
     }
-  }
 
-  res.new_cov.resize(size_cov);
-  for (int i = 0; i < size_cov; i++) {
-    res.new_cov[i].data.resize(size_cov);
+    if (req.return_cov_diag) {
+      res.new_cov_diag[k].data.resize(size_gp_);
 
-    for (int j = 0; j <= size_cov; j++) {
-      res.new_cov[i].data[j] = cov(i, j);
+      for (int l = 0; l < size_gp_; l++) {
+        res.new_cov_diag[k].data[l] = cov(l, l);
+      }
+    } else {
+      res.new_cov[k].data.resize(size_gp_);
+
+      for (int i = 0; i < size_gp_; i++) {
+        res.new_cov[k].data[i].data.resize(size_gp_);
+
+        for (int j = 0; j <= size_gp_; j++) {
+          res.new_cov[k].data[i].data[j] = cov(i, j);
+        }
+      }
     }
   }
 }

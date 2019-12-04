@@ -266,6 +266,9 @@ void GPNodelet::update_gp(
 {
   // Select the observed part of the state wich is concerned by update
   // Asumption: the state is not affected far from the measurements
+  if (x_meas.size() == 0)
+    return;
+
   float min_x = *std::min_element(x_meas.begin(), x_meas.end());
   float min_y = *std::min_element(y_meas.begin(), y_meas.end());
   float max_x = *std::max_element(x_meas.begin(), x_meas.end());

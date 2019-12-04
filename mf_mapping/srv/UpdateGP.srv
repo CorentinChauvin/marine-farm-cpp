@@ -1,5 +1,5 @@
 #
-# Service to update a Gaussian Process
+# Service to update a Gaussian Process for several sets of camera measurements
 #
 
 # Whether to update the mean
@@ -17,13 +17,19 @@ mf_mapping/Float32Array[] cov
 # Whether to use the internal GP covariance instead
 bool use_internal_cov
 
-# Camera measurements
-mf_sensors_simulator/CameraOutput meas
+# Sets of camera measurements
+mf_sensors_simulator/CameraOutput[] meas
+
+# Whether to return the new covariances diagonal, or the full covariances
+bool return_cov_diag
 
 ---
 
-# Updated mean
-float32[] new_mean
+# Updated means (one for each set of measurements)
+mf_mapping/Float32Array[] new_mean
 
-# Updated covariance
-mf_mapping/Float32Array[] new_cov
+# Updated covariances (one for each set of measurements)
+mf_mapping/Array2D[] new_cov
+
+# Updated covariances (one for each set of measurements)
+mf_mapping/Float32Array[] new_cov_diag

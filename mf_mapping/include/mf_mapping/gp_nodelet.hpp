@@ -137,7 +137,7 @@ class GPNodelet: public nodelet::Nodelet {
     void camera_cb(const mf_sensors_simulator::CameraOutputConstPtr &msg);
 
     /**
-     * \brief  Service to update the Gaussian Process
+     * \brief  Service to update the Gaussian Process for several sets of measurements
      */
     bool update_gp_cb(mf_mapping::UpdateGP::Request &req,
       mf_mapping::UpdateGP::Response &res);

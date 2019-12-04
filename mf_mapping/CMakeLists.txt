@@ -3,8 +3,8 @@ project(mf_mapping)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
-# set(CMAKE_CXX_FLAGS_DEBUG "-g -fno-omit-frame-pointer")
-# set(ROS_BUILD_TYPE Debug)
+# set(CMAKE_CXX_FLAGS "-O2 -g -DNDEBUG -fno-omit-frame-pointer -DEIGEN_NO_DEBUG")
+# set(ROS_BUILD_TYPE RelWithDebInfo)
 
 set(EIGEN_BUILD_FLAGS "-O3 -DEIGEN_NO_DEBUG")
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${EIGEN_BUILD_FLAGS}")

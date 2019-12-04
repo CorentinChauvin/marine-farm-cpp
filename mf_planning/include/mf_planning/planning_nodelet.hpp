@@ -111,6 +111,15 @@ class PlanningNodelet: public nodelet::Nodelet {
       const std::vector<mf_mapping::Float32Array> &array);
 
     /**
+     * \brief  Converts a custom ROS array to a 2D std vector
+     *
+     * \param  The array to convert
+     * \return  Converted 2D vector
+     */
+    std::vector<std::vector<float>> array_to_vector2D(
+      const mf_mapping::Array2D &array);
+
+    /**
      * \brief  Fills a lattice of possible waypoints
      *
      * Generates a lattice of possible waypoints in robot frame. These waypoints
