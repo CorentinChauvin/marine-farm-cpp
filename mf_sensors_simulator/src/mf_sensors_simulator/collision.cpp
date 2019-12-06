@@ -180,8 +180,8 @@ void CameraNodelet::get_ray_algae_carac(
     w_algae[k] = 2*ray_shapes_[k]->getExtent().y;
     h_algae[k] = 2*ray_shapes_[k]->getExtent().z;
 
-    inc_y3[k] = w_algae[k] / n_width;
-    inc_z3[k] = h_algae[k] / n_height;
+    inc_y3[k] = w_algae[k] / (n_width);
+    inc_z3[k] = h_algae[k] / (n_height);
   }
 }
 

@@ -186,6 +186,9 @@ void CameraNodelet::publish_output()
 
   get_ray_algae_carac(w_algae, h_algae, inc_y3,  inc_z3, tf_algae);
 
+  int n_heat_height = heatmaps_[0].size();    // height of the heatmap
+  int n_heat_width = heatmaps_[0][0].size();  // width of the heatmap
+
   // For each pixel
   for (unsigned int i = 0; i < n_pxl_height_; i++) {
     for (unsigned int j = 0; j < n_pxl_width_; j++) {
@@ -209,6 +212,9 @@ void CameraNodelet::publish_output()
         // Get alga disease value
         int k = z / inc_z3[alga_idx];
         int l = y / inc_y3[alga_idx];
+        k = min(k, n_heat_height-1);  // prevent problems with the last element
+        l = min(l, n_heat_width-1);
+
         float value = heatmaps_[corr_algae_[alga_idx]][k][l];
 
         // Transform hit point in camera frame
