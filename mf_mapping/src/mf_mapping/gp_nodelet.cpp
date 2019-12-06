@@ -62,7 +62,8 @@ void GPNodelet::onInit()
 
   // ROS parameters
   private_nh_.param<float>("main_freq", main_freq_, 1.0);
-  private_nh_.param<string>("wall_frame", wall_frame_, "");
+  private_nh_.param<string>("wall_frame", wall_frame_, "wall");
+  private_nh_.param<string>("camera_frame", camera_frame_, "camera");
   private_nh_.param<float>("camera_var", camera_var_, 1.0);
   private_nh_.param<float>("camera_decay", camera_decay_, 1.0);
   private_nh_.param<float>("matern_length", matern_length_, 1.0);
@@ -81,6 +82,7 @@ void GPNodelet::onInit()
 
   // Other variables
   camera_msg_available_ = false;
+  tf_got_ = false;
   gp_initialised_ = false;
   delta_x_ = size_wall_x_ / (size_gp_x_-1);
   delta_y_ = size_wall_y_ / (size_gp_y_-1);
@@ -113,6 +115,8 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
 {
   if (!ros::ok() || ros::isShuttingDown() || b_sigint_)
     return;
+
+  tf_got_ = get_tf();
 
   if (!gp_initialised_) {
     NODELET_INFO("[gp_nodelet] Initialisation of Gaussian Process...");
@@ -167,10 +171,27 @@ void GPNodelet::camera_cb(const mf_sensors_simulator::CameraOutput::ConstPtr &ms
 }
 
 
+bool GPNodelet::get_tf()
+{
+  geometry_msgs::TransformStamped transform;
+
+  try {
+    transform = tf_buffer_.lookupTransform(wall_frame_, camera_frame_, ros::Time(0));
+  }
+  catch (tf2::TransformException &ex) {
+    NODELET_WARN("[gp_nodelet] %s", ex.what());
+    return false;
+  }
+
+  wall_camera_tf_ = transform;
+  return true;
+}
+
+
 bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
   mf_mapping::UpdateGP::Response &res)
 {
-  // Check input data validity
+  // Check input data validity and initialisation
   if (req.update_mean && !req.use_internal_mean && req.mean.size() != size_gp_) {
     NODELET_WARN("[gp_nodelet] Input mean of the wrong size");
     return false;
@@ -181,22 +202,20 @@ bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
     return false;
   }
 
+  if (!tf_got_)
+    return false;
+
   // Parse the input GP mean and covariance
   Eigen::VectorXf mean(size_gp_);
-
-  if (req.update_mean) {
-    if (req.use_internal_mean)
-      mean = gp_mean_;
-    else {
-      for (int k = 0; k < size_gp_; k++) {
-        mean(k) = req.mean[k];
-      }
-    }
-  } else {
-    mean = Eigen::VectorXf::Zero(size_gp_);
-  }
-
   Eigen::MatrixXf cov(size_gp_, size_gp_);
+
+  if (!req.update_mean || req.use_internal_mean)
+    mean = gp_mean_;
+  else {
+    for (int k = 0; k < size_gp_; k++) {
+      mean(k) = req.mean[k];
+    }
+  }
 
   if (req.use_internal_cov)
     cov = gp_cov_;
@@ -215,27 +234,42 @@ bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
   vector<vector<float>> values(n_meas), distances(n_meas);
 
   for (int k = 0; k < n_meas; k++) {
-    x_meas[k] = req.meas[k].x;
-    y_meas[k] = req.meas[k].y;
-    z_meas[k] = req.meas[k].z;
+    vector<float> x = req.meas[k].x;
+    vector<float> y = req.meas[k].y;
+    vector<float> z = req.meas[k].z;
+    transform_points(x, y, z, x_meas[k], y_meas[k], z_meas[k], wall_camera_tf_);
+
     values[k] = req.meas[k].value;
     distances[k] = req.meas[k].distance;
   }
 
-  // Update the given Gaussian Processes
+  // Update and evaluate the given Gaussian Processes
   res.new_mean.resize(n_meas);
   res.new_cov.resize(n_meas);
   res.new_cov_diag.resize(n_meas);
+  res.eval_values.resize(n_meas);
 
-  vector<unsigned int> idx_obs;  // won't be used
+  vector<unsigned int> idx_obs;  // array of corresponding indices for obs states
   RectArea obs_coord;            // won't be used
 
   for (int k = 0; k < n_meas; k++) {
-    // Update the GP
+    // Update and evaluate the GP
     update_gp(x_meas[k], y_meas[k], z_meas[k], distances[k], values[k],
       mean, cov, idx_obs, obs_coord, req.update_mean);
 
-    // Prepare the outputs
+    if (req.eval_gp) {
+      int size_meas = x_meas[k].size();
+      res.eval_values[k].data.resize(size_meas);
+      Eigen::VectorXf x_obs, y_obs, W;  // necessary objects for evaluation
+      prepare_eval(idx_obs, mean, x_obs, y_obs, W);
+
+      for (int l = 0; l < size_meas; l++) {
+        res.eval_values[k].data[l] = eval_gp(x_meas[k][l], y_meas[k][l],
+          x_obs, y_obs, W);
+      }
+    }
+
+    // Fill the outputs
     if (req.update_mean) {
       res.new_mean[k].data.resize(size_gp_);
 
@@ -269,17 +303,24 @@ bool GPNodelet::transform_points(const vec_f &x_in, const vec_f &y_in, const vec
   vec_f &x_out, vec_f &y_out, vec_f &z_out, string frame_in, string frame_out)
 {
   // Get the tf transform
-  geometry_msgs::TransformStamped tf;
+  geometry_msgs::TransformStamped transform;
 
   try {
-    tf = tf_buffer_.lookupTransform(frame_out, frame_in, ros::Time(0));
+    transform = tf_buffer_.lookupTransform(frame_out, frame_in, ros::Time(0));
   }
   catch (tf2::TransformException &ex) {
-    NODELET_WARN("%s",ex.what());
+    NODELET_WARN("[gp_nodelet] %s",ex.what());
     return false;
   }
 
   // Transform the points
+  return transform_points(x_in, y_in, z_in, x_out, y_out, z_out, transform);
+}
+
+
+bool GPNodelet::transform_points(const vec_f &x_in, const vec_f &y_in, const vec_f &z_in,
+  vec_f &x_out, vec_f &y_out, vec_f &z_out, const geometry_msgs::TransformStamped &transform)
+{
   unsigned int n = x_in.size();
   x_out.resize(n);
   y_out.resize(n);
@@ -291,7 +332,7 @@ bool GPNodelet::transform_points(const vec_f &x_in, const vec_f &y_in, const vec
     p_in.position.y = y_in[k];
     p_in.position.z = z_in[k];
 
-    tf2::doTransform(p_in, p_out, tf);
+    tf2::doTransform(p_in, p_out, transform);
 
     x_out[k] = p_out.position.x;
     y_out[k] = p_out.position.y;

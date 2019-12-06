@@ -1,6 +1,7 @@
 gp_nodelet:
   main_freq: 5.0
   wall_frame: "wall"
+  camera_frame: "camera"
 
   # Sensor model
   camera_var: 80.0    # max variance on camera measurements

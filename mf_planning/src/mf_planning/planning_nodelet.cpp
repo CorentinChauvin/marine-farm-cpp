@@ -66,14 +66,18 @@ void PlanningNodelet::onInit()
   private_nh_.param<float>("main_freq", main_freq_, 1.0);
   private_nh_.param<string>("wall_frame", wall_frame_, "wall");
   private_nh_.param<string>("robot_frame", robot_frame_, "base_link");
+  private_nh_.param<string>("camera_frame", camera_frame_, "camera");
   private_nh_.param<int>("nbr_int_steps", nbr_int_steps_, 10);
   private_nh_.param<vector<double>>("model_constants", model_csts, vector<double>(11, 0.0));
   private_nh_.param<float>("max_lat_rudder", max_lat_rudder_, 15.0);
   private_nh_.param<float>("max_elev_rudder", max_elev_rudder_, 10.0);
+  private_nh_.param<bool>("horiz_motion", horiz_motion_, true);
+  private_nh_.param<bool>("vert_motion", vert_motion_, true);
   private_nh_.param<float>("plan_speed", plan_speed_, 1.0);
   private_nh_.param<float>("plan_horizon", plan_horizon_, 1.0);
   private_nh_.param<float>("lattice_res", lattice_res_, 0.5);
   private_nh_.param<float>("min_wall_dist", min_wall_dist_, 0.3);
+  private_nh_.param<float>("gp_weight", gp_weight_, 1.0);
   private_nh_.param<int>("camera_width", camera_width_, -1);
   private_nh_.param<int>("camera_height", camera_height_, -1);
 
@@ -81,6 +85,9 @@ void PlanningNodelet::onInit()
   robot_model_ = RobotModel(model_csts);
   last_gp_mean_.resize(0);
   last_gp_cov_.resize(0);
+  x_hit_pt_sel_.resize(0);
+  y_hit_pt_sel_.resize(0);
+  z_hit_pt_sel_.resize(0);
 
   // ROS subscribers
   gp_mean_sub_ = nh_.subscribe<mf_mapping::Float32ArrayConstPtr>("gp_mean", 1,
@@ -133,7 +140,7 @@ void PlanningNodelet::pub_lattice_markers()
 
   visualization_msgs::Marker marker;
   marker.header.stamp = ros::Time::now();
-  marker.header.frame_id = robot_frame_;
+  marker.header.frame_id = camera_frame_;
   marker.ns = "lattice";
   marker.lifetime = ros::Duration(1/main_freq_);
   marker.color.r = 0.0;
@@ -170,9 +177,26 @@ void PlanningNodelet::pub_lattice_markers()
 
   // Publish the corresponding poses
   geometry_msgs::PoseArray msg;
-  msg.header.frame_id = robot_frame_;
+  msg.header.frame_id = camera_frame_;
   msg.poses = lattice_;
   lattice_pose_pub_.publish(msg);
+
+  // Publish the hitpoints of the selected viewpoint
+  marker.ns = "hitpoints";
+  marker.color.r = 0.0;
+  marker.color.g = 1.0;
+  marker.color.b = 1.0;
+  marker.color.a = 1.0;
+
+  int n_pts = x_hit_pt_sel_.size();
+  marker.points.resize(n_pts);
+  for (unsigned int k = 0; k < n_pts; k++) {
+    marker.points[k].x = x_hit_pt_sel_[k];
+    marker.points[k].y = y_hit_pt_sel_[k];
+    marker.points[k].z = z_hit_pt_sel_[k];
+  }
+
+  lattice_pub_.publish(marker);
 }
 
 

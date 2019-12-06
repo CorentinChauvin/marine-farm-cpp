@@ -185,31 +185,6 @@ void GPNodelet::build_Kalman_objects(
 }
 
 
-void GPNodelet::build_eval_objects(
-  const vector<unsigned int> &idx_obs,
-  const vector<unsigned int> &idx_nobs,
-  VectorXf &mu_nobs, MatrixXf &C_nobs, MatrixXf &E)
-{
-  unsigned int size_obs = idx_obs.size();
-  unsigned int size_nobs = idx_nobs.size();
-
-  for (unsigned int k = 0; k < size_nobs; k++) {
-    mu_nobs(k) = gp_mean_(idx_nobs[k]);
-
-    for (unsigned int l = 0; l <= k; l++) {
-      C_nobs(k, l) = gp_C_(idx_nobs[k], idx_nobs[l]);
-      C_nobs(l, k) = C_nobs(k, l);
-    }
-  }
-
-  for (unsigned int k = 0; k < size_obs; k++) {
-    for (unsigned int l = 0; l < size_nobs; l++) {
-      E(k, l) = gp_C_(idx_obs[k], idx_nobs[l]);
-    }
-  }
-}
-
-
 void GPNodelet::update_reordered_gp(
   const vector<unsigned int> &idx_obs,
   const vector<unsigned int> &idx_nobs,
@@ -380,6 +355,51 @@ void GPNodelet::update_gp(
 
   pop_reordered_idx(size_obs, size_nobs, min_obs_x, max_obs_x, min_obs_y, max_obs_y, idx_obs, idx_nobs);
 
+}
+
+
+void GPNodelet::prepare_eval(
+  const std::vector<unsigned int> &idx_obs,
+  const Eigen::VectorXf &gp_mean,
+  Eigen::VectorXf &x_obs, Eigen::VectorXf &y_obs,
+  Eigen::VectorXf &W) const
+{
+  unsigned int size_obs = idx_obs.size();
+  VectorXf mu_obs(size_obs);  // observed part of the state
+  MatrixXf C_inv_obs(size_obs, size_obs);   // observed part of the gp_C_inv_ matrix
+  x_obs = VectorXf(size_obs); // x coordinates of the observed state
+  y_obs = VectorXf(size_obs); // y coordinates of the observed state
+
+  for (unsigned int k = 0; k < size_obs; k++) {
+    mu_obs(k) = gp_mean(idx_obs_[k]);
+    x_obs(k) = x_coord_(idx_obs_[k]);
+    y_obs(k) = y_coord_(idx_obs_[k]);
+
+    for (unsigned int l = 0; l <= k; l++) {
+      C_inv_obs(k, l) = gp_C_inv_(idx_obs_[k], idx_obs_[l]);
+      C_inv_obs(l, k) = C_inv_obs(k, l);
+    }
+  }
+
+  W = C_inv_obs * mu_obs;
+}
+
+
+float GPNodelet::eval_gp(
+  float x, float y,
+  const Eigen::VectorXf &x_obs, const Eigen::VectorXf &y_obs,
+  const Eigen::VectorXf &W) const
+{
+  int size_obs = x_obs.size();
+  Eigen::VectorXf k_obs(size_obs);
+
+  for (unsigned int l = 0; l < size_obs; l++) {
+    k_obs(l) = matern_kernel(
+      x, y, x_obs(l), y_obs(l)
+    );
+  }
+
+  return k_obs.dot(W);
 }
 
 

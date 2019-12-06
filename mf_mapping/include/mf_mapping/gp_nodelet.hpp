@@ -76,11 +76,13 @@ class GPNodelet: public nodelet::Nodelet {
 
     bool gp_initialised_;  ///<  Whether the Gaussian Process is initialised
     bool camera_msg_available_;  ///<  Whether a new camera message is available
+    bool tf_got_;   ///<  Whether transforms have been retrieved
     mf_sensors_simulator::CameraOutput::ConstPtr camera_msg_;  ///<  Last camera message
     float delta_x_;  ///<  Increment (m) in the x direction
     float delta_y_;  ///<  Increment (m) in the y direction
     unsigned int size_gp_;    ///<  Total size of the Gaussian Process
     unsigned int size_img_;   ///<  Total size of the image
+    geometry_msgs::TransformStamped wall_camera_tf_;  // Transform from wall to camera frames
 
     Eigen::VectorXf gp_mean_;     ///<  Mean of the Gaussian Process
     Eigen::MatrixXf gp_cov_;      ///<  Covariance of the Gaussian Process
@@ -94,8 +96,9 @@ class GPNodelet: public nodelet::Nodelet {
 
     /// \name  ROS parameters
     ///@{
-    float main_freq_;         ///<  Frequency of the main loop
-    std::string wall_frame_;  ///<  Name of the wall frame
+    float main_freq_;           ///<  Frequency of the main loop
+    std::string wall_frame_;    ///<  Name of the wall frame
+    std::string camera_frame_;  ///<  Name of the camera frame
 
     float camera_var_;     ///<  Max variance on camera measurements
     float camera_decay_;   ///<  Exponential decay rate on camera measurements
@@ -125,6 +128,13 @@ class GPNodelet: public nodelet::Nodelet {
     void main_cb(const ros::TimerEvent &timer_event);
 
     /**
+     * \brief  Gets necessary tf transforms
+     *
+     * \return  Whether the transforms could be retrieved
+     */
+    bool get_tf();
+
+    /**
      * \brief  SINGINT (Ctrl+C) callback to stop the nodelet properly
      */
     static void sigint_handler(int s);
@@ -143,21 +153,39 @@ class GPNodelet: public nodelet::Nodelet {
       mf_mapping::UpdateGP::Response &res);
 
     /**
-     * \brief  Transforms points from camera frame to wall frame
+     * \brief  Transforms points from one frame to another
      *
-     * \param x_in      X coordinate of the input point
-     * \param y_in      Y coordinate of the input point
-     * \param z_in      Z coordinate of the input point
-     * \param x_out     X coordinate of the transformed point
-     * \param y_out     Y coordinate of the transformed point
-     * \param z_out     Z coordinate of the transformed point
-     * \param frame_in  Frame of the input point
+     * \param[in]  x_in       X coordinate of the input points
+     * \param[in]  y_in       Y coordinate of the input points
+     * \param[in]  z_in       Z coordinate of the input points
+     * \param[out] x_out      X coordinate of the transformed points
+     * \param[out] y_out      Y coordinate of the transformed points
+     * \param[out] z_out      Z coordinate of the transformed points
+     * \param[in]  frame_in   Frame of the input points
+     * \param[in]  frame_out  Frame of the output points
      *
      * \return  Whether the points could be transformed
      */
     bool transform_points(const vec_f &x_in, const vec_f &y_in, const vec_f &z_in,
       vec_f &x_out, vec_f &y_out, vec_f &z_out,
       std::string frame_in, std::string frame_out);
+
+    /**
+     * \brief  Transforms points from one frame to another
+     *
+     * \param[in]  x_in       X coordinate of the input points
+     * \param[in]  y_in       Y coordinate of the input points
+     * \param[in]  z_in       Z coordinate of the input points
+     * \param[out] x_out      X coordinate of the transformed points
+     * \param[out] y_out      Y coordinate of the transformed points
+     * \param[out] z_out      Z coordinate of the transformed points
+     * \param[in]  transform  Transform to apply
+     *
+     * \return  Whether the points could be transformed
+     */
+    bool transform_points(const vec_f &x_in, const vec_f &y_in, const vec_f &z_in,
+      vec_f &x_out, vec_f &y_out, vec_f &z_out,
+      const geometry_msgs::TransformStamped &transform);
 
     /**
      * \brief  Initialises the Gaussian Process
@@ -240,23 +268,6 @@ class GPNodelet: public nodelet::Nodelet {
     ) const;
 
     /**
-     * \brief  Builds vectors and matrices needed during GP evaluation
-     *
-     * \note  It assumes the following objects are already of the right size
-     *
-     * \param[in] idx_obs     Array of corresponding indices for obs states
-     * \param[in] idx_nobs    Array of corresponding indices for non obs states
-     * \param[out] mu_nobs    Not observed part of the state
-     * \param[out] C_nobs     Covariance matrix of the GP for not obs states
-     * \param[out] E          Off diagonal block matrix in gp_C_
-     */
-    void build_eval_objects(
-      const std::vector<unsigned int> &idx_obs,
-      const std::vector<unsigned int> &idx_nobs,
-      Eigen::VectorXf &mu_nobs, Eigen::MatrixXf &C_nobs, Eigen::MatrixXf &E
-    );
-
-    /**
      * \brief  Fills GP mean and covariance from reordered objects
      *
      * \param[in]  idx_obs   Array of corresponding indices for obs states
@@ -276,11 +287,11 @@ class GPNodelet: public nodelet::Nodelet {
     /**
      * \brief  Updates the Gaussian Process given measured data points
      *
-     * \param[in]      x_meas       X coordinate of the measured data points
-     * \param[in]      y_meas       Y coordinate of the measured data points
-     * \param[in]      z_meas       Z coordinate of the measured data points
-     * \param[in]      distances    Distances to the measured points
-     * \param[in]      values       Value of the points at coordinates (x, y)
+     * \param[in]      x_meas       X coordinate of the measured data points (in wall frame=
+     * \param[in]      y_meas       Y coordinate of the measured data points (in wall frame=
+     * \param[in]      z_meas       Z coordinate of the measured data points (in wall frame=
+     * \param[in]      distances    Distances between the camera origin and the measured points
+     * \param[in]      values       Measured value of the points at coordinates (x, y)
      * \param[in, out] gp_mean      Mean of the Gaussian Process
      * \param[in, out] gp_cov       Covariance of the Gaussian Process
      * \param[out]     idx_obs      Array of corresponding indices for obs states
@@ -294,6 +305,38 @@ class GPNodelet: public nodelet::Nodelet {
       std::vector<unsigned int> &idx_obs,
       RectArea &obs_coord,
       bool update_mean = true
+    ) const;
+
+    /**
+     * \brief  Prepares objects needed for Gaussian Process evaluation
+     *
+     * \param[in]  idx_obs  Array of corresponding indices for obs states
+     * \param[in]  gp_mean  Mean of the Gaussian Process
+     * \param[out] x_obs    X coordinates of the observed state
+     * \param[out] y_obs    Y coordinates of the observed state
+     * \param[out] W        Vector needed for evaluation (\f$ W = (C^{-1})_{obs} \mu_{obs} \f$)
+     */
+    void prepare_eval(
+      const std::vector<unsigned int> &idx_obs,
+      const Eigen::VectorXf &gp_mean,
+      Eigen::VectorXf &x_obs, Eigen::VectorXf &y_obs,
+      Eigen::VectorXf &W
+    ) const;
+
+    /**
+     * \brief  Evaluates the Gaussian Process at a given point
+     *
+     * \param x      X coordinate of the evaluated point
+     * \param y      Y coordinate of the evaluated point
+     * \param x_obs  X coordinates of the observed state
+     * \param x_obs  Y coordinates of the observed state
+     * \param W      Vector needed for evaluation (\f$ W = (C^{-1})_{obs} \mu_{obs} \f$)
+     * \return  Value of the evaluated Gaussian Process
+     */
+    float eval_gp(
+      float x, float y,
+      const Eigen::VectorXf &x_obs, const Eigen::VectorXf &y_obs,
+      const Eigen::VectorXf &W
     ) const;
 
     /**

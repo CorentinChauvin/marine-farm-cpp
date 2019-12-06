@@ -58,7 +58,10 @@ class PlanningNodelet: public nodelet::Nodelet {
     RobotModel robot_model_;  ///<  Robot model
     geometry_msgs::TransformStamped wall_robot_tf_;  ///<  Transform from wall to robot frames
     std::vector<geometry_msgs::Pose> lattice_;  ///<  Lattice of possible waypoints
-    int selected_vp_;  ///<  Selected view point
+    int selected_vp_;  ///<  Index of selected view point in the lattice
+    std::vector<float> x_hit_pt_sel_;  ///<  X coordinates of the hit points for the selected viewpoint
+    std::vector<float> y_hit_pt_sel_;  ///<  Y coordinates of the hit points for the selected viewpoint
+    std::vector<float> z_hit_pt_sel_;  ///<  Z coordinates of the hit points for the selected viewpoint
     std::vector<float> last_gp_mean_;              ///<  Last mean of the Gaussian Process
     std::vector<std::vector<float>> last_gp_cov_;  ///<  Last covariance of the Gaussian Process
 
@@ -67,15 +70,19 @@ class PlanningNodelet: public nodelet::Nodelet {
     float main_freq_;           ///<  Frequency of the main loop
     std::string wall_frame_;    ///<  Wall frame
     std::string robot_frame_;   ///<  Robot frame
+    std::string camera_frame_;  ///<  Camera frame
 
     int nbr_int_steps_;      ///<  Initial number of model integration steps
     float max_lat_rudder_;   ///<  Maximum angle of the lateral rudder
     float max_elev_rudder_;  ///<  Maximum angle of the elevation rudder
 
+    bool horiz_motion_;    ///<  Whether to allow motion in the horizontal plane
+    bool vert_motion_;     ///<  Whether to allow motion in the vertical plane
     float plan_speed_;     ///<  Planned speed (m/s) of the robot
     float plan_horizon_;   ///<  Horizon (m) of the planning
     float lattice_res_;    ///<  Resolution (m) of the waypoints lattice
     float min_wall_dist_;  ///<  Minimum distance to the wall that can be planned
+    float gp_weight_;      ///<  Weight attributed to the Gaussian Process values in viewpoint selection
     int camera_height_;    ///<  Number of pixels of the camera along height (-1 for actual camera size)
     int camera_width_;     ///<  Number of pixels of the camera along width  (-1 for actual camera size)
     ///@}

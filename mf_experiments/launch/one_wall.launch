@@ -1,8 +1,8 @@
 <launch>
   <!-- Launchfile arguments -->
   <arg name="rviz" value="true" />
-  <arg name="display_img_gp" value="true" />
-  <arg name="display_cov_gp" value="true" />
+  <arg name="display_img_gp" value="false" />
+  <arg name="display_cov_gp" value="false" />
 
   <!-- ROS parameters -->
   <rosparam file="$(find mf_farm_simulator)/config/farm_simulator.yaml" command="load" ns="simu" />

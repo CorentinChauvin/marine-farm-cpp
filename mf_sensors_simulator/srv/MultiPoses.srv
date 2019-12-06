@@ -1,8 +1,8 @@
 #
-# Service to perform raycasting for several camera poses
+# Service to perform raycasting for several virtual viewpoint poses
 #
 
-# Array of camera poses
+# Array of viewpoint poses in camera frame
 geometry_msgs/PoseArray pose_array
 
 # Number of pixels of the camera in height
@@ -16,5 +16,5 @@ int32 n_pxl_width
 # Whether the call was successful
 bool is_success
 
-# Raycasting results for each camera pose
+# Raycasting results for each viewpoint pose (in camera frame)
 CameraOutput[] results

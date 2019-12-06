@@ -17,11 +17,14 @@ mf_mapping/Float32Array[] cov
 # Whether to use the internal GP covariance instead
 bool use_internal_cov
 
-# Sets of camera measurements
+# Sets of camera measurements (in global camera frame)
 mf_sensors_simulator/CameraOutput[] meas
 
 # Whether to return the new covariances diagonal, or the full covariances
 bool return_cov_diag
+
+# Whether to evaluate the Gaussian Process at the measured points
+bool eval_gp
 
 ---
 
@@ -33,3 +36,6 @@ mf_mapping/Array2D[] new_cov
 
 # Updated covariances (one for each set of measurements)
 mf_mapping/Float32Array[] new_cov_diag
+
+# Values of the evaluated Gaussian Process
+mf_mapping/Float32Array[] eval_values

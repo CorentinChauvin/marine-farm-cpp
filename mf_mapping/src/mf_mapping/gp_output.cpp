@@ -50,24 +50,12 @@ void GPNodelet::publish_gp_state()
 void GPNodelet::publish_wall_img()
 {
   // Preparing evaluation of the Gaussian Process
-  unsigned int size_obs = idx_obs_.size();
-  VectorXf mu_obs(size_obs);             // observed part of the state
-  MatrixXf C_inv_obs(size_obs, size_obs);   // observed part of the gp_C_inv_ matrix
-  VectorXf x_obs(size_obs);  // x coordinates of the observed state
-  VectorXf y_obs(size_obs);  // y coordinates of the observed state
+  int size_obs = idx_obs_.size();
+  VectorXf x_obs;  // x coordinates of the observed state
+  VectorXf y_obs;  // y coordinates of the observed state
+  VectorXf W;      // vector needed for evaluation
 
-  for (unsigned int k = 0; k < size_obs; k++) {
-    mu_obs(k) = gp_mean_(idx_obs_[k]);
-    x_obs(k) = x_coord_(idx_obs_[k]);
-    y_obs(k) = y_coord_(idx_obs_[k]);
-
-    for (unsigned int l = 0; l <= k; l++) {
-      C_inv_obs(k, l) = gp_C_inv_(idx_obs_[k], idx_obs_[l]);
-      C_inv_obs(l, k) = C_inv_obs(k, l);
-    }
-  }
-
-  VectorXf W = C_inv_obs * mu_obs;
+  prepare_eval(idx_obs_, gp_mean_, x_obs, y_obs, W);
 
   // Evaluate the Gaussian Process on the wall
   float delta_x = size_wall_x_ / size_img_x_;
@@ -79,15 +67,7 @@ void GPNodelet::publish_wall_img()
   for (unsigned int i = 0; i < size_img_x_; i++) {
     for (unsigned int j = 0; j < size_img_y_; j++) {
       if (changed_pxl_[k]) {
-        Eigen::VectorXf k_obs(size_obs);
-
-        for (unsigned int l = 0; l < size_obs; l++) {
-          k_obs(l) = matern_kernel(
-            x, y, x_obs(l), y_obs(l)
-          );
-        }
-
-        out_values_[k] = k_obs.dot(W);
+        out_values_[k] = eval_gp(x, y, x_obs, y_obs, W);
         changed_pxl_[k] = false;
       }
 

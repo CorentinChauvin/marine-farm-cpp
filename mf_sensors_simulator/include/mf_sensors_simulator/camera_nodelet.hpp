@@ -344,7 +344,7 @@ class CameraNodelet: public nodelet::Nodelet {
      * \note  It will transform the viewpoint in global camera frame. So it
      *    assumes `CameraNodelet::camera_robot_tf_` is up to date.
      *
-     * \param [in]  vp_pose     Pose of the viewpoint in robot frame
+     * \param [in]  vp_pose     Pose of the viewpoint in camera frame
      * \param [in]  n_pxl_h     Number of pixels of the camera in height direction
      * \param [in]  n_pxl_w     Number of pixels of the camera in width direction
      * \param [out] pxl_output  Hit points for all pixels

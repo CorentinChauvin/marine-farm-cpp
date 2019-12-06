@@ -305,28 +305,17 @@ void CameraNodelet::raycast_wall(
   pxl_output.y.reserve(n_pixels);
   pxl_output.z.reserve(n_pixels);
 
-  // Transform the viewpoint in camera frame
-  geometry_msgs::Pose transf_pose;  // position of the viewpoint in camera frame
-  tf2::doTransform(vp_pose, transf_pose, camera_robot_tf_);
-
-  // Compute transform from robot camera frame to viewpoint camera frame
-  geometry_msgs::TransformStamped robot_vp_tf = pose_to_tf(vp_pose);  // transform from robot to view point
-  tf2::Vector3 origin(transf_pose.position.x, transf_pose.position.y, transf_pose.position.z);
-
-  vector<geometry_msgs::TransformStamped> transforms = {robot_camera_tf_,
-    robot_vp_tf, camera_robot_tf_};
-
-  geometry_msgs::TransformStamped transform = combine_transforms(transforms);
-
   // Check the four corners
   int x_corner[4] = {0, n_pxl_h-1, n_pxl_h-1, 0};  // position of the 4 corners in height direction
   int y_corner[4] = {0, 0, n_pxl_w-1, n_pxl_w-1};  // position of the 4 corners in width direction
   bool hit_all_corners = true;
+  tf2::Vector3 origin(vp_pose.position.x, vp_pose.position.y, vp_pose.position.z);
+  geometry_msgs::TransformStamped camera_vp_tf = pose_to_tf(vp_pose);  // transform from camera to viewpoint
 
   for (int l = 0; l < 4; l++) {
     // Transform aim point into camera frame
     tf2::Vector3 aim_pt1 = get_aim_pt(x_corner[l], y_corner[l], n_pxl_h, n_pxl_w);  // aim point in view point camera frame
-    tf2::Vector3 aim_pt = apply_transform(aim_pt1, transform);
+    tf2::Vector3 aim_pt = apply_transform(aim_pt1, camera_vp_tf);
 
     // Perform raycast
     int alga_idx;
@@ -364,7 +353,7 @@ void CameraNodelet::raycast_wall(
         if ((i != 0 && i != n_pxl_h-1) || (j != 0 && j != n_pxl_w-1)) {
           // Transform aim point into camera frame
           tf2::Vector3 aim_pt1 = get_aim_pt(i, j, n_pxl_h, n_pxl_w);  // aim point in view point camera frame
-          tf2::Vector3 aim_pt = apply_transform(aim_pt1, transform);
+          tf2::Vector3 aim_pt = apply_transform(aim_pt1, camera_vp_tf);
 
           // Perform raycast
           int alga_idx;

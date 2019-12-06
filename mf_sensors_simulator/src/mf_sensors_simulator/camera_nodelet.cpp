@@ -239,6 +239,12 @@ bool CameraNodelet::get_tf()
 bool CameraNodelet::ray_multi_cb(mf_sensors_simulator::MultiPoses::Request &req,
   mf_sensors_simulator::MultiPoses::Response &res)
 {
+  // Check for initialisation
+  if (!world_init_ || !get_tf()) {
+    res.is_success = false;
+    return true;
+  }
+
   // Prepare the output
   int n_pxl_h = req.n_pxl_height;
   int n_pxl_w = req.n_pxl_width;
@@ -250,25 +256,10 @@ bool CameraNodelet::ray_multi_cb(mf_sensors_simulator::MultiPoses::Request &req,
   int nbr_poses = req.pose_array.poses.size();
   res.results.resize(nbr_poses);
 
-  // Transform the poses in camera frame
-  if (!world_init_ || !get_tf()) {
-    res.is_success = false;
-    return true;
-  }
-
-  vector<geometry_msgs::Pose> poses(nbr_poses);
-
-  for (unsigned int k = 0; k < nbr_poses; k++) {
-    geometry_msgs::Pose transf_pose;
-    tf2::doTransform(req.pose_array.poses[k], transf_pose, camera_robot_tf_);
-
-    poses[k] = transf_pose;
-  }
-
   // Creating a collision body for field of view at all poses
   rp3d::CollisionBody* body = coll_world_.createCollisionBody(rp3d::Transform::identity());
   unique_ptr<rp3d::BoxShape> shape;
-  multi_fov_body(poses, body, shape);
+  multi_fov_body(req.pose_array.poses, body, shape);
 
   // Selects algae that are in field of view of the camera
   coll_mutex_.lock();

@@ -94,7 +94,7 @@ void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle
           pose.position.z = z;
 
           // Transform point in wall frame to check for collision
-          geometry_msgs::Pose transf_pose = pose;
+          geometry_msgs::Pose transf_pose;
           tf2::doTransform(pose, transf_pose, wall_robot_tf_);
 
           if (transf_pose.position.z >= min_wall_dist_) {
@@ -138,9 +138,42 @@ bool PlanningNodelet::plan_trajectory()
   float max_lat_angle = plan_horizon_ / (2 * lat_turn_radius);
   float max_elev_angle = plan_horizon_ / (2 * elev_turn_radius);
 
+  if (!horiz_motion_) max_lat_angle = 0;
+  if (!vert_motion_)  max_elev_angle = 0;
+
   // Generate a lattice of possible waypoints (in robot frame)
   generate_lattice(max_lat_angle, max_elev_angle, plan_horizon_, lattice_res_, lattice_);
+
+  // Compute the corresponding camera orientation for each viewpoint
   int size_lattice = lattice_.size();
+
+  for (int k = 0; k < size_lattice; k++) {
+    tf2::Quaternion q_orig, q_rot, q_new;
+    tf2::convert(lattice_[k].orientation, q_orig);
+    q_rot.setRPY(M_PI_2, 0.0, 0.0);
+
+    q_new = q_orig * q_rot;
+    q_new.normalize();
+    tf2::convert(q_new, lattice_[k].orientation);
+  }
+
+  // Transform the orientation in camera frame
+  geometry_msgs::TransformStamped camera_robot_tf;
+
+  try {
+    camera_robot_tf = tf_buffer_.lookupTransform(camera_frame_, robot_frame_, ros::Time(0));
+  }
+  catch (tf2::TransformException &ex) {
+    NODELET_WARN("[planning_nodelet] %s", ex.what());
+    return false;
+  }
+
+  for (int k = 0; k < size_lattice; k++) {
+    geometry_msgs::Pose transf_pose;
+    tf2::doTransform(lattice_[k], transf_pose, camera_robot_tf);
+
+    lattice_[k] = transf_pose;
+  }
 
   // Get camera measurement for each viewpoint of the lattice
   mf_sensors_simulator::MultiPoses camera_srv;
@@ -166,6 +199,7 @@ bool PlanningNodelet::plan_trajectory()
   gp_srv.request.use_internal_cov = true;
   gp_srv.request.update_mean = false;
   gp_srv.request.return_cov_diag = true;
+  gp_srv.request.eval_gp = false;
 
   gp_srv.request.meas.resize(size_lattice);
   for (int k = 0; k < size_lattice; k++) {
@@ -187,13 +221,16 @@ bool PlanningNodelet::plan_trajectory()
   for (int k = 0; k < size_lattice; k++) {
     for (int l = 0; l < size_gp; l++) {
       float cov_diff = last_gp_cov_[l][l] - cov_diag[k][l];
-      float weight = last_gp_mean_[l];
-
+      float weight = 100 * (1/(1 + exp(-gp_weight_*(last_gp_mean_[l] - 0.5))));
       info_gain[k] += weight * cov_diff;
     }
   }
 
   selected_vp_ = std::max_element(info_gain.begin(), info_gain.end()) - info_gain.begin();
+
+  x_hit_pt_sel_ = camera_srv.response.results[selected_vp_].x;
+  y_hit_pt_sel_ = camera_srv.response.results[selected_vp_].y;
+  z_hit_pt_sel_ = camera_srv.response.results[selected_vp_].z;
 
 }
 

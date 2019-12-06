@@ -2,6 +2,7 @@ planning_nodelet:
   main_freq: 3
   wall_frame: "wall"
   robot_frame: "base_link"
+  camera_frame: "camera"
 
   # Model parameters
   nbr_int_steps: 10  # initial number of integration steps
@@ -11,10 +12,17 @@ planning_nodelet:
   max_elev_rudder: 10  # maximum angle of the elevation rudder
 
   # Planning parameters
-  plan_speed: 3.0     # planned speed (m/s) of the robot
-  plan_horizon: 1.5   # horizon (m) of the planning
-  lattice_res: 0.4    # resolution (m) of the waypoints lattice
-  min_wall_dist: 0.2  # minimum distance to the wall that can be planned
+  horiz_motion: false  # whether to allow motion in the horizontal plane
+  vert_motion: true    # whether to allow motion in the vertical plane
+  plan_speed: 3.0      # planned speed (m/s) of the robot
+  plan_horizon: 1.5    # horizon (m) of the planning
+  lattice_res: 0.4     # resolution (m) of the waypoints lattice
+  min_wall_dist: 0.2   # minimum distance to the wall that can be planned
+  gp_weight: 100       # weight attributed to the Gaussian Process values in viewpoint selection
 
-  camera_height: 5    # number of pixels of the camera along height (-1 for actual camera size)
-  camera_width: 10    # number of pixels of the camera along width  (-1 for actual camera size)
+  camera_height: 5  # number of pixels of the camera along height (-1 for actual camera size)
+  camera_width: 10  # number of pixels of the camera along width  (-1 for actual camera size)
+
+
+
+  vp: 21
