@@ -142,7 +142,22 @@ class PlanningNodelet: public nodelet::Nodelet {
       float horizon, float resolution, std::vector<geometry_msgs::Pose> &lattice);
 
     /**
-     * \brief  Computes a trajectory plan
+     * \brief  Computes the diagonal of the covariance for each viewpoint of the lattice
+     *
+     * \param[out] cov_diag  Diagonal of the GP cov for each viewpoint
+     * \param[out] camera_pts_x  X coord of camera hit pts for each viewpoint
+     * \param[out] camera_pts_x  Y coord of camera hit pts for each viewpoint
+     * \param[out] camera_pts_x  Z coord of camera hit pts for each viewpoint
+     */
+    bool compute_lattice_gp(
+      std::vector<std::vector<float>> &cov_diag,
+      std::vector<std::vector<float>> &camera_pts_x,
+      std::vector<std::vector<float>> &camera_pts_y,
+      std::vector<std::vector<float>> &camera_pts_z
+    );
+
+    /**
+     * \brief  Main function to compute a trajectory plan
      */
     bool plan_trajectory();
 
@@ -164,7 +179,7 @@ class PlanningNodelet: public nodelet::Nodelet {
     void gp_mean_cb(const mf_mapping::Float32ArrayConstPtr msg);
 
     /**
-     * \brief Callback for Gaussian Process mean
+     * \brief Callback for Gaussian Process covariance
      */
     void gp_cov_cb(const mf_mapping::Array2DConstPtr msg);
 

@@ -123,27 +123,12 @@ void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle
 }
 
 
-bool PlanningNodelet::plan_trajectory()
+bool PlanningNodelet::compute_lattice_gp(
+  vector<vector<float>> &cov_diag,
+  vector<vector<float>> &camera_pts_x,
+  vector<vector<float>> &camera_pts_y,
+  vector<vector<float>> &camera_pts_z)
 {
-  // Check for Gaussian Process received
-  int size_gp = last_gp_cov_.size();
-
-  if (last_gp_cov_.size() == 0 || last_gp_mean_.size() == 0)
-    return false;
-
-  // Compute maximum angles for lattice generation
-  float lat_turn_radius = robot_model_.lat_turn_radius(plan_speed_, max_lat_rudder_);
-  float elev_turn_radius = robot_model_.elev_turn_radius(plan_speed_, max_lat_rudder_);
-
-  float max_lat_angle = plan_horizon_ / (2 * lat_turn_radius);
-  float max_elev_angle = plan_horizon_ / (2 * elev_turn_radius);
-
-  if (!horiz_motion_) max_lat_angle = 0;
-  if (!vert_motion_)  max_elev_angle = 0;
-
-  // Generate a lattice of possible waypoints (in robot frame)
-  generate_lattice(max_lat_angle, max_elev_angle, plan_horizon_, lattice_res_, lattice_);
-
   // Compute the corresponding camera orientation for each viewpoint
   int size_lattice = lattice_.size();
 
@@ -191,9 +176,18 @@ bool PlanningNodelet::plan_trajectory()
     return false;
   }
 
-  // Update the GP covariance for each viewpoint
-  vector<vector<float>> cov_diag(size_lattice);  // diagonal of the updated GP for each view point
+  // Store camera hit points
+  camera_pts_x.resize(size_lattice);
+  camera_pts_y.resize(size_lattice);
+  camera_pts_z.resize(size_lattice);
 
+  for (int k = 0; k < size_lattice; k++) {
+    camera_pts_x[k] = camera_srv.response.results[k].x;
+    camera_pts_y[k] = camera_srv.response.results[k].y;
+    camera_pts_z[k] = camera_srv.response.results[k].z;
+  }
+
+  // Update the GP covariance for each viewpoint
   mf_mapping::UpdateGP gp_srv;
   gp_srv.request.use_internal_mean = true;
   gp_srv.request.use_internal_cov = true;
@@ -214,6 +208,39 @@ bool PlanningNodelet::plan_trajectory()
     NODELET_WARN("[planning_nodelet] Failed to call update_gp service");
     return false;
   }
+}
+
+
+bool PlanningNodelet::plan_trajectory()
+{
+  // Check for Gaussian Process received
+  int size_gp = last_gp_cov_.size();
+
+  if (last_gp_cov_.size() == 0 || last_gp_mean_.size() == 0)
+    return false;
+
+  // Compute maximum angles for lattice generation
+  float lat_turn_radius  = robot_model_.lat_turn_radius(plan_speed_, max_lat_rudder_);
+  float elev_turn_radius = robot_model_.elev_turn_radius(plan_speed_, max_lat_rudder_);
+
+  float max_lat_angle  = plan_horizon_ / (2 * lat_turn_radius);
+  float max_elev_angle = plan_horizon_ / (2 * elev_turn_radius);
+
+  if (!horiz_motion_) max_lat_angle = 0;
+  if (!vert_motion_)  max_elev_angle = 0;
+
+  // Generate a lattice of possible waypoints (in robot frame)
+  generate_lattice(max_lat_angle, max_elev_angle, plan_horizon_, lattice_res_, lattice_);
+
+  // Update the GP covariance for each viewpoint
+  int size_lattice = lattice_.size();
+  vector<vector<float>> cov_diag(size_lattice);  // diagonal of the updated GP cov for each view point
+  vector<vector<float>> camera_pts_x, camera_pts_y, camera_pts_z;  // camera hit points
+
+  bool ret = compute_lattice_gp(cov_diag, camera_pts_x, camera_pts_y, camera_pts_z);
+
+  if (!ret)
+    return false;
 
   // Compute information gain and select best viewpoint
   vector<float> info_gain(size_lattice, 0.0);
@@ -228,9 +255,9 @@ bool PlanningNodelet::plan_trajectory()
 
   selected_vp_ = std::max_element(info_gain.begin(), info_gain.end()) - info_gain.begin();
 
-  x_hit_pt_sel_ = camera_srv.response.results[selected_vp_].x;
-  y_hit_pt_sel_ = camera_srv.response.results[selected_vp_].y;
-  z_hit_pt_sel_ = camera_srv.response.results[selected_vp_].z;
+  x_hit_pt_sel_ = camera_pts_x[selected_vp_];
+  y_hit_pt_sel_ = camera_pts_y[selected_vp_];
+  z_hit_pt_sel_ = camera_pts_z[selected_vp_];
 
 }
 
