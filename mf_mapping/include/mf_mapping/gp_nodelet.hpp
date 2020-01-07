@@ -83,6 +83,7 @@ class GPNodelet: public nodelet::Nodelet {
     unsigned int size_gp_;    ///<  Total size of the Gaussian Process
     unsigned int size_img_;   ///<  Total size of the image
     geometry_msgs::TransformStamped wall_camera_tf_;  // Transform from wall to camera frames
+    float radius_obs_;  ///<  Radius of influence of an observation on the GP
 
     Eigen::VectorXf gp_mean_;     ///<  Mean of the Gaussian Process
     Eigen::MatrixXf gp_cov_;      ///<  Covariance of the Gaussian Process
@@ -348,6 +349,56 @@ class GPNodelet: public nodelet::Nodelet {
      * \brief  Publishes an image of the evaluated GP and its covariance
      */
     void publish_wall_img();
+
+    /**
+     * \brief  Evaluates the Lambert W (0 branch) function
+     *
+     * The Lambert W function solves the equation w*exp(w) = z with w = W0(z)
+     * when z >= 0. Uses Newton's method as indicated at
+     * https://en.wikipedia.org/wiki/Lambert_W_function#Numerical_evaluation
+     *
+     * \note  This function is better implemented in Boost in versions >=1.69,
+     *        which is not supported by ROS 1 (as of January 2020)
+     *
+     * \param z          Positive real number
+     * \param precision  Desired precision for the result
+     * \param init_w     Initial point of Newton's evaluation
+     * \return  The Lambert W function evaluated at z if z >= 0, 0 otherwise.
+     */
+    double lambert_w0(double z, double precision=0.01, double init_w=1.0) const;
+
+    /**
+     * \brief  Evaluates the Lambert W (-1 branch) function
+     *
+     * The Lambert W function solves the equation w*exp(w) = z with w = W0(z)
+     * when -1/e <= z < 0. Uses Newton's method as indicated at
+     * https://en.wikipedia.org/wiki/Lambert_W_function#Numerical_evaluation
+     *
+     * \note  This function is better implemented in Boost in versions >=1.69,
+     *        which is not supported by ROS 1 (as of January 2020)
+     *
+     * \param z          Real number in [-1/e, 0)
+     * \param precision  Desired precision for the result
+     * \param init_w     Initial point of Newton's evaluation
+     * \return  The Lambert W function evaluated at z if z is in the right bound,
+     *          0 otherwise.
+     */
+    double lambert_wm1(double z, double precision=0.01, double init_w=-2.0) const;
+
+    /**
+     * \brief  Applies Netwton's method to evaluate Lambert W function
+     *
+     * The initial point should be < -1.0 for branch -1 and > 0.0 for branch 0.
+     *
+     * \warning  Does not care of bounds, so to use with care. Prefer using
+     *    `GPNodelet::lambert_w0` and `GPNodelet::lambert_wm1`.
+     *
+     * \param z          Real number in [-1/e, +inf)
+     * \param precision  Desired precision for the result
+     * \param init_w     Initial point of Newton's evaluation
+     * \return  The Lambert W function evaluated at z.
+     */
+    double lambert_w(double z, double precision, double init_w) const;
 
 };
 

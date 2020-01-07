@@ -249,13 +249,10 @@ void GPNodelet::update_gp(
   float max_x = *std::max_element(x_meas.begin(), x_meas.end());
   float max_y = *std::max_element(y_meas.begin(), y_meas.end());
 
-  float added_distance = -matern_length_/sqrt(3)
-                       * log(matern_thresh_/pow(matern_var_, 2));
-
-  min_x = max(float(0), min_x - added_distance);  // area on the wall affected by the update
-  max_x = min(float(size_wall_x_), max_x + added_distance);
-  min_y = max(float(0), min_y - added_distance);
-  max_y = min(float(size_wall_y_), max_y + added_distance);
+  min_x = max(float(0), min_x - radius_obs_);  // area on the wall affected by the update
+  max_x = min(float(size_wall_x_), max_x + radius_obs_);
+  min_y = max(float(0), min_y - radius_obs_);
+  max_y = min(float(size_wall_y_), max_y + radius_obs_);
 
   unsigned int min_obs_x = min_x / delta_x_;  // indices in the original state
   unsigned int max_obs_x = max_x / delta_x_;
@@ -340,10 +337,10 @@ void GPNodelet::update_gp(
   update_reordered_gp(idx_obs, idx_nobs, mu, P, gp_mean, gp_cov);
 
   // Storing correspondance indices for evaluation
-  min_x = max(float(0), min_x - added_distance);  // area on the wall affected by the update
-  max_x = min(float(size_wall_x_), max_x + added_distance);
-  min_y = max(float(0), min_y - added_distance);
-  max_y = min(float(size_wall_y_), max_y + added_distance);
+  min_x = max(float(0), min_x - radius_obs_);  // area on the wall affected by the update
+  max_x = min(float(size_wall_x_), max_x + radius_obs_);
+  min_y = max(float(0), min_y - radius_obs_);
+  max_y = min(float(size_wall_y_), max_y + radius_obs_);
 
   min_obs_x = min_x / delta_x_;  // indices in the original state
   max_obs_x = max_x / delta_x_;

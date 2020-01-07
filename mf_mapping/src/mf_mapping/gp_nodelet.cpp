@@ -91,6 +91,9 @@ void GPNodelet::onInit()
   out_values_.resize(size_img_, 0.5);
   changed_pxl_.resize(size_img_, false);
 
+  radius_obs_ = -matern_length_/sqrt(3)
+              * (lambert_wm1(-matern_thresh_/(exp(1)*matern_var_)) + 1);
+
   // ROS subscribers
   camera_sub_ = nh_.subscribe<mf_sensors_simulator::CameraOutput>("camera_out", 1, &GPNodelet::camera_cb, this);
 
@@ -341,6 +344,54 @@ bool GPNodelet::transform_points(const vec_f &x_in, const vec_f &y_in, const vec
 
   return true;
 }
+
+
+double GPNodelet::lambert_w0(double z, double precision, double init_w) const
+{
+  // Handle out of bound case
+  if (z < 0) {
+    NODELET_WARN("[gp_nodelet] Calling lambert_w0 with z=%f", z);
+    return 0;
+  }
+
+  // Apply Newton's method
+  return lambert_w(z, precision, init_w);
+}
+
+
+double GPNodelet::lambert_wm1(double z, double precision, double init_w) const
+{
+  // Handle out of bound case
+  if (z < -1/exp(1) || z >= 0) {
+    NODELET_WARN("[gp_nodelet] Calling lambert_wm1 with z=%f", z);
+    return 0;
+  }
+
+  // Apply Newton's method
+  return lambert_w(z, precision, init_w);
+}
+
+
+double GPNodelet::lambert_w(double z, double precision, double init_w) const
+{
+  double w = init_w;
+  double last_w = w;
+  double delta;
+  int safe_count = 100;
+
+  do {
+    w = w - (w*exp(w) - z) / (exp(w) + w*exp(w));
+    delta = abs(last_w - w);
+    last_w = w;
+  } while (delta > precision && safe_count-- > 0);
+
+  if (safe_count == 0)
+    NODELET_WARN("[gp_nodelet] lambert_w0(%f) fails to converge, throwing intermediary result w=%f anyway.", z, w);
+
+  return w;
+}
+
+
 
 
 
