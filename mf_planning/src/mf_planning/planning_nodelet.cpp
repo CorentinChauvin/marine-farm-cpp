@@ -64,6 +64,7 @@ void PlanningNodelet::onInit()
   vector<double> model_csts;  // model constants
 
   private_nh_.param<float>("main_freq", main_freq_, 1.0);
+  private_nh_.param<string>("ocean_frame", ocean_frame_, "ocean");
   private_nh_.param<string>("wall_frame", wall_frame_, "wall");
   private_nh_.param<string>("robot_frame", robot_frame_, "base_link");
   private_nh_.param<string>("camera_frame", camera_frame_, "camera");
@@ -75,6 +76,7 @@ void PlanningNodelet::onInit()
   private_nh_.param<bool>("vert_motion", vert_motion_, true);
   private_nh_.param<float>("plan_speed", plan_speed_, 1.0);
   private_nh_.param<float>("plan_horizon", plan_horizon_, 1.0);
+  private_nh_.param<float>("plan_res", plan_res_, 0.1);
   private_nh_.param<float>("lattice_res", lattice_res_, 0.5);
   private_nh_.param<float>("min_wall_dist", min_wall_dist_, 0.3);
   private_nh_.param<float>("gp_weight", gp_weight_, 1.0);
@@ -98,6 +100,7 @@ void PlanningNodelet::onInit()
   // ROS publishers
   lattice_pub_ = nh_.advertise<visualization_msgs::Marker>("wp_lattice", 0);
   lattice_pose_pub_ = nh_.advertise<geometry_msgs::PoseArray>("wp_pose_array", 0);
+  path_pub_ = nh_.advertise<nav_msgs::Path>("path", 0);
 
   // ROS services
   ray_multi_client_ = nh_.serviceClient<mf_sensors_simulator::MultiPoses>("raycast_multi");
@@ -140,9 +143,10 @@ void PlanningNodelet::pub_lattice_markers()
 
   visualization_msgs::Marker marker;
   marker.header.stamp = ros::Time::now();
-  marker.header.frame_id = camera_frame_;
+  marker.header.frame_id = robot_frame_;
   marker.ns = "lattice";
   marker.lifetime = ros::Duration(1/main_freq_);
+  marker.pose.orientation.w = 1.0;
   marker.color.r = 0.0;
   marker.color.g = 1.0;
   marker.color.b = 0.0;
@@ -177,12 +181,13 @@ void PlanningNodelet::pub_lattice_markers()
 
   // Publish the corresponding poses
   geometry_msgs::PoseArray msg;
-  msg.header.frame_id = camera_frame_;
+  msg.header.frame_id = robot_frame_;
   msg.poses = lattice_;
   lattice_pose_pub_.publish(msg);
 
   // Publish the hitpoints of the selected viewpoint
   marker.ns = "hitpoints";
+  marker.header.frame_id = camera_frame_;
   marker.color.r = 0.0;
   marker.color.g = 1.0;
   marker.color.b = 1.0;
@@ -202,17 +207,19 @@ void PlanningNodelet::pub_lattice_markers()
 
 bool PlanningNodelet::get_tf()
 {
-  geometry_msgs::TransformStamped transform;
+  geometry_msgs::TransformStamped t1, t2;
 
   try {
-    transform = tf_buffer_.lookupTransform(wall_frame_, robot_frame_, ros::Time(0));
+    t1 = tf_buffer_.lookupTransform(wall_frame_, robot_frame_, ros::Time(0));
+    t2 = tf_buffer_.lookupTransform(ocean_frame_, robot_frame_, ros::Time(0));
   }
   catch (tf2::TransformException &ex) {
     NODELET_WARN("[planning_nodelet] %s", ex.what());
     return false;
   }
 
-  wall_robot_tf_ = transform;
+  wall_robot_tf_ = t1;
+  ocean_robot_tf_ = t2;
   return true;
 }
 

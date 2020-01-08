@@ -10,7 +10,10 @@
 #include "mf_sensors_simulator/MultiPoses.h"
 #include "mf_mapping/UpdateGP.h"
 #include <visualization_msgs/Marker.h>
+#include <nav_msgs/Path.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <tf2/LinearMath/Scalar.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <cmath>
 #include <vector>
@@ -131,6 +134,7 @@ bool PlanningNodelet::compute_lattice_gp(
 {
   // Compute the corresponding camera orientation for each viewpoint
   int size_lattice = lattice_.size();
+  std::vector<geometry_msgs::Pose> lattice(size_lattice);  // lattice of camera orientations
 
   for (int k = 0; k < size_lattice; k++) {
     tf2::Quaternion q_orig, q_rot, q_new;
@@ -139,7 +143,7 @@ bool PlanningNodelet::compute_lattice_gp(
 
     q_new = q_orig * q_rot;
     q_new.normalize();
-    tf2::convert(q_new, lattice_[k].orientation);
+    tf2::convert(q_new, lattice[k].orientation);
   }
 
   // Transform the orientation in camera frame
@@ -155,15 +159,15 @@ bool PlanningNodelet::compute_lattice_gp(
 
   for (int k = 0; k < size_lattice; k++) {
     geometry_msgs::Pose transf_pose;
-    tf2::doTransform(lattice_[k], transf_pose, camera_robot_tf);
+    tf2::doTransform(lattice[k], transf_pose, camera_robot_tf);
 
-    lattice_[k] = transf_pose;
+    lattice[k] = transf_pose;
   }
 
   // Get camera measurement for each viewpoint of the lattice
   mf_sensors_simulator::MultiPoses camera_srv;
   camera_srv.request.pose_array.header.frame_id = robot_frame_;
-  camera_srv.request.pose_array.poses = lattice_;
+  camera_srv.request.pose_array.poses = lattice;
   camera_srv.request.n_pxl_height = camera_height_;
   camera_srv.request.n_pxl_width = camera_width_;
 
@@ -208,6 +212,40 @@ bool PlanningNodelet::compute_lattice_gp(
     NODELET_WARN("[planning_nodelet] Failed to call update_gp service");
     return false;
   }
+}
+
+
+nav_msgs::Path PlanningNodelet::straight_line_path(const geometry_msgs::Pose &start,
+  const geometry_msgs::Pose &end, float resolution)
+{
+  // Convert input
+  tf2::Vector3 p1, p2;
+  tf2::convert(start.position, p1);
+  tf2::convert(end.position, p2);
+
+  tf2::Quaternion q1, q2;
+  tf2::convert(start.orientation, q1);
+  tf2::convert(end.orientation, q2);
+
+  // Prepare interpolation
+  nav_msgs::Path path;
+  float d = tf2::tf2Distance(p1, p2);
+  int n = d/resolution;
+
+  path.header.frame_id = ocean_frame_;
+  path.header.stamp = ros::Time::now();
+  path.poses.resize(n + 1);
+
+  // Interpolation
+  for (int k = 0; k <= n; k++) {
+    geometry_msgs::PoseStamped new_pose;
+    tf2::toMsg(   p1 + (p2-p1) * (float(k)/n),              new_pose.pose.position);
+    tf2::convert((q1 + (q2-q1) * (float(k)/n)).normalize(), new_pose.pose.orientation);
+
+    path.poses[k] = new_pose;
+  }
+
+  return path;
 }
 
 
@@ -258,6 +296,14 @@ bool PlanningNodelet::plan_trajectory()
   x_hit_pt_sel_ = camera_pts_x[selected_vp_];
   y_hit_pt_sel_ = camera_pts_y[selected_vp_];
   z_hit_pt_sel_ = camera_pts_z[selected_vp_];
+
+  // Generate a straight line trajectory (in ocean frame) to go to the selected point
+  geometry_msgs::Pose current_pose, selected_pose;
+  current_pose = tf_to_pose(ocean_robot_tf_);
+  tf2::doTransform(lattice_[selected_vp_], selected_pose, ocean_robot_tf_);
+
+  nav_msgs::Path path = straight_line_path(current_pose, selected_pose, plan_res_);
+  path_pub_.publish(path);
 
 }
 

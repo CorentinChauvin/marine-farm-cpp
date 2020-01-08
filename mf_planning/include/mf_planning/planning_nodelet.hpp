@@ -13,6 +13,7 @@
 #include "mf_robot_model/robot_model.hpp"
 #include "mf_mapping/Float32Array.h"
 #include "mf_mapping/Array2D.h"
+#include <nav_msgs/Path.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_ros/transform_listener.h>
@@ -50,14 +51,16 @@ class PlanningNodelet: public nodelet::Nodelet {
     ros::ServiceClient update_gp_client_;  ///<  Service client for updating the Gaussian Process
     ros::Publisher lattice_pub_;       ///<  Publisher for the waypoints lattice
     ros::Publisher lattice_pose_pub_;  ///<  Publisher for the waypoints lattice poses
+    ros::Publisher path_pub_;          ///<  Publisher for the path
     ros::Subscriber gp_mean_sub_;      ///<  Subscriber for the mean of the Gaussian Process
     ros::Subscriber gp_cov_sub_;       ///<  Subscriber for the covariance of the Gaussian Process
     tf2_ros::Buffer tf_buffer_;        ///<  Buffer for tf2
     tf2_ros::TransformListener tf_listener_;  ///<  Transform listener for tf2
 
     RobotModel robot_model_;  ///<  Robot model
-    geometry_msgs::TransformStamped wall_robot_tf_;  ///<  Transform from wall to robot frames
-    std::vector<geometry_msgs::Pose> lattice_;  ///<  Lattice of possible waypoints
+    geometry_msgs::TransformStamped wall_robot_tf_;   ///<  Transform from wall to robot frames
+    geometry_msgs::TransformStamped ocean_robot_tf_;  ///<  Transform from ocean to robot frames
+    std::vector<geometry_msgs::Pose> lattice_;  ///<  Lattice of possible waypoints in robot frame
     int selected_vp_;  ///<  Index of selected view point in the lattice
     std::vector<float> x_hit_pt_sel_;  ///<  X coordinates of the hit points for the selected viewpoint
     std::vector<float> y_hit_pt_sel_;  ///<  Y coordinates of the hit points for the selected viewpoint
@@ -68,6 +71,7 @@ class PlanningNodelet: public nodelet::Nodelet {
     /// \name  ROS parameters
     ///@{
     float main_freq_;           ///<  Frequency of the main loop
+    std::string ocean_frame_;   ///<  Ocean frame
     std::string wall_frame_;    ///<  Wall frame
     std::string robot_frame_;   ///<  Robot frame
     std::string camera_frame_;  ///<  Camera frame
@@ -80,6 +84,7 @@ class PlanningNodelet: public nodelet::Nodelet {
     bool vert_motion_;     ///<  Whether to allow motion in the vertical plane
     float plan_speed_;     ///<  Planned speed (m/s) of the robot
     float plan_horizon_;   ///<  Horizon (m) of the planning
+    float plan_res_;       ///<  Spatial resolution (m) of the planned trajectory
     float lattice_res_;    ///<  Resolution (m) of the waypoints lattice
     float min_wall_dist_;  ///<  Minimum distance to the wall that can be planned
     float gp_weight_;      ///<  Weight attributed to the Gaussian Process values in viewpoint selection
@@ -157,6 +162,17 @@ class PlanningNodelet: public nodelet::Nodelet {
     );
 
     /**
+     * \brief  Interpolates a straight line path between two poses
+     *
+     * \param p1          Start of the path
+     * \param p2          End of the path
+     * \param resolution  Spatial resolution of the path
+     * \return  Generated path
+     */
+    nav_msgs::Path straight_line_path(const geometry_msgs::Pose &start,
+      const geometry_msgs::Pose &end, float resolution);
+
+    /**
      * \brief  Main function to compute a trajectory plan
      */
     bool plan_trajectory();
@@ -183,8 +199,33 @@ class PlanningNodelet: public nodelet::Nodelet {
      */
     void gp_cov_cb(const mf_mapping::Array2DConstPtr msg);
 
+    /**
+     * \brief  Converts a tf transform to a pose, assuming the frames correspond
+     *
+     * \param transf  Transform to convert
+     * \retturn  Converted pose
+     */
+    inline geometry_msgs::Pose tf_to_pose(const geometry_msgs::TransformStamped &transf);
+
 
 };
+
+
+inline geometry_msgs::Pose PlanningNodelet::tf_to_pose(
+  const geometry_msgs::TransformStamped &transf
+)
+{
+  geometry_msgs::Pose pose;
+  pose.position.x = transf.transform.translation.x;
+  pose.position.y = transf.transform.translation.y;
+  pose.position.z = transf.transform.translation.z;
+  pose.orientation.x = transf.transform.rotation.x;
+  pose.orientation.y = transf.transform.rotation.y;
+  pose.orientation.z = transf.transform.rotation.z;
+  pose.orientation.w = transf.transform.rotation.w;
+
+  return pose;
+}
 
 
 

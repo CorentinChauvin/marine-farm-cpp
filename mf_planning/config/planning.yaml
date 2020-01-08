@@ -1,5 +1,6 @@
 planning_nodelet:
   main_freq: 3
+  ocean_frame: "ocean"
   wall_frame: "wall"
   robot_frame: "base_link"
   camera_frame: "camera"
@@ -16,6 +17,7 @@ planning_nodelet:
   vert_motion: true    # whether to allow motion in the vertical plane
   plan_speed: 3.0      # planned speed (m/s) of the robot
   plan_horizon: 1.5    # horizon (m) of the planning
+  plan_res: 0.1        # spatial resolution (m) of the planned trajectory
   lattice_res: 0.4     # resolution (m) of the waypoints lattice
   min_wall_dist: 0.2   # minimum distance to the wall that can be planned
   gp_weight: 100       # weight attributed to the Gaussian Process values in viewpoint selection
