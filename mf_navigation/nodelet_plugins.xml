@@ -1,5 +1,5 @@
 <library path="lib/libplanning_nodelet">
-    <class name="mf_planning/PlanningNodelet" type="mfcpp::PlanningNodelet" base_class_type="nodelet::Nodelet">
+    <class name="mf_navigation/PlanningNodelet" type="mfcpp::PlanningNodelet" base_class_type="nodelet::Nodelet">
         <description>
             Nodelet for trajectory planning
         </description>

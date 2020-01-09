@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(mf_planning)
+project(mf_navigation)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -39,7 +39,7 @@ catkin_package(
 ###########
 
 include_directories(
-  include/mf_planning
+  include/mf_navigation
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -48,8 +48,8 @@ include_directories(${Eigen_INCLUDE_DIRS})
 
 # Planning nodelet
 add_library(planning_nodelet
-  src/mf_planning/planning_nodelet.cpp
-  src/mf_planning/planning.cpp
+  src/mf_navigation/planning_nodelet.cpp
+  src/mf_navigation/planning.cpp
 )
 add_dependencies(planning_nodelet
   ${catkin_EXPORTED_TARGETS}

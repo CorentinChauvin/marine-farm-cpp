@@ -9,7 +9,7 @@
   <rosparam file="$(find mf_robot_simulator)/config/robot_simulator.yaml" command="load" ns="simu" />
   <rosparam file="$(find mf_sensors_simulator)/config/sensors_simulator.yaml" command="load" ns="simu" />
   <rosparam file="$(find mf_mapping)/config/mapping.yaml" command="load" ns="nav" />
-  <rosparam file="$(find mf_planning)/config/planning.yaml" command="load" ns="nav" />
+  <rosparam file="$(find mf_navigation)/config/planning.yaml" command="load" ns="nav" />
   <rosparam file="$(find mf_experiments)/config/one_wall.yaml" command="load" />
 
   <!-- Static transforms -->
@@ -42,7 +42,7 @@
       <remap from="camera_out" to="/simu/camera_out" />
     </node>
 
-    <node pkg="nodelet" type="nodelet" args="load mf_planning/PlanningNodelet nav_nodelet_manager"
+    <node pkg="nodelet" type="nodelet" args="load mf_navigation/PlanningNodelet nav_nodelet_manager"
       name="planning_nodelet" output="screen">
       <remap from="raycast_multi" to="/simu/raycast_multi" />
     </node>
