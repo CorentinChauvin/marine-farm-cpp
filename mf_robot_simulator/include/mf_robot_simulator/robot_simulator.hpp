@@ -12,6 +12,7 @@
 #include "mf_robot_model/robot_model.hpp"
 #include "mf_robot_simulator/Command.h"
 #include "mf_robot_simulator/CartesianCommand.h"
+#include <geometry_msgs/Pose.h>
 #include <ros/ros.h>
 #include <vector>
 
@@ -44,8 +45,9 @@ class RobotSimulator {
   private:
     // Private members
     ros::NodeHandle nh_;         ///<  ROS node handler
-    ros::Subscriber input_sub_;  ///< ROS subscriber for the control input
+    ros::Subscriber control_input_sub_;  ///< ROS subscriber for the control input
     ros::Subscriber cart_input_sub_;  ///< ROS subscriber for the debug cartesian control input
+    ros::Subscriber pose_input_sub_;  ///< ROS subscriber for setting the pose
     ros::Publisher odom_pub_;    ///<  ROS publisher for the odometry output
     ros::Publisher rviz_pub_;    ///<  ROS publisher for rviz markers
     tf2_ros::TransformBroadcaster tf_br_;  ///<  Tf broadcaster
@@ -69,13 +71,24 @@ class RobotSimulator {
 
     /**
      * \brief  Callback for the control input
+     *
+     * \param  Control input
      */
-    void input_cb(const mf_robot_simulator::Command::ConstPtr &msg);
+    void control_input_cb(const mf_robot_simulator::Command::ConstPtr &msg);
 
     /**
      * \brief  Callback for the debug cartesian control input
+     *
+     * \param  Cartesian speed input
      */
     void cart_input_cb(const mf_robot_simulator::CartesianCommand::ConstPtr &msg);
+
+    /**
+     * \brief  Callback for setting the pose
+     *
+     * \param msg  Pose in fixed frame
+     */
+    void pose_input_cb(const geometry_msgs::Pose::ConstPtr &msg);
 
     /**
      * \brief  Updates the robot state by integrating the ODE

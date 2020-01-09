@@ -5,3 +5,11 @@
         </description>
     </class>
 </library>
+
+<library path="lib/libcart_control_nodelet">
+    <class name="mf_navigation/CartControlNodelet" type="mfcpp::CartControlNodelet" base_class_type="nodelet::Nodelet">
+        <description>
+            Nodelet for trajectory cheated cartesian control
+        </description>
+    </class>
+</library>

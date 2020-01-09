@@ -21,7 +21,6 @@
 #include <vector>
 #include <iostream>
 
-
 using namespace std;
 
 PLUGINLIB_EXPORT_CLASS(mfcpp::PlanningNodelet, nodelet::Nodelet)

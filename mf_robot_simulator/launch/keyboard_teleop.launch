@@ -1,7 +1,7 @@
 <launch>
   <node name="keyboard_teleop" type="keyboard_teleop.py" pkg="mf_robot_simulator"
     output="screen">
-    <remap from="command" to="/simu/robot_simulator/input" />
+    <remap from="command" to="/simu/robot_simulator/control_input" />
     <remap from="cart_command" to="/simu/robot_simulator/cart_input" />
 
     <param name="init_speed" value="500.0" />

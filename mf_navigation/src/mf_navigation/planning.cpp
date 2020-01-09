@@ -283,7 +283,7 @@ bool PlanningNodelet::plan_trajectory()
   // Compute information gain and select best viewpoint
   vector<float> info_gain(size_lattice, 0.0);
 
-  for (int k = 0; k < size_lattice; k++) {
+  for (int k = 1; k < size_lattice; k++) {
     for (int l = 0; l < size_gp; l++) {
       float cov_diff = last_gp_cov_[l][l] - cov_diag[k][l];
       float weight = 100 * (1/(1 + exp(-gp_weight_*(last_gp_mean_[l] - 0.5))));

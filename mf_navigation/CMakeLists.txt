@@ -57,3 +57,14 @@ add_dependencies(planning_nodelet
   mf_mapping_generate_messages_cpp
 )
 target_link_libraries(planning_nodelet ${catkin_LIBRARIES})
+
+# Cheated cartesian control
+add_library(cart_control_nodelet
+  src/mf_navigation/cart_control_nodelet.cpp
+)
+add_dependencies(cart_control_nodelet
+  ${catkin_EXPORTED_TARGETS}
+  # mf_sensors_simulator_generate_messages_cpp
+  # mf_mapping_generate_messages_cpp
+)
+target_link_libraries(cart_control_nodelet ${catkin_LIBRARIES})

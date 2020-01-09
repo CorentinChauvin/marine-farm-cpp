@@ -6,9 +6,11 @@ Panels:
       Expanded:
         - /TF1/Frames1
         - /Farm1/Namespaces1
+        - /Odometry1
+        - /Odometry1/Shape1
         - /CameraFOV1/Namespaces1
       Splitter Ratio: 0.5
-    Tree Height: 437
+    Tree Height: 868
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -133,23 +135,23 @@ Visualization Manager:
           Scale: 1
           Value: true
         Value: true
-      Enabled: false
-      Keep: 100
+      Enabled: true
+      Keep: 1000
       Name: Odometry
-      Position Tolerance: 0.100000001
+      Position Tolerance: 0.0500000007
       Shape:
         Alpha: 1
         Axes Length: 1
         Axes Radius: 0.100000001
         Color: 255; 25; 0
-        Head Length: 0.300000012
-        Head Radius: 0.100000001
-        Shaft Length: 1
-        Shaft Radius: 0.0500000007
+        Head Length: 0.0500000007
+        Head Radius: 0.0500000007
+        Shaft Length: 0.150000006
+        Shaft Radius: 0.0199999996
         Value: Arrow
       Topic: /simu/robot_simulator/odom_output
       Unreliable: false
-      Value: false
+      Value: true
     - Class: rviz/Marker
       Enabled: false
       Marker Topic: /simu/camera_markers
@@ -223,25 +225,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 5.40789223
+      Distance: 3.59656835
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.583622217
-        Y: 0.179534912
-        Z: 1.35043783e-05
+        X: -0.613778293
+        Y: -2.21808934
+        Z: 1.3385169e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.0947975889
+      Pitch: 0.0397975631
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 4.10356569
+      Yaw: 4.67857695
     Saved: ~
 Window Geometry:
   Displays:

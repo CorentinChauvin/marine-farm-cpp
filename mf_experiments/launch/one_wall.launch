@@ -9,7 +9,7 @@
   <rosparam file="$(find mf_robot_simulator)/config/robot_simulator.yaml" command="load" ns="simu" />
   <rosparam file="$(find mf_sensors_simulator)/config/sensors_simulator.yaml" command="load" ns="simu" />
   <rosparam file="$(find mf_mapping)/config/mapping.yaml" command="load" ns="nav" />
-  <rosparam file="$(find mf_navigation)/config/planning.yaml" command="load" ns="nav" />
+  <rosparam file="$(find mf_navigation)/config/navigation.yaml" command="load" ns="nav" />
   <rosparam file="$(find mf_experiments)/config/one_wall.yaml" command="load" />
 
   <!-- Static transforms -->
@@ -21,14 +21,17 @@
   <group ns="simu">
     <node pkg="nodelet" type="nodelet" args="manager" name="simu_nodelet_manager" output="screen" />
 
+    <!-- Farm simulator -->
     <node pkg="nodelet" type="nodelet" args="load mf_farm_simulator/FarmNodelet simu_nodelet_manager"
       name="farm_nodelet" output="screen" />
 
+    <!-- Sensors simulator -->
     <node pkg="nodelet" type="nodelet" args="load mf_sensors_simulator/CameraNodelet simu_nodelet_manager"
       name="camera_nodelet" output="screen">
       <remap from="camera_nodelet/algae" to="farm_nodelet/algae" />
     </node>
 
+    <!-- Robot simulator -->
     <node name="robot_simulator" type="robot_simulator" pkg="mf_robot_simulator"
       output="screen" />
   </group>
@@ -37,14 +40,22 @@
   <group ns="nav">
     <node pkg="nodelet" type="nodelet" args="manager" name="nav_nodelet_manager" output="screen" />
 
+    <!-- Mapping -->
     <node pkg="nodelet" type="nodelet" args="load mf_mapping/GPNodelet nav_nodelet_manager"
       name="gp_nodelet" output="screen">
       <remap from="camera_out" to="/simu/camera_out" />
     </node>
 
+    <!-- Planning -->
     <node pkg="nodelet" type="nodelet" args="load mf_navigation/PlanningNodelet nav_nodelet_manager"
       name="planning_nodelet" output="screen">
       <remap from="raycast_multi" to="/simu/raycast_multi" />
+    </node>
+
+    <!-- Control -->
+    <node pkg="nodelet" type="nodelet" args="load mf_navigation/CartControlNodelet nav_nodelet_manager"
+      name="cart_control_nodelet" output="screen">
+      <remap from="pose_output" to="/simu/robot_simulator/pose_input" />
     </node>
   </group>
 

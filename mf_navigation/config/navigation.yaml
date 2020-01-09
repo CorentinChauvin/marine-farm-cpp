@@ -1,5 +1,5 @@
 planning_nodelet:
-  main_freq: 3
+  main_freq: 1.0
   ocean_frame: "ocean"
   wall_frame: "wall"
   robot_frame: "base_link"
@@ -25,6 +25,6 @@ planning_nodelet:
   camera_height: 5  # number of pixels of the camera along height (-1 for actual camera size)
   camera_width: 10  # number of pixels of the camera along width  (-1 for actual camera size)
 
-
-
-  vp: 21
+cart_control_nodelet:
+  main_freq: 10
+  speed: 0.2  # desired robot speed

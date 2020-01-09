@@ -13,7 +13,9 @@
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TransformStamped.h>
-#include <tf/transform_datatypes.h>
+#include <geometry_msgs/Pose.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <ros/ros.h>
 #include <string>
@@ -58,10 +60,11 @@ void RobotSimulator::init_node()
   rviz_pub_ = nh_.advertise<visualization_msgs::Marker>("rviz_markers", 1);
 
   // ROS subscribers
-  input_sub_ = nh_.subscribe<mf_robot_simulator::Command>("input", 1, &RobotSimulator::input_cb, this);
+  control_input_sub_ = nh_.subscribe<mf_robot_simulator::Command>("control_input", 1, &RobotSimulator::control_input_cb, this);
   cart_input_sub_ = nh_.subscribe<mf_robot_simulator::CartesianCommand>(
     "cart_input", 1, &RobotSimulator::cart_input_cb, this
   );
+  pose_input_sub_ = nh_.subscribe<geometry_msgs::Pose>("pose_input", 1, &RobotSimulator::pose_input_cb, this);
 
   // Simulator initialisation
   input_ = {0, 0, 0, 0};
@@ -102,7 +105,7 @@ void RobotSimulator::disp_state()
 }
 
 
-void RobotSimulator::input_cb(const mf_robot_simulator::Command::ConstPtr &msg)
+void RobotSimulator::control_input_cb(const mf_robot_simulator::Command::ConstPtr &msg)
 {
   input_[0] = msg->n;
   input_[1] = msg->delta_r;
@@ -121,6 +124,18 @@ void RobotSimulator::cart_input_cb(const mf_robot_simulator::CartesianCommand::C
   cart_input_[0] = msg->v_x;
   cart_input_[1] = msg->v_y;
   cart_input_[2] = msg->v_z;
+}
+
+
+void RobotSimulator::pose_input_cb(const geometry_msgs::Pose::ConstPtr &msg)
+{
+  state_[0] = msg->position.x;
+  state_[1] = msg->position.y;
+  state_[2] = msg->position.z;
+
+  tf2::Quaternion quat(msg->orientation.x, msg->orientation.y, msg->orientation.z,
+    msg->orientation.w);
+  tf2::Matrix3x3(quat).getRPY(state_[3], state_[4], state_[5]);
 }
 
 
@@ -153,9 +168,9 @@ void RobotSimulator::publish_state()
   odom.pose.pose.position.y = state_[1];
   odom.pose.pose.position.z = state_[2];
 
-  tf::Quaternion quat;
+  tf2::Quaternion quat;
 	quat.setRPY(state_[3], state_[4], state_[5]);
-	tf::quaternionTFToMsg(quat, odom.pose.pose.orientation);
+  tf2::convert(quat, odom.pose.pose.orientation);
 
   odom.twist.twist.linear.x = state_[6];
   odom.twist.twist.linear.y = state_[7];
