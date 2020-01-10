@@ -9,7 +9,15 @@
 <library path="lib/libcart_control_nodelet">
     <class name="mf_navigation/CartControlNodelet" type="mfcpp::CartControlNodelet" base_class_type="nodelet::Nodelet">
         <description>
-            Nodelet for trajectory cheated cartesian control
+            Nodelet for cheated cartesian control
+        </description>
+    </class>
+</library>
+
+<library path="lib/libmpc_nodelet">
+    <class name="mf_navigation/MPCNodelet" type="mfcpp::MPCNodelet" base_class_type="nodelet::Nodelet">
+        <description>
+            Nodelet for Model Predictive Control
         </description>
     </class>
 </library>

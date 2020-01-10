@@ -5,14 +5,6 @@ planning_nodelet:
   robot_frame: "base_link"
   camera_frame: "camera"
 
-  # Model parameters
-  nbr_int_steps: 10  # initial number of integration steps
-  model_constants: [0, 17.68e-3, -6.0e-1, 29.74e-8, -0.4, -4.1, -0.19, 0.22,
-                    -1.51, -1.3, 0.21, -0.4, 2.0]
-  max_lat_rudder: 15   # maximum angle of the lateral rudder
-  max_elev_rudder: 10  # maximum angle of the elevation rudder
-
-  # Planning parameters
   horiz_motion: false  # whether to allow motion in the horizontal plane
   vert_motion: true    # whether to allow motion in the vertical plane
   plan_speed: 3.0      # planned speed (m/s) of the robot
@@ -25,6 +17,11 @@ planning_nodelet:
   camera_height: 5  # number of pixels of the camera along height (-1 for actual camera size)
   camera_width: 10  # number of pixels of the camera along width  (-1 for actual camera size)
 
+
 cart_control_nodelet:
   main_freq: 10
   speed: 0.2  # desired robot speed
+
+
+mpc_nodelet:
+  main_freq: 10

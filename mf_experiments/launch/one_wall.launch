@@ -1,8 +1,10 @@
 <launch>
   <!-- Launchfile arguments -->
-  <arg name="rviz" value="true" />
+  <arg name="rviz" value="false" />
   <arg name="display_img_gp" value="false" />
   <arg name="display_cov_gp" value="false" />
+  <arg name="cart_control" value="false" />
+  <arg name="mpc_control" value="true" />
 
   <!-- ROS parameters -->
   <rosparam file="$(find mf_farm_simulator)/config/farm_simulator.yaml" command="load" ns="simu" />
@@ -49,13 +51,21 @@
     <!-- Planning -->
     <node pkg="nodelet" type="nodelet" args="load mf_navigation/PlanningNodelet nav_nodelet_manager"
       name="planning_nodelet" output="screen">
+      <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
+      <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />
+
       <remap from="raycast_multi" to="/simu/raycast_multi" />
     </node>
 
     <!-- Control -->
     <node pkg="nodelet" type="nodelet" args="load mf_navigation/CartControlNodelet nav_nodelet_manager"
-      name="cart_control_nodelet" output="screen">
+      name="cart_control_nodelet" output="screen" if="$(arg cart_control)" >
       <remap from="pose_output" to="/simu/robot_simulator/pose_input" />
+    </node>
+
+    <node pkg="nodelet" type="nodelet" args="load mf_navigation/MPCNodelet nav_nodelet_manager"
+      name="mpc_nodelet" output="screen" if="$(arg mpc_control)">
+      <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
     </node>
   </group>
 

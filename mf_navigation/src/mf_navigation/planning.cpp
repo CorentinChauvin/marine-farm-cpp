@@ -15,6 +15,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <tf2/LinearMath/Scalar.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <eigen3/Eigen/Dense>
 #include <cmath>
 #include <vector>
 #include <iostream>

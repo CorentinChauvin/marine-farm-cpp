@@ -74,9 +74,49 @@ class RobotModel
       double t2, double init_step);
 
     /**
+     * \brief  Gets the matrices of the linearised system
+     *
+     * If the system is linearised around \f$ (x_0, u_0) \f$, the system can be
+     * expressed for new variables \f$ (\Delta x, \Delta u) = (x-x_0, u-u_0) \f$.
+     * The ODE then becomes: \f$ \dot{\Delta x} = A \Delta x + B \Delta u \f$.
+     *
+     * \param[in]  x_0  Nominal state
+     * \param[in]  u_0  Nominal input
+     * \param[out] A    A matrix
+     * \param[out] B    B matrix
+     */
+    void get_linear_matrices(const state_type &x_0, const input_type &u_0,
+      Eigen::MatrixXd &A, Eigen::MatrixXd &B);
+
+      /**
+       * \brief  Gets the matrices of the discretised linearised system
+       *
+       * The system \f$ \dot{\Delta x} = A \Delta x + B \Delta u \f$ is discretised
+       * by \f$ A_d = e^{dt.A} \f$ and \f$ B_d = (\int_{0}^{dt} e^{s.A} ds) B \f$.
+       * The integral is approximated by a Riemann sum.
+       *
+       * \param[in]  x_0  Nominal state
+       * \param[in]  u_0  Nominal input
+       * \param[in]  dt   Discretisation interval
+       * \param[out] Ad   Discretised A matrix
+       * \param[out] Bd   Discretised B matrix
+       * \param[in]  N    Number of terms in the Riemann sum
+       */
+    void get_lin_discr_matrices(const state_type &x_0, const input_type &u_0,
+      float dt, Eigen::MatrixXd &Ad, Eigen::MatrixXd &Bd, int N=10);
+
+    /**
+     * \brief  Computes the propeller speed in steady state
+     *
+     * \note  This assumes that delta_m = 0
+     * \param speed  Desired steady state speed
+     */
+    double inline steady_propeller_speed(double speed);
+
+    /**
      * \brief  Computes the horizontal speed in steady state
      *
-     * \note  This assumes the propeller speed is constant and the robot is
+     * \note  This assumes that the propeller speed is constant and the robot is
      *        horizontal
      * \param n  Rotational speed of the propeller
      */
@@ -145,7 +185,21 @@ class RobotModel
      */
     Eigen::Matrix3d jac_orient(double phi, double theta, double psi);
 
+    /**
+     * \brief  Returns the sign of a real number
+     *
+     * \return 1 if x>=0, -1 otherwise
+     */
+    inline double sign(double x);
+
 };
+
+
+double inline RobotModel::steady_propeller_speed(double speed)
+{
+  double a = 1/c_[3] * (-c_[1]*speed - c_[2]*speed*speed);
+  return sign(speed) * sqrt(abs(a));
+}
 
 
 inline double RobotModel::steady_speed(double propeller_speed)
@@ -173,6 +227,14 @@ double inline RobotModel::elev_turn_radius(double u, double delta_e)
 
   return sqrt(R_squared);
 }
+
+
+inline double RobotModel::sign(double x)
+{
+  return (double) (x >= 0);
+}
+
+
 
 
 }  // namespace mfcpp
