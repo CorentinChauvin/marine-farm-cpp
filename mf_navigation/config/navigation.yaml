@@ -7,7 +7,7 @@ planning_nodelet:
 
   horiz_motion: false  # whether to allow motion in the horizontal plane
   vert_motion: true    # whether to allow motion in the vertical plane
-  plan_speed: 3.0      # planned speed (m/s) of the robot
+  plan_speed: 1.5      # planned speed (m/s) of the robot
   plan_horizon: 1.5    # horizon (m) of the planning
   plan_res: 0.1        # spatial resolution (m) of the planned trajectory
   lattice_res: 0.4     # resolution (m) of the waypoints lattice
@@ -25,3 +25,7 @@ cart_control_nodelet:
 
 mpc_nodelet:
   main_freq: 10
+
+  nominal_speed: 1.5  # nominal speed (m/s) of the robot
+  time_horizon: 2.0   # time horizon (s) for the MPC prediction
+  nbr_steps: 10       # number of steps for the MPC prediction (fixed in CVXGEN)

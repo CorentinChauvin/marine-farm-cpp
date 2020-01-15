@@ -54,7 +54,7 @@ void RobotModel::integrate(state_type &state, const input_type &input, double t1
 }
 
 
-void RobotModel::get_linear_matrices(const state_type &x_0, const input_type &u_0,
+void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0,
   Eigen::MatrixXd &A, Eigen::MatrixXd &B)
 {
   const state_type &x = x_0;  // for convenience
@@ -132,10 +132,10 @@ void RobotModel::get_linear_matrices(const state_type &x_0, const input_type &u_
 
 
 void RobotModel::get_lin_discr_matrices(const state_type &x_0, const input_type &u_0,
-  float dt, Eigen::MatrixXd &Ad, Eigen::MatrixXd &Bd, int N)
+  Eigen::MatrixXd &Ad, Eigen::MatrixXd &Bd, float dt, int N)
 {
   Eigen::MatrixXd A, B;
-  get_linear_matrices(x_0, u_0, A, B);
+  get_lin_matrices(x_0, u_0, A, B);
 
   Ad = (dt*A).exp();
 

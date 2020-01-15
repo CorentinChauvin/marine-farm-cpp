@@ -85,7 +85,7 @@ class RobotModel
      * \param[out] A    A matrix
      * \param[out] B    B matrix
      */
-    void get_linear_matrices(const state_type &x_0, const input_type &u_0,
+    void get_lin_matrices(const state_type &x_0, const input_type &u_0,
       Eigen::MatrixXd &A, Eigen::MatrixXd &B);
 
       /**
@@ -97,13 +97,13 @@ class RobotModel
        *
        * \param[in]  x_0  Nominal state
        * \param[in]  u_0  Nominal input
-       * \param[in]  dt   Discretisation interval
        * \param[out] Ad   Discretised A matrix
        * \param[out] Bd   Discretised B matrix
+       * \param[in]  dt   Discretisation interval
        * \param[in]  N    Number of terms in the Riemann sum
        */
     void get_lin_discr_matrices(const state_type &x_0, const input_type &u_0,
-      float dt, Eigen::MatrixXd &Ad, Eigen::MatrixXd &Bd, int N=10);
+      Eigen::MatrixXd &Ad, Eigen::MatrixXd &Bd, float dt, int N=10);
 
     /**
      * \brief  Computes the propeller speed in steady state

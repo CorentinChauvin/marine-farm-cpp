@@ -17,6 +17,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -Wall")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   mf_robot_model
+  mf_common
   std_msgs
   message_generation
   tf
@@ -54,5 +55,6 @@ add_executable(robot_simulator
 add_dependencies(robot_simulator
   ${catkin_EXPORTED_TARGETS}
   ${PROJECT_NAME}_generate_messages_cpp
+  mf_common_generate_messages_cpp
 )
 target_link_libraries(robot_simulator ${catkin_LIBRARIES})

@@ -26,6 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
   mf_robot_model
   mf_sensors_simulator
   mf_mapping
+  mf_common
 )
 
 catkin_package(
@@ -41,6 +42,7 @@ catkin_package(
 include_directories(
   include/mf_navigation
   ${catkin_INCLUDE_DIRS}
+  ${mf_robot_model_INCLUDE_DIRS}
 )
 
 find_package(Eigen3 REQUIRED)
@@ -70,8 +72,10 @@ target_link_libraries(cart_control_nodelet ${catkin_LIBRARIES})
 # MPC nodelet
 add_library(mpc_nodelet
   src/mf_navigation/mpc_nodelet.cpp
+  src/mf_navigation/mpc.cpp
 )
 add_dependencies(mpc_nodelet
   ${catkin_EXPORTED_TARGETS}
+  mf_common_generate_messages_cpp
 )
 target_link_libraries(mpc_nodelet ${catkin_LIBRARIES})

@@ -149,7 +149,7 @@ Visualization Manager:
         Shaft Length: 0.150000006
         Shaft Radius: 0.0199999996
         Value: Arrow
-      Topic: /simu/robot_simulator/odom_output
+      Topic: /simu/robot_simulator/odom
       Unreliable: false
       Value: true
     - Class: rviz/Marker

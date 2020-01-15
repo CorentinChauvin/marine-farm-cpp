@@ -10,6 +10,7 @@
 #include "mf_robot_model/robot_model.hpp"
 #include "mf_robot_simulator/Command.h"
 #include "mf_robot_simulator/CartesianCommand.h"
+#include "mf_common/Float32Array.h"
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -56,7 +57,8 @@ void RobotSimulator::init_node()
   nh_.param<vector<double>>("bnd_input", bnd_input_, vector<double>(4, 0.0));
 
   // ROS publishers
-  odom_pub_ = nh_.advertise<nav_msgs::Odometry>("odom_output", 1);
+  odom_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
+  state_pub_ = nh_.advertise<mf_common::Float32Array>("state", 1);
   rviz_pub_ = nh_.advertise<visualization_msgs::Marker>("rviz_markers", 1);
 
   // ROS subscribers
@@ -159,6 +161,12 @@ void RobotSimulator::update_state(float dt)
 
 void RobotSimulator::publish_state()
 {
+  // Publish state
+  mf_common::Float32Array state_msg;
+  vector<float> float_state(state_.begin(), state_.end());
+  state_msg.array = float_state;
+  state_pub_.publish(state_msg);
+
   // Publish odometry
   nav_msgs::Odometry odom;
   odom.header.stamp = ros::Time::now();

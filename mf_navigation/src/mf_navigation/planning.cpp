@@ -174,6 +174,7 @@ bool PlanningNodelet::compute_lattice_gp(
 
   if (ray_multi_client_.call(camera_srv)) {
     if (!camera_srv.response.is_success) {
+      NODELET_WARN("[planning_nodelet] Call to raycast_multi service resulted didn't give output ");
       return false;
     }
   } else {
@@ -213,6 +214,8 @@ bool PlanningNodelet::compute_lattice_gp(
     NODELET_WARN("[planning_nodelet] Failed to call update_gp service");
     return false;
   }
+
+  return true;
 }
 
 

@@ -49,6 +49,7 @@ class RobotSimulator {
     ros::Subscriber cart_input_sub_;  ///< ROS subscriber for the debug cartesian control input
     ros::Subscriber pose_input_sub_;  ///< ROS subscriber for setting the pose
     ros::Publisher odom_pub_;    ///<  ROS publisher for the odometry output
+    ros::Publisher state_pub_;   ///<  ROS publisher for the current state
     ros::Publisher rviz_pub_;    ///<  ROS publisher for rviz markers
     tf2_ros::TransformBroadcaster tf_br_;  ///<  Tf broadcaster
 

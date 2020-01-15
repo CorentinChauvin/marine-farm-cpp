@@ -66,6 +66,8 @@
     <node pkg="nodelet" type="nodelet" args="load mf_navigation/MPCNodelet nav_nodelet_manager"
       name="mpc_nodelet" output="screen" if="$(arg mpc_control)">
       <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
+
+      <remap from="state" to="/simu/robot_simulator/state" />
     </node>
   </group>
 
