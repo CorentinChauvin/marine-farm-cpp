@@ -40,6 +40,8 @@
 
   <!-- Navigation planner -->
   <group ns="nav">
+    <!-- launch-prefix="gdb -ex run - -args" -->
+    <!-- launch-prefix="valgrind - -tool=memcheck - -leak-check=yes - -track-origins=yes - -log-file=/tmp/TEST4.log"  -->
     <node pkg="nodelet" type="nodelet" args="manager" name="nav_nodelet_manager" output="screen" />
 
     <!-- Mapping -->
@@ -66,6 +68,8 @@
     <node pkg="nodelet" type="nodelet" args="load mf_navigation/MPCNodelet nav_nodelet_manager"
       name="mpc_nodelet" output="screen" if="$(arg mpc_control)">
       <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
+      <remap from="~bnd_delta_m" to="/simu/robot_simulator/bnd_delta_m" />
+      <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />
 
       <remap from="state" to="/simu/robot_simulator/state" />
     </node>

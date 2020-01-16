@@ -11,8 +11,11 @@
 
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Point.h>
+#include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <eigen3/Eigen/Dense>
 
 
 namespace mfcpp {
@@ -85,6 +88,99 @@ inline geometry_msgs::Pose interpolate(
   tf2::convert((q1 + (q2-q1) * t).normalize(), new_pose.orientation);
 
   return new_pose;
+}
+
+/**
+ * \brief  Converts a quaternion to Roll-Pitch-Yaw Euler angles
+ *
+ * \param[in]  quat   Quaternion to convert
+ * \param[out] roll   Resulting roll angle
+ * \param[out] pitch  Resulting pitch angle
+ * \param[out] yaw    Resulting yaw angle
+ */
+inline void to_euler(const tf2::Quaternion &quat, double &roll, double &pitch, double &yaw)
+{
+  tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+}
+
+/**
+ * \brief  Converts a quaternion to Roll-Pitch-Yaw Euler angles
+ *
+ * \param[in]  quat   Quaternion to convert
+ * \param[out] roll   Resulting roll angle
+ * \param[out] pitch  Resulting pitch angle
+ * \param[out] yaw    Resulting yaw angle
+ */
+inline void to_euler(const geometry_msgs::Quaternion &quat, double &roll, double &pitch, double &yaw)
+{
+  tf2::Quaternion _quat(quat.x, quat.y, quat.z, quat.w);
+  to_euler(_quat, roll, pitch, yaw);
+}
+
+/**
+ * \brief  Converts Roll-Pitch-Yaw Euler angles to a quaternion
+ *
+ * \param[in]  roll   Roll angle to convert
+ * \param[in]  pitch  Pitch angle to convert
+ * \param[in]  yaw    Yaw angle to convert
+ * \param[out] quat   Resulting quaternion
+ */
+inline void to_quaternion(double roll, double pitch, double yaw, tf2::Quaternion &quat)
+{
+  quat.setRPY(roll, pitch, yaw);
+}
+
+/**
+ * \brief  Converts Roll-Pitch-Yaw Euler angles to a quaternion
+ *
+ * \param[in]  roll   Roll angle to convert
+ * \param[in]  pitch  Pitch angle to convert
+ * \param[in]  yaw    Yaw angle to convert
+ * \param[out] quat   Resulting quaternion
+ */
+inline void to_quaternion(double roll, double pitch, double yaw, geometry_msgs::Quaternion &quat)
+{
+  tf2::Quaternion _quat;
+  _quat.setRPY(roll, pitch, yaw);
+  tf2::convert(_quat, quat);
+}
+
+/**
+ * \brief  Fills a Eigen DiagonalMatrix from a std::Vector
+ *
+ * \param[in]  v  Vector containing the diagonal terms of the matrix
+ * \param[out] D  Diagonal matrix to fill
+ */
+template <class T>
+inline void fill_diag_mat(
+  const std::vector<T> &v,
+  Eigen::DiagonalMatrix<T, Eigen::Dynamic> &D)
+{
+  Eigen::Matrix<T, Eigen::Dynamic, 1> vec(v.size());
+
+  for (int k = 0; k < v.size(); k++)
+    vec(k) = v[k];
+
+  D = vec.asDiagonal();
+}
+
+/**
+ * \brief  Fills a Eigen matrix from a std::Vector
+ *
+ * \param[in]  v  Vector containing the diagonal terms of the matrix
+ * \param[out] D  Square diagonal matrix to fill
+ */
+template <class T, class MatrixT>
+inline void fill_diag_mat(
+  const std::vector<T> &v,
+  MatrixT &D)
+{
+  int n = v.size();
+  D = MatrixT::Zero(n, n);
+
+  for (int k = 0; k < n; k++) {
+    D(k, k) = v[k];
+  }
 }
 
 

@@ -80,13 +80,16 @@ class RobotModel
      * expressed for new variables \f$ (\Delta x, \Delta u) = (x-x_0, u-u_0) \f$.
      * The ODE then becomes: \f$ \dot{\Delta x} = A \Delta x + B \Delta u \f$.
      *
+     * `MatrixT` can either be `Eigen::MatrixXd` or `Eigen::MatrixXf`
+     *
      * \param[in]  x_0  Nominal state
      * \param[in]  u_0  Nominal input
      * \param[out] A    A matrix
      * \param[out] B    B matrix
      */
+    template <class MatrixT>
     void get_lin_matrices(const state_type &x_0, const input_type &u_0,
-      Eigen::MatrixXd &A, Eigen::MatrixXd &B);
+      MatrixT &A, MatrixT &B) const;
 
       /**
        * \brief  Gets the matrices of the discretised linearised system
@@ -95,6 +98,8 @@ class RobotModel
        * by \f$ A_d = e^{dt.A} \f$ and \f$ B_d = (\int_{0}^{dt} e^{s.A} ds) B \f$.
        * The integral is approximated by a Riemann sum.
        *
+       * `MatrixT` can either be `Eigen::MatrixXd` or `Eigen::MatrixXf`
+       *
        * \param[in]  x_0  Nominal state
        * \param[in]  u_0  Nominal input
        * \param[out] Ad   Discretised A matrix
@@ -102,8 +107,19 @@ class RobotModel
        * \param[in]  dt   Discretisation interval
        * \param[in]  N    Number of terms in the Riemann sum
        */
+    template <class MatrixT>
     void get_lin_discr_matrices(const state_type &x_0, const input_type &u_0,
-      Eigen::MatrixXd &Ad, Eigen::MatrixXd &Bd, float dt, int N=10);
+      MatrixT &Ad, MatrixT &Bd, float dt, int N=10) const;
+
+    /**
+     * \brief  Overloads get_lin_discr_matrices for Eigen vectors
+     *
+     * `VectorT` can either be `Eigen::VectorXd` or `Eigen::VectorXf`
+     * `MatrixT` can either be `Eigen::MatrixXd` or `Eigen::MatrixXf`
+     */
+    template <class VectorT, class MatrixT>
+    void get_lin_discr_matrices(const VectorT &x_0, const VectorT &u_0,
+        MatrixT &Ad, MatrixT &Bd, float dt, int N=10) const;
 
     /**
      * \brief  Computes the propeller speed in steady state
@@ -111,7 +127,7 @@ class RobotModel
      * \note  This assumes that delta_m = 0
      * \param speed  Desired steady state speed
      */
-    double inline steady_propeller_speed(double speed);
+    double inline steady_propeller_speed(double speed) const;
 
     /**
      * \brief  Computes the horizontal speed in steady state
@@ -120,7 +136,7 @@ class RobotModel
      *        horizontal
      * \param n  Rotational speed of the propeller
      */
-    double inline steady_speed(double n);
+    double inline steady_speed(double n) const;
 
     /**
      * \brief  Computes the lateral turning radius
@@ -128,7 +144,7 @@ class RobotModel
      * \param u        Speed of the robot
      * \param delta_r  Angle of the lateral rudder
      */
-    double inline lat_turn_radius(double u, double delta_r);
+    double inline lat_turn_radius(double u, double delta_r) const;
 
     /**
      * \brief  Computes the elevation turning radius
@@ -136,7 +152,7 @@ class RobotModel
      * \param u        Speed of the robot
      * \param delta_e  Angle of the elevation rudder
      */
-    double inline elev_turn_radius(double u, double delta_e);
+    double inline elev_turn_radius(double u, double delta_e) const;
 
   private:
     /// \brief  Model constants
@@ -190,26 +206,26 @@ class RobotModel
      *
      * \return 1 if x>=0, -1 otherwise
      */
-    inline double sign(double x);
+    inline double sign(double x) const;
 
 };
 
 
-double inline RobotModel::steady_propeller_speed(double speed)
+double inline RobotModel::steady_propeller_speed(double speed) const
 {
   double a = 1/c_[3] * (-c_[1]*speed - c_[2]*speed*speed);
   return sign(speed) * sqrt(abs(a));
 }
 
 
-inline double RobotModel::steady_speed(double propeller_speed)
+inline double RobotModel::steady_speed(double propeller_speed) const
 {
   double delta = pow(c_[1], 2) - 4*c_[2]*c_[3]*pow(propeller_speed, 2);
   return -(c_[1] + sqrt(delta)) / (2*c_[2]);
 }
 
 
-double inline RobotModel::lat_turn_radius(double u, double delta_r)
+double inline RobotModel::lat_turn_radius(double u, double delta_r) const
 {
   double K = -4 * c_[9] * c_[10] * delta_r;
   double r = (-c_[8] - sqrt(pow(c_[8], 2) + K*pow(u, 2))) / (2*c_[9]);
@@ -219,7 +235,7 @@ double inline RobotModel::lat_turn_radius(double u, double delta_r)
 }
 
 
-double inline RobotModel::elev_turn_radius(double u, double delta_e)
+double inline RobotModel::elev_turn_radius(double u, double delta_e) const
 {
   double K = -4 * c_[5] * c_[7] * delta_e;
   double r = (-c_[4] - sqrt(pow(c_[4], 2) + K*pow(u, 2))) / (2*c_[5]);
@@ -229,7 +245,7 @@ double inline RobotModel::elev_turn_radius(double u, double delta_e)
 }
 
 
-inline double RobotModel::sign(double x)
+inline double RobotModel::sign(double x) const
 {
   return (double) (x >= 0);
 }

@@ -12,9 +12,15 @@
 #include <eigen3/Eigen/Dense>
 #include <cmath>
 
+#include <iostream>
+
 using Eigen::Vector3d;
 using Eigen::Matrix3d;
+using Eigen::VectorXd;
+using Eigen::VectorXf;
 using Eigen::MatrixXd;
+using Eigen::MatrixXf;
+
 
 using namespace std;
 namespace pl = std::placeholders;
@@ -54,13 +60,14 @@ void RobotModel::integrate(state_type &state, const input_type &input, double t1
 }
 
 
+template <class MatrixT>
 void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0,
-  Eigen::MatrixXd &A, Eigen::MatrixXd &B)
+  MatrixT &A, MatrixT &B) const
 {
   const state_type &x = x_0;  // for convenience
   const input_type &u = u_0;
-  A = MatrixXd::Zero(x.size(), x.size());
-  B = MatrixXd::Zero(u.size(), u.size());
+  A = MatrixT::Zero(x.size(), x.size());
+  B = MatrixT::Zero(x.size(), u.size());
 
   double c3 = cos(x[3]);  double s3 = sin(x[3]);
   double c4 = cos(x[4]);  double s4 = sin(x[4]);  double t4 = tan(x[4]);
@@ -131,21 +138,36 @@ void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0,
 }
 
 
+template <class MatrixT>
 void RobotModel::get_lin_discr_matrices(const state_type &x_0, const input_type &u_0,
-  Eigen::MatrixXd &Ad, Eigen::MatrixXd &Bd, float dt, int N)
+  MatrixT &Ad, MatrixT &Bd, float dt, int N) const
 {
-  Eigen::MatrixXd A, B;
+  MatrixT A, B;
   get_lin_matrices(x_0, u_0, A, B);
 
   Ad = (dt*A).exp();
 
-  MatrixXd sum = MatrixXd::Zero(u_0.size(), u_0.size());
+  MatrixT sum = MatrixT::Zero(u_0.size(), u_0.size());
   float ds = dt / N;
 
   for (int k = 0; k < N; k++) {
     sum += ds * (k*ds*A).exp();
   }
   Bd = sum * B;
+}
+
+
+template <class VectorT, class MatrixT>
+void RobotModel::get_lin_discr_matrices(const VectorT &x_0, const VectorT &u_0,
+  MatrixT &Ad, MatrixT &Bd, float dt, int N) const
+{
+  state_type _x_0(x_0.rows());
+  input_type _u_0(u_0.rows());
+
+  for (int k = 0; k < _x_0.size(); k++) _x_0[k] = x_0(k);
+  for (int k = 0; k < _u_0.size(); k++) _u_0[k] = u_0(k);
+
+  get_lin_discr_matrices(_x_0, _u_0, Ad, Bd, dt, N);
 }
 
 
@@ -208,6 +230,17 @@ Matrix3d RobotModel::jac_orient(double phi, double theta, double psi)
 
   return J;
 }
+
+
+/*
+ * Instanciate templated functions
+ */
+template void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0, MatrixXf &A, MatrixXf &B) const;
+template void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0, MatrixXd &A, MatrixXd &B) const;
+template void RobotModel::get_lin_discr_matrices(const state_type &x_0, const input_type &u_0, MatrixXf &Ad, MatrixXf &Bd, float dt, int N=10) const;
+template void RobotModel::get_lin_discr_matrices(const state_type &x_0, const input_type &u_0, MatrixXd &Ad, MatrixXd &Bd, float dt, int N=10) const;
+template void RobotModel::get_lin_discr_matrices(const VectorXf &x_0, const VectorXf &u_0, MatrixXf &Ad, MatrixXf &Bd, float dt, int N) const;
+template void RobotModel::get_lin_discr_matrices(const VectorXd &x_0, const VectorXd &u_0, MatrixXd &Ad, MatrixXd &Bd, float dt, int N) const;
 
 
 }  // namespace mfcpp

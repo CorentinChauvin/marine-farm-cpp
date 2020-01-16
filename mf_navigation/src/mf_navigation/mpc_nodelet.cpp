@@ -8,6 +8,7 @@
  */
 
 #include "mpc_nodelet.hpp"
+#include "mf_common/common.hpp"
 #include "mf_robot_model/robot_model.hpp"
 #include "mf_common/Float32Array.h"
 #include <nav_msgs/Path.h>
@@ -20,6 +21,7 @@
 
 using namespace std;
 using Eigen::MatrixXd;
+using Eigen::DiagonalMatrix;
 
 PLUGINLIB_EXPORT_CLASS(mfcpp::MPCNodelet, nodelet::Nodelet)
 
@@ -59,20 +61,33 @@ void MPCNodelet::onInit()
 
   // ROS parameters
   vector<double> model_csts;  // model constants
-  vector<double> bnd_input;   // boundaries on the input
+  vector<double> P, Q_x, R_u, R_delta;  // MPC tuning parameters
 
   private_nh_.param<float>("main_freq", main_freq_, 10.0);
-  private_nh_.param<float>("nominal_speed", nominal_speed_, 1.0);
+  private_nh_.param<float>("desired_speed", desired_speed_, 1.0);
   private_nh_.param<float>("time_horizon", time_horizon_, 1.0);
   private_nh_.param<int>("nbr_steps", nbr_steps_, 10);
+  private_nh_.param<vector<double>>("P", P, vector<double>(13, 1.0));
+  private_nh_.param<vector<double>>("Q_x", Q_x, vector<double>(13, 1.0));
+  private_nh_.param<vector<double>>("R_u", R_u, vector<double>(4, 1.0));
+  private_nh_.param<vector<double>>("R_delta", R_delta, vector<double>(4, 1.0));
 
   private_nh_.param<vector<double>>("model_constants", model_csts, vector<double>(11, 0.0));
-  private_nh_.param<vector<double>>("bnd_input", bnd_input, vector<double>(4, 0.0));
+  private_nh_.param<double>("bnd_delta_m", bounds_.delta_m, 1.0);
+  private_nh_.param<vector<double>>("bnd_input", bounds_.input, vector<double>(4, 0.0));
+
 
   // Other variables
   robot_model_ = RobotModel(model_csts);
   path_received_ = false;
   state_received_ = false;
+
+  last_desired_speed_ = desired_speed_;
+
+  fill_diag_mat(P, tuning_params_.P);
+  fill_diag_mat(Q_x, tuning_params_.Q_x);
+  fill_diag_mat(R_u, tuning_params_.R_u);
+  fill_diag_mat(R_delta, tuning_params_.R_delta);
 
   // ROS subscribers
   path_sub_ = nh_.subscribe<nav_msgs::PathConstPtr>("path", 1, &MPCNodelet::path_cb, this);
@@ -82,21 +97,10 @@ void MPCNodelet::onInit()
   // pose_pub_ = nh_.advertise<geometry_msgs::Pose>("pose_output", 0);
 
 
-  // TODO: change that
-  // vector<double> x_0 = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0};
-  // vector<double> u_0 = {robot_model_.steady_propeller_speed(1), 0, 0, 0};
-  // robot_model_.get_lin_matrices(x_0, u_0, Ad_, Bd_);
-  // cout << "A: \n" << Ad_ << endl;
-  // robot_model_.get_lin_discr_matrices(x_0, u_0, Ad_, Bd_, 0.000001, 100);
-  // cout << "Ad: \n" << 1/0.000001*Ad_ << endl;
-
-
   // Main loop
   main_timer_ = private_nh_.createTimer(
     ros::Duration(1/main_freq_), &MPCNodelet::main_cb, this
   );
-
-  cout << "Timer passed" << endl;
 }
 
 
@@ -106,7 +110,13 @@ void MPCNodelet::main_cb(const ros::TimerEvent &timer_event)
     return;
 
   if (path_received_ && state_received_) {
-    compute_control(path_, state_, nominal_speed_, time_horizon_, nbr_steps_);
+    // TODO: change that
+    last_control_ = vector<float>(4);
+
+    compute_control(path_, state_, last_control_, robot_model_, tuning_params_,
+      desired_speed_, last_desired_speed_, time_horizon_, nbr_steps_, bounds_);
+
+    last_desired_speed_ = desired_speed_;
   }
 }
 

@@ -26,6 +26,19 @@ cart_control_nodelet:
 mpc_nodelet:
   main_freq: 10
 
-  nominal_speed: 1.5  # nominal speed (m/s) of the robot
+  desired_speed: 1.5  # desired speed (m/s) of the robot
   time_horizon: 2.0   # time horizon (s) for the MPC prediction
   nbr_steps: 10       # number of steps for the MPC prediction (fixed in CVXGEN)
+
+  P: [1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0,
+      1.0]  # diagonal of the penalty on the last state error
+  Q_x: [0.1, 0.1, 0.1,
+        0.1, 0.1, 0.1,
+        0.1, 0.1, 0.1,
+        0.1, 0.1, 0.1,
+        0.1]  # diagonal of the penalty on the intermediary states error
+  R_u: [0.1, 0.1, 0.1, 0.1]      # diagonal of the penalty on the control input error
+  R_delta: [0.1, 0.1, 0.1, 0.1]  # diagonal of the penalty on the control change rate
