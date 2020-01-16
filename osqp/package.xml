@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>reactphysics3d</name>
+  <name>osqp</name>
   <version>0.0.0</version>
-  <description>The reactphysics3d package</description>
+  <description>The osqp package</description>
   <maintainer email="corentin.chauvin@gmail.com">Corentin Chauvin-Hameau</maintainer>
   <author email="corentin.chauvin@gmail.com">Corentin Chauvin-Hameau</author>
   <url type="website">https://github.com/CorentinChauvin/marine-farm-cpp</url>

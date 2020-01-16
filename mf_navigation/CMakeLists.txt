@@ -27,6 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
   mf_sensors_simulator
   mf_mapping
   mf_common
+  osqp
 )
 
 catkin_package(

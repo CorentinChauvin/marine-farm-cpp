@@ -8,6 +8,7 @@
 
 #include "mpc_nodelet.hpp"
 #include "mf_common/common.hpp"
+#include "osqp.h"
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Quaternion.h>
