@@ -234,6 +234,13 @@ class MPCNodelet: public nodelet::Nodelet {
     );
 
     /**
+     * \brief  Solves the MPC problem
+     *
+     *
+     */
+    bool solve_mpc();
+
+    /**
      * \brief  Computes the control signal to send to the robot
      *
      * The desired speed might be changed if the robot is close to the end of

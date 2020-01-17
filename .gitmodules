@@ -4,3 +4,6 @@
 [submodule "osqp/include/osqp"]
 	path = osqp/include/osqp
 	url = https://github.com/oxfordcontrol/osqp.git
+[submodule "osqp/include/osqp-eigen"]
+	path = osqp/include/osqp-eigen
+	url = https://github.com/robotology/osqp-eigen.git

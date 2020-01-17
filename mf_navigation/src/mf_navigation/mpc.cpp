@@ -8,7 +8,7 @@
 
 #include "mpc_nodelet.hpp"
 #include "mf_common/common.hpp"
-#include "osqp.h"
+#include "OsqpEigen/OsqpEigen.h"
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Quaternion.h>
@@ -272,6 +272,14 @@ void MPCNodelet::fill_bounds_objs(
 }
 
 
+bool MPCNodelet::solve_mpc()
+{
+  // Instanciate solver
+  OsqpEigen::Solver solver;
+
+}
+
+
 void MPCNodelet::compute_control(
   const nav_msgs::Path &path,
   const vector<float> &current_state,
@@ -343,6 +351,10 @@ void MPCNodelet::compute_control(
   MatrixXf Ab;  // multiplicative factor in front of U in the bound inequalities
 
   fill_bounds_objs(bounds, n, N, X0, X_ref, G, H, lb, ub, Ab);
+
+  // Solve MPC
+  solve_mpc();
+
 
 }
 

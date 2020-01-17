@@ -11,6 +11,9 @@ set(EIGEN_BUILD_FLAGS "-O3 -DEIGEN_NO_DEBUG")
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${EIGEN_BUILD_FLAGS}")
 set(ROS_BUILD_TYPE Release)
 
+cmake_policy(SET CMP0028 NEW)
+
+
 
 ########################
 ##  Configure Catkin  ##
@@ -30,6 +33,9 @@ find_package(catkin REQUIRED COMPONENTS
   osqp
 )
 
+find_package(Eigen3 REQUIRED)
+include_directories(${Eigen_INCLUDE_DIRS})
+
 catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS nodelet roscpp
@@ -45,9 +51,6 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${mf_robot_model_INCLUDE_DIRS}
 )
-
-find_package(Eigen3 REQUIRED)
-include_directories(${Eigen_INCLUDE_DIRS})
 
 # Planning nodelet
 add_library(planning_nodelet
