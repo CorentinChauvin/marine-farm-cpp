@@ -6,13 +6,16 @@
  * \date   2020
  */
 
-#include "mpc_nodelet.hpp"
+#include "mpc_node.hpp"
 #include "mf_common/common.hpp"
 #include "osqp.h"
+#include "osqp_eigen/SparseMatrixHelper.hpp"
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Point.h>
+#include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/Sparse>
 #include <vector>
 
 using namespace std;
@@ -24,7 +27,7 @@ using Eigen::MatrixXd;
 
 namespace mfcpp {
 
-std::vector<geometry_msgs::Pose> MPCNodelet::adapt_path(
+std::vector<geometry_msgs::Pose> MPCNode::adapt_path(
   const std::vector<geometry_msgs::Pose> &orig_path,
   const geometry_msgs::Point &current_position,
   int nbr_steps,
@@ -83,7 +86,7 @@ std::vector<geometry_msgs::Pose> MPCNodelet::adapt_path(
       // Last pose of the path
       if (k != nbr_steps) {
         // TODO: to remove
-        NODELET_WARN("[mpc_nodelet] Unexpected path length");
+        ROS_WARN("[mpc_node] Unexpected path length");
       }
 
       new_path[k] = orig_path[size_path-1];
@@ -98,7 +101,7 @@ std::vector<geometry_msgs::Pose> MPCNodelet::adapt_path(
 
 
 template <class VectorT>
-void MPCNodelet::fill_ref_pts(
+void MPCNode::fill_ref_pts(
   int N, int n, int m,
   const std::vector<geometry_msgs::Pose> &path,
   float desired_speed,
@@ -108,7 +111,7 @@ void MPCNodelet::fill_ref_pts(
   VectorT &U_ref)
 {
   if (N < 1 || n < 1 || m < 1 || path.size() != N + 1) {
-    NODELET_WARN("[mpc_nodelet] Wrong input dimensions in fill_ref_pts");
+    ROS_WARN("[mpc_node] Wrong input dimensions in fill_ref_pts");
     return;
   }
 
@@ -138,7 +141,7 @@ void MPCNodelet::fill_ref_pts(
 
 
 template <class MatrixT>
-void MPCNodelet::fill_G(const MatrixT &Ad, const MatrixT &Bd, int N, MatrixT &G)
+void MPCNode::fill_G(const MatrixT &Ad, const MatrixT &Bd, int N, MatrixT &G)
 {
   int n = Bd.rows();
   int m = Bd.cols();
@@ -157,7 +160,7 @@ void MPCNodelet::fill_G(const MatrixT &Ad, const MatrixT &Bd, int N, MatrixT &G)
 
 
 template <class MatrixT>
-void MPCNodelet::fill_H(const MatrixT &Ad, int N, MatrixT &H)
+void MPCNode::fill_H(const MatrixT &Ad, int N, MatrixT &H)
 {
   int n = Ad.rows();
   H = MatrixT(n*(N+1), n);
@@ -173,7 +176,7 @@ void MPCNodelet::fill_H(const MatrixT &Ad, int N, MatrixT &H)
 
 
 template <class MatrixT>
-void MPCNodelet::fill_L(const MatrixT &P, const MatrixT &Q_x, int N, MatrixT &L)
+void MPCNode::fill_L(const MatrixT &P, const MatrixT &Q_x, int N, MatrixT &L)
 {
   int n = P.rows();
   L = MatrixT::Zero(n*(N+1), n*(N+1));
@@ -186,7 +189,7 @@ void MPCNodelet::fill_L(const MatrixT &P, const MatrixT &Q_x, int N, MatrixT &L)
 
 
 template <class MatrixT>
-void MPCNodelet::fill_M(const MatrixT &R_u, const MatrixT &R_delta, int N, MatrixT &M)
+void MPCNode::fill_M(const MatrixT &R_u, const MatrixT &R_delta, int N, MatrixT &M)
 {
   int m = R_u.rows();
   M = MatrixT::Zero(m*(N+1), m*(N+1));
@@ -202,16 +205,17 @@ void MPCNodelet::fill_M(const MatrixT &R_u, const MatrixT &R_delta, int N, Matri
   }
 
   // Over-diagonal blocks
-  MatrixT B = -2*R_delta;
+  MatrixT B = -R_delta;
 
   for (int k = 0; k < N; k++) {
     M.block(k*m, (k+1)*m, m, m) = B;
+    M.block((k+1)*m, k*m, m, m) = B;
   }
 }
 
 
 template <class VectorT, class MatrixT>
-void MPCNodelet::fill_V(float desired_speed, float last_desired_speed,
+void MPCNode::fill_V(float desired_speed, float last_desired_speed,
   const MatrixT &R_delta, int N, VectorT &V)
 {
   int m = R_delta.rows();
@@ -227,8 +231,27 @@ void MPCNodelet::fill_V(float desired_speed, float last_desired_speed,
 }
 
 
+template <class MatrixT>
+void MPCNode::fill_LG(const MatrixT &G, const MatrixT &P, const MatrixT &Q_x,
+  int n, int m, int N, MatrixT &LG)
+{
+  LG = MatrixXf::Zero(n*(N+1), m*(N+1));
+
+  for (int k = 1; k <= N; k++) {
+    MatrixXf M = Q_x * G.block(k*n, m, n, m);
+
+    for (int l = 0; l < N-k; l++) {
+      LG.block((k+l)*n, (1+l)*m, n, m) = M;
+    }
+  }
+  for (int l = 0; l < N; l++) {
+    LG.block(N*n, (1+l)*m, n, m) = P * G.block(N*n, (1+l)*m, n, m);
+  }
+}
+
+
 template <class VectorT, class MatrixT>
-void MPCNodelet::fill_bounds_objs(
+void MPCNode::fill_bounds_objs(
   const MPCBounds &bounds,
   int n, int N,
   const VectorT &X0, const VectorT &X_ref,
@@ -259,20 +282,149 @@ void MPCNodelet::fill_bounds_objs(
   ub = VectorT::Zero((m+1)*(N+1));
   Ab = MatrixT::Zero((m+1)*(N+1), m*(N+1));
 
-  lb.block(0, 0, N+1, 1)       = a - Kb*H*X0 - Kb*X_ref;
-  ub.block(0, 0, N+1, 1)       = b - Kb*H*X0 - Kb*X_ref;
+  VectorXf HX0 = H*X0;
+  VectorXf delta(N+1);  // Kb*H*X0 - Kb*X_ref
+
+  for (int k = 0; k < N+1; k++) {
+    delta(k) = HX0((k+1)*n - 1) - X_ref((k+1)*n - 1);
+  }
+
+  lb.block(0, 0, N+1, 1) = a - delta;
+  ub.block(0, 0, N+1, 1) = b - delta;
 
   for (int k = 0; k < N+1; k++) {
     lb.block(N+1 + k*m, 0, m, 1) = c;
     ub.block(N+1 + k*m, 0, m, 1) = d;
   }
 
-  Ab.block(0, 0, N+1, m*(N+1)) = Kb*G;
-  Ab.block(N+1, 0, m*(N+1), m*(N+1)) = MatrixT::Identity(m, m);
+  MatrixT KbG(N+1, m*(N+1));
+  for (int i = 0; i < N+1; i++) {
+    for (int j = 0; j < m*(N+1); j++) {
+      KbG(i, j) = G((i+1)*n - 1, j);
+    }
+  }
+  Ab.block(0, 0, N+1, m*(N+1)) = KbG;
+  Ab.block(N+1, 0, m*(N+1), m*(N+1)) = MatrixT::Identity(m*(N+1), m*(N+1));
 }
 
 
-void MPCNodelet::compute_control(
+template <class VectorT, class T>
+bool MPCNode::solve_qp(
+  const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &P,
+  const VectorT &q,
+  const VectorT &lb,
+  const VectorT &ub,
+  const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &Ab,
+  VectorT &solution)
+{
+  cout << "Entering solve_qp" << endl;
+
+  typedef Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> MatrixT;
+  int n = q.rows();
+  int m = ub.rows();
+
+
+  // cout << "P:\n" << P << endl;
+  // cout << "q:\n" << q << endl;
+  // cout << "lb:\n" << lb << endl;
+  // cout << "ub:\n" << ub << endl;
+  // cout << "Ab:\n" << Ab << endl;
+
+  // Debug data
+  // n = 2;
+  // m = 3;
+  // MatrixXf P_(n, n), Ab_(m, n);
+  // VectorXf lb_(m), ub_(m), q_(n);
+  //
+  // P_ << 5, 1, 1, 2;
+  // q_ << 1, 1;
+  // lb_ << 1, 0, 0;
+  // ub_ << 1, 0.7, 0.7;
+  // Ab_ << 1, 1, 1, 0, 0, 1;
+
+
+  // Workspace structures
+  OSQPWorkspace *work;
+  OSQPSettings  *settings = (OSQPSettings *)c_malloc(sizeof(OSQPSettings));
+  OSQPData      *data     = (OSQPData *)c_malloc(sizeof(OSQPData));
+
+  // Populate data
+  if (data) {
+    MatrixT P_tri = P.template triangularView<Eigen::Upper>();  // upper part of P
+    Eigen::SparseMatrix<T> _P = P_tri.sparseView();
+    Eigen::SparseMatrix<T> _A = Ab.sparseView();
+
+    data->P = nullptr;
+    data->A = nullptr;
+
+    data->n = n;
+    data->m = m;
+    OsqpEigen::SparseMatrixHelper::createOsqpSparseMatrix(_P, data->P);
+    data->q = const_cast<T*>(q.data());
+    OsqpEigen::SparseMatrixHelper::createOsqpSparseMatrix(_A, data->A);
+    data->l = const_cast<T*>(lb.data());
+    data->u = const_cast<T*>(ub.data());
+  }
+
+  // Define solver settings as default
+  if (settings) {
+    osqp_set_default_settings(settings);
+    settings->alpha = 1.0; // Change alpha parameter
+    settings->verbose = true;
+  }
+
+  // Setup workspace
+  cout << "Before osqp_setup" << endl;
+
+  c_int setup_flag = osqp_setup(&work, data, settings);
+
+  if (setup_flag != 0) {
+    ROS_WARN("[mpc_node] Setup of MPC problem failed");
+
+    // TODO: remove later
+    switch (setup_flag) {
+      case OSQP_DATA_VALIDATION_ERROR: cout << "OSQP_DATA_VALIDATION_ERROR" << endl; break;
+      case OSQP_SETTINGS_VALIDATION_ERROR: cout << "OSQP_SETTINGS_VALIDATION_ERROR" << endl; break;
+      case OSQP_LINSYS_SOLVER_LOAD_ERROR: cout << "OSQP_LINSYS_SOLVER_LOAD_ERROR" << endl; break;
+      case OSQP_LINSYS_SOLVER_INIT_ERROR: cout << "OSQP_LINSYS_SOLVER_INIT_ERROR" << endl; break;
+      case OSQP_NONCVX_ERROR: cout << "OSQP_NONCVX_ERROR" << endl; break;
+      case OSQP_MEM_ALLOC_ERROR: cout << "OSQP_MEM_ALLOC_ERROR" << endl; break;
+      case OSQP_WORKSPACE_NOT_INIT_ERROR: cout << "OSQP_WORKSPACE_NOT_INIT_ERROR" << endl; break;
+      default: break;
+    }
+
+    return false;
+  }
+
+
+  // Solve Problem
+  c_int solve_ret = 0;  // return code of the solving operation (0: no error)
+
+  cout << "Starting to solve..." << endl;
+
+  solve_ret = osqp_solve(work);
+
+  if (solve_ret != 0 || work->info->status_val != OSQP_SOLVED) {
+    ROS_WARN("[mpc_node] Couldn't solve MPC problem");
+    return false;
+  }
+
+  // Parse solution
+  solution = VectorT(n);
+  for (int k = 0; k < n; k++)
+    solution(k) = work->solution->x[k];
+
+  // Cleanup
+  if (data) {
+    if (data->A) c_free(data->A);
+    if (data->P) c_free(data->P);
+    c_free(data);
+  }
+  if (settings) c_free(settings);
+}
+
+
+bool MPCNode::compute_control(
   const nav_msgs::Path &path,
   const vector<float> &current_state,
   const vector<float> &last_control,
@@ -282,12 +434,16 @@ void MPCNodelet::compute_control(
   float last_desired_speed,
   float time_horizon,
   int nbr_steps,
-  const MPCBounds &bounds)
+  const MPCBounds &bounds,
+  std::vector<float> &command)
 {
   if (path.poses.size() < 2) {
-    NODELET_WARN("[mpc_nodelet] Path size < 2");
-    return;
+    ROS_WARN("[mpc_node] Path size < 2");
+    return false;
   }
+
+  clock_t start = clock();
+  cout << "---" << endl;
 
   // Parse current state
   geometry_msgs::Point current_position;
@@ -297,11 +453,6 @@ void MPCNodelet::compute_control(
 
   int n = current_state.size();
   int m = last_control.size();
-  VectorXf X0(n);
-  VectorXf U0(m);
-
-  for (int k = 0; k < n; k++) X0(k) = current_state[k];
-  for (int k = 0; k < m; k++) U0(k) = last_control[k];
 
   // Store the original path for convenience
   int size_path = path.poses.size();
@@ -323,13 +474,24 @@ void MPCNodelet::compute_control(
   VectorXf X_ref, U_ref;
 
   fill_ref_pts(N, n, m, new_path, desired_speed, last_desired_speed, robot_model,
-     X_ref, U_ref);
+    X_ref, U_ref);
+
+  // Fill intial points
+  VectorXf x0(n), X0(n);  // initial state, and initial offset to the reference
+  VectorXf u0(m), U0(m);  // initial input, and initial offset to the reference
+
+  for (int k = 0; k < n; k++) x0(k) = current_state[k];
+  for (int k = 0; k < m; k++) u0(k) = last_control[k];
+
+  X0 = x0 - X_ref.block(0, 0, n, 1);
+  U0 = u0 - U_ref.block(0, 0, m, 1);
 
   // Build MPC objects
   MatrixXf Ad, Bd;  // discretised model
   MatrixXf G, H;    // to express X with respect to U and X0
   MatrixXf L, M;    // to compute quadratic partts of the cost function
   VectorXf V;       // to compute linear parts of the cost function
+  MatrixXf LG;      // product of L and G
 
   robot_model.get_lin_discr_matrices(X0, U0, Ad, Bd, time_resolution, 10);
   fill_G(Ad, Bd, N, G);
@@ -337,12 +499,40 @@ void MPCNodelet::compute_control(
   fill_L(tuning_params_.P, tuning_params_.Q_x, N, L);
   fill_M(tuning_params_.R_u, tuning_params_.R_delta, N, M);
   fill_V(desired_speed, last_desired_speed, tuning_params_.R_delta, N, V);
+  fill_LG(G, tuning_params.P, tuning_params.Q_x, n, m, N, LG);
 
   // Build MPC bounds objects
   VectorXf lb, ub;  // lower and upper bounds
   MatrixXf Ab;  // multiplicative factor in front of U in the bound inequalities
 
   fill_bounds_objs(bounds, n, N, X0, X_ref, G, H, lb, ub, Ab);
+
+  // Solve MPC Quadratic Program
+  MatrixXf P = 2*(G.transpose()*LG + M);
+  VectorXf q = 2*LG.transpose()*(H*X0) + V;
+  VectorXf solution;
+
+  // TODO: to remove
+  Eigen::LLT<Eigen::MatrixXf> lltOfA(P); // compute the Cholesky decomposition of A
+  if(lltOfA.info() == Eigen::NumericalIssue)
+    ROS_WARN("Possibly non semi-positive definite matrix!");
+
+  bool solved;
+  solved = solve_qp(P, q, lb, ub, Ab, solution);
+
+  cout << "Total time: " << (clock() - start) / (double)CLOCKS_PER_SEC << endl;
+
+  if (solved) {
+    command.resize(m);
+    for (int k = 0; k < m; k++)
+      command[k] = solution(k) + U_ref(k);
+
+    VectorXf command_vec = (solution + U_ref).block(0, 0, m, 1);
+    cout << "Command to apply: " << command_vec.transpose() << endl;
+
+    return true;
+  } else
+    return false;
 
 }
 

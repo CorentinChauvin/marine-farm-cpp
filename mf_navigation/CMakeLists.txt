@@ -4,12 +4,14 @@ project(mf_navigation)
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 
-# set(CMAKE_CXX_FLAGS_DEBUG "-g -fno-omit-frame-pointer")
-# set(ROS_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS_DEBUG "-g -fno-omit-frame-pointer")
+set(ROS_BUILD_TYPE Debug)
+add_compile_options(-pg)
+set(catkin_LIBRARIES ${catkin_LIBRARIES} -pg)
 
-set(EIGEN_BUILD_FLAGS "-O3 -DEIGEN_NO_DEBUG")
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${EIGEN_BUILD_FLAGS}")
-set(ROS_BUILD_TYPE Release)
+# set(EIGEN_BUILD_FLAGS "-O3 -DEIGEN_NO_DEBUG")
+# set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${EIGEN_BUILD_FLAGS}")
+# set(ROS_BUILD_TYPE Release)
 
 
 ########################
@@ -24,6 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   visualization_msgs
   mf_robot_model
+  mf_robot_simulator
   mf_sensors_simulator
   mf_mapping
   mf_common
@@ -70,13 +73,14 @@ add_dependencies(cart_control_nodelet
 )
 target_link_libraries(cart_control_nodelet ${catkin_LIBRARIES})
 
-# MPC nodelet
-add_library(mpc_nodelet
-  src/mf_navigation/mpc_nodelet.cpp
+# MPC node
+add_executable(mpc_node
+  src/mf_navigation/mpc_node.cpp
   src/mf_navigation/mpc.cpp
 )
-add_dependencies(mpc_nodelet
+add_dependencies(mpc_node
   ${catkin_EXPORTED_TARGETS}
   mf_common_generate_messages_cpp
+  mf_robot_simulator_generate_messages_cpp
 )
-target_link_libraries(mpc_nodelet ${catkin_LIBRARIES})
+target_link_libraries(mpc_node ${catkin_LIBRARIES})

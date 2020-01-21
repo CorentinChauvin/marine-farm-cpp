@@ -1,14 +1,14 @@
 /**
  * @file
  *
- * \brief  Declaration of a nodelet for Model Predictive Control of an underwater
+ * \brief  Declaration of a node for Model Predictive Control of an underwater
  *         robot
  * \author Corentin Chauvin-Hameau
  * \date   2020
  */
 
-#ifndef MPC_NODELET_HPP
-#define MPC_NODELET_HPP
+#ifndef MPC_NODE_HPP
+#define MPC_NODE_HPP
 
 #include "mf_robot_model/robot_model.hpp"
 #include "mf_common/Float32Array.h"
@@ -16,29 +16,27 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <tf2_ros/transform_listener.h>
-#include <nodelet/nodelet.h>
 #include <ros/ros.h>
 #include <string>
 #include <vector>
-#include <csignal>
 
 namespace mfcpp {
 
 /**
- * \brief  Nodelet for Model Predictive Control of a robot
+ * \brief  Node for Model Predictive Control of a robot
  *
  * `MatrixT` template can either be `Eigen::MatrixXf` or `Eigen::MatrixXd`.
  * `VectorT` template can either be `Eigen::VectorXf` or `Eigen::VectorXd`.
  */
-class MPCNodelet: public nodelet::Nodelet {
+class MPCNode {
   public:
-    MPCNodelet();
-    ~MPCNodelet();
+    MPCNode();
+    ~MPCNode();
 
     /**
-     * \brief  Function called at beginning of nodelet execution
+     * \brief  Runs the node
      */
-    virtual void onInit();
+    void run_node();
 
   private:
     /**
@@ -61,16 +59,11 @@ class MPCNodelet: public nodelet::Nodelet {
       std::vector<double> input;  // bounds on the control input
     };
 
-    // Static members
-    // Note: the timers need to be static since stopped by the SIGINT callback
-    static sig_atomic_t volatile b_sigint_;  ///<  Whether SIGINT signal has been received
-    static ros::Timer main_timer_;  ///<  Timer callback for the main function
-
     // Private members
     ros::NodeHandle nh_;          ///<  Node handler (for topics and services)
-    ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
     ros::Subscriber path_sub_;    ///<  Subscriber for the desired path
     ros::Subscriber state_sub_;   ///<  Subscriber for the current robot state
+    ros::Publisher command_pub_;  ///<  Publisher for the computed command
     tf2_ros::Buffer tf_buffer_;   ///<  Buffer for tf2
     tf2_ros::TransformListener tf_listener_;  ///<  Transform listener for tf2
 
@@ -94,16 +87,9 @@ class MPCNodelet: public nodelet::Nodelet {
     ///@}
 
     /**
-     * \brief  Main callback which is called by a timer
-     *
-     * \param timer_event  Timer event information
+     * \brief  Initialises the node and its parameters
      */
-    void main_cb(const ros::TimerEvent &timer_event);
-
-    /**
-     * \brief  SINGINT (Ctrl+C) callback to stop the nodelet properly
-     */
-    static void sigint_handler(int s);
+    void init_node();
 
     /**
      * \brief  Generates a path of the right size for MPC prediction
@@ -211,6 +197,21 @@ class MPCNodelet: public nodelet::Nodelet {
       const MatrixT &R_delta, int N, VectorT &V);
 
     /**
+     * \brief  Fills the product of L and G matrices
+     *
+     * \param[in]  G    G matrix
+     * \param[in]  P    Penalty on the last state error
+     * \param[in]  Q_x  Penalty on the intermediary states errors
+     * \param[in]  n    Size of the state
+     * \param[in]  m    Size of the input
+     * \param[in]  N    Number of steps for the MPC prediction
+     * \param[out] LG   LG matrix
+     */
+    template <class MatrixT>
+    void fill_LG(const MatrixT &G, const MatrixT &P, const MatrixT &Q_x, int n,
+      int m, int N, MatrixT &LG);
+
+    /**
      * \brief  Fills the different bounds objects
      *
      * \param[in]  bounds  Bounds of the MPC problem
@@ -234,6 +235,23 @@ class MPCNodelet: public nodelet::Nodelet {
     );
 
     /**
+     * \brief  Solves a Quadratic Program
+     *
+     *
+     */
+    template <class VectorT, class T>
+    bool solve_qp(
+      const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &P,
+      const VectorT &q,
+      const VectorT &lb,
+      const VectorT &ub,
+      const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &Ab,
+      VectorT &solution
+    );
+
+    int foo();
+
+    /**
      * \brief  Computes the control signal to send to the robot
      *
      * The desired speed might be changed if the robot is close to the end of
@@ -249,8 +267,11 @@ class MPCNodelet: public nodelet::Nodelet {
      * \param[in]     time_horizon        Time horizon (s) for the MPC prediction
      * \param[in]     nbr_steps           Number of steps for the MPC prediction
      * \param[in]     bounds              Bounds of the MPC problem
+     * \param[out]    command             Computed control input to apply
+     *
+     * \return  Whether the control could be computed
      */
-    void compute_control(
+    bool compute_control(
       const nav_msgs::Path &path,
       const std::vector<float> &current_state,
       const std::vector<float> &last_control,
@@ -260,13 +281,14 @@ class MPCNodelet: public nodelet::Nodelet {
       float last_desired_speed,
       float time_horizon,
       int nbr_steps,
-      const MPCBounds &bounds
+      const MPCBounds &bounds,
+      std::vector<float> &command
     );
 
     /**
      * \brief  Callback for the desired path
      */
-    void path_cb(const nav_msgs::PathConstPtr msg);
+    void path_cb(const nav_msgs::Path msg);
 
     /**
      * \brief  Callback for the current robot state

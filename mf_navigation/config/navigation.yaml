@@ -1,5 +1,5 @@
 planning_nodelet:
-  main_freq: 1.0
+  main_freq: 0.2
   ocean_frame: "ocean"
   wall_frame: "wall"
   robot_frame: "base_link"
@@ -23,7 +23,7 @@ cart_control_nodelet:
   speed: 0.2  # desired robot speed
 
 
-mpc_nodelet:
+mpc_node:
   main_freq: 10
 
   desired_speed: 1.5  # desired speed (m/s) of the robot
@@ -42,3 +42,4 @@ mpc_nodelet:
         0.1]  # diagonal of the penalty on the intermediary states error
   R_u: [0.1, 0.1, 0.1, 0.1]      # diagonal of the penalty on the control input error
   R_delta: [0.1, 0.1, 0.1, 0.1]  # diagonal of the penalty on the control change rate
+  # R_delta: [0.0, 0.0, 0.0, 0.0]  # diagonal of the penalty on the control change rate

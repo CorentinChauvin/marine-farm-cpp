@@ -1,6 +1,6 @@
 <launch>
   <!-- Launchfile arguments -->
-  <arg name="rviz" value="false" />
+  <arg name="rviz" value="true" />
   <arg name="display_img_gp" value="false" />
   <arg name="display_cov_gp" value="false" />
   <arg name="cart_control" value="false" />
@@ -65,13 +65,19 @@
       <remap from="pose_output" to="/simu/robot_simulator/pose_input" />
     </node>
 
-    <node pkg="nodelet" type="nodelet" args="load mf_navigation/MPCNodelet nav_nodelet_manager"
-      name="mpc_nodelet" output="screen" if="$(arg mpc_control)">
+    <!-- <node pkg="nodelet" type="nodelet" args="manager" name="mpc_nodelet_manager" output="screen"
+      launch-prefix="valgrind - -tool=callgrind - -callgrind-out-file='callgrind.listener.%p' "/> -->
+    <!-- <node pkg="nodelet" type="nodelet" args="manager" name="mpc_nodelet_manager" output="screen"
+      launch-prefix="gdb -ex run - -args" /> -->
+
+    <node name="mpc_node" type="mpc_node" pkg="mf_navigation" output="screen" if="$(arg mpc_control)">
       <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
       <remap from="~bnd_delta_m" to="/simu/robot_simulator/bnd_delta_m" />
       <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />
 
-      <remap from="state" to="/simu/robot_simulator/state" />
+      <remap from="~state" to="/simu/robot_simulator/state" />
+      <remap from="~path" to="/nav/path" />
+      <remap from="~command" to="/simu/robot_simulator/control_input" />
     </node>
   </group>
 
