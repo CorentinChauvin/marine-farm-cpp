@@ -43,11 +43,13 @@ void MPCNode::init_node()
   // ROS parameters
   vector<double> model_csts;  // model constants
   vector<double> P, Q_x, R_u, R_delta;  // MPC tuning parameters
+  bool disable_vbs;  // whether to disable Variable Buoyancy System (VBS)
 
   nh_.param<float>("main_freq", main_freq_, 10.0);
   nh_.param<float>("desired_speed", desired_speed_, 1.0);
   nh_.param<float>("time_horizon", time_horizon_, 1.0);
   nh_.param<int>("nbr_steps", nbr_steps_, 10);
+  nh_.param<bool>("disable_vbs", disable_vbs, false);
   nh_.param<vector<double>>("P", P, vector<double>(13, 1.0));
   nh_.param<vector<double>>("Q_x", Q_x, vector<double>(13, 1.0));
   nh_.param<vector<double>>("R_u", R_u, vector<double>(4, 1.0));
@@ -65,6 +67,10 @@ void MPCNode::init_node()
 
   last_desired_speed_ = desired_speed_;
   last_control_ = vector<float>(4, 0);
+
+  if (disable_vbs)
+    bounds_.delta_m = 0;
+
 
   fill_diag_mat(P, tuning_params_.P);
   fill_diag_mat(Q_x, tuning_params_.Q_x);
@@ -92,6 +98,7 @@ void MPCNode::run_node()
     if (path_received_ && state_received_) {
       vector<float> control;
       bool control_computed;
+      float desired_speed = desired_speed_;
 
       control_computed = compute_control(
         path_,
@@ -99,7 +106,7 @@ void MPCNode::run_node()
         last_control_,
         robot_model_,
         tuning_params_,
-        desired_speed_,
+        desired_speed,
         last_desired_speed_,
         time_horizon_,
         nbr_steps_,
@@ -107,7 +114,7 @@ void MPCNode::run_node()
         control
       );
 
-      last_desired_speed_ = desired_speed_;
+      last_desired_speed_ = desired_speed;
 
       if (control_computed) {
         mf_robot_simulator::Command msg;

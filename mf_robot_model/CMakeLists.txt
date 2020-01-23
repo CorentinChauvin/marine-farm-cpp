@@ -17,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
 )
 
+find_package(Eigen3 REQUIRED)
+
 catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS roscpp
@@ -33,6 +35,7 @@ catkin_package(
 include_directories(
   include/mf_robot_model
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
 )
 
 find_package(Eigen3 REQUIRED)

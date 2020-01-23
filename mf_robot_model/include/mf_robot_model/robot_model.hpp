@@ -61,14 +61,14 @@ class RobotModel
      * It will update the state by integrating the dynamic model of the robot.
      * It assumes that the inputs are constant during the integration.
      *
-     * \note  It is based on the error-controlled `runge_kutta54_cash_karp`
-     *        stepper (5th order) and uses adaptive step-size.
+     * It is based on the error-controlled `runge_kutta54_cash_karp` stepper
+     * (5th order) and uses adaptive step-size.
      *
-     * \param state       Initial state to update
-     * \param input       Input to the actuators
-     * \param t1          Starting time of the integration
-     * \param t2          Ending time of the integration
-     * \param init_step   Initial step size for the integration
+     * \param[in,out] state       Initial state to update
+     * \param[in]     input       Input to the actuators
+     * \param[in]     t1          Starting time of the integration
+     * \param[in]     t2          Ending time of the integration
+     * \param[in]     init_step   Initial step size for the integration
      */
     void integrate(state_type &state, const input_type &input, double t1,
       double t2, double init_step);
@@ -96,7 +96,8 @@ class RobotModel
        *
        * The system \f$ \dot{\Delta x} = A \Delta x + B \Delta u \f$ is discretised
        * by \f$ A_d = e^{dt.A} \f$ and \f$ B_d = (\int_{0}^{dt} e^{s.A} ds) B \f$.
-       * The integral is approximated by a Riemann sum.
+       *
+       * \todo  Update how to get B_d
        *
        * `MatrixT` can either be `Eigen::MatrixXd` or `Eigen::MatrixXf`
        *
@@ -105,11 +106,10 @@ class RobotModel
        * \param[out] Ad   Discretised A matrix
        * \param[out] Bd   Discretised B matrix
        * \param[in]  dt   Discretisation interval
-       * \param[in]  N    Number of terms in the Riemann sum
        */
     template <class MatrixT>
     void get_lin_discr_matrices(const state_type &x_0, const input_type &u_0,
-      MatrixT &Ad, MatrixT &Bd, float dt, int N=10) const;
+      MatrixT &Ad, MatrixT &Bd, float dt) const;
 
     /**
      * \brief  Overloads get_lin_discr_matrices for Eigen vectors
@@ -119,7 +119,7 @@ class RobotModel
      */
     template <class VectorT, class MatrixT>
     void get_lin_discr_matrices(const VectorT &x_0, const VectorT &u_0,
-        MatrixT &Ad, MatrixT &Bd, float dt, int N=10) const;
+        MatrixT &Ad, MatrixT &Bd, float dt) const;
 
     /**
      * \brief  Computes the propeller speed in steady state

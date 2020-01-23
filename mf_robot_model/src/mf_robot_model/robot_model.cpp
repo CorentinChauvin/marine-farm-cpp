@@ -83,7 +83,7 @@ void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0,
 
   A(1, 3) = (-c5*s3 + s5*s4*c3)*x[7] + (-c5*c3 - s5*s3*s4)*x[8];
   A(1, 4) = -s5*s4*x[6] + s5*c4*s3*x[7] + s5*c3*c4*x[8];
-  A(1, 5) = c5*c4*x[6] + (-s5*s3 + c5*s4*s3)*x[7] + (s5*s3 + c5*c3*s4)*x[8];
+  A(1, 5) = c5*c4*x[6] + (-s5*c3 + c5*s4*s3)*x[7] + (s5*s3 + c5*c3*s4)*x[8];
   A(1, 6) = s5*c4;
   A(1, 7) = c5*c3 + s5*s4*s3;
   A(1, 8) = -c5*s3 + s5*s4*c3;
@@ -109,9 +109,9 @@ void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0,
   A(5, 10) = s3/c4;
   A(5, 11) = c3/c4;
 
-  A(6, 4) = -1/c_[12]*x[12]*c4;
-  A(6, 6) = c_[1] + 2*sign(x[6])*x[6];
-  A(6, 12) = -1/c_[12]*s4;
+  A(6, 4) = -g_*x[12]*c4;
+  A(6, 6) = c_[1] + 2*c_[2]*abs(x[6]);
+  A(6, 12) = -g_*s4;
 
   A(7, 3) = g_*x[12]*c4*c3;
   A(7, 4) = -g_*x[12]*s4*s3;
@@ -124,14 +124,14 @@ void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0,
   A(8, 12) = g_*c4*c3;
 
   A(10, 4) = c_[6]*c4;
-  A(10, 10) = c_[4] + 2*c_[5]*sign(x[10])*x[10];
+  A(10, 10) = c_[4] + 2*c_[5]*abs(x[10]);
 
-  A(11, 11) = c_[8] + 2*c_[9]*sign(x[11])*x[11];
+  A(11, 11) = c_[8] + 2*c_[9]*abs(x[11]);
 
   A(12, 12) = -1/c_[12];
 
   // B matrix
-  B(6, 0) = 2*c_[3]*sign(u[0])*u[0];
+  B(6, 0) = 2*c_[3]*abs(u[0]);
   B(10, 2) = c_[7]*x[6]*x[6];
   B(11, 1) = c_[10]*x[6]*x[6];
   B(12, 3) = 1;
@@ -140,26 +140,25 @@ void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0,
 
 template <class MatrixT>
 void RobotModel::get_lin_discr_matrices(const state_type &x_0, const input_type &u_0,
-  MatrixT &Ad, MatrixT &Bd, float dt, int N) const
+  MatrixT &Ad, MatrixT &Bd, float dt) const
 {
   MatrixT A, B;
   get_lin_matrices(x_0, u_0, A, B);
 
-  Ad = (dt*A).exp();
-
-  MatrixT sum = MatrixT::Zero(u_0.size(), u_0.size());
-  float ds = dt / N;
-
-  for (int k = 0; k < N; k++) {
-    sum += ds * (k*ds*A).exp();
-  }
-  Bd = sum * B;
+  int n = A.cols();
+  int m = B.cols();
+  MatrixT M = MatrixT::Zero(n + m, n + m);
+  M.block(0, 0, n, n) = dt*A;
+  M.block(0, n, n, m) = dt*B;
+  MatrixT E = M.exp();
+  Ad = E.block(0, 0, n, n);
+  Bd = E.block(0, n, n, m);
 }
 
 
 template <class VectorT, class MatrixT>
 void RobotModel::get_lin_discr_matrices(const VectorT &x_0, const VectorT &u_0,
-  MatrixT &Ad, MatrixT &Bd, float dt, int N) const
+  MatrixT &Ad, MatrixT &Bd, float dt) const
 {
   state_type _x_0(x_0.rows());
   input_type _u_0(u_0.rows());
@@ -167,7 +166,7 @@ void RobotModel::get_lin_discr_matrices(const VectorT &x_0, const VectorT &u_0,
   for (int k = 0; k < _x_0.size(); k++) _x_0[k] = x_0(k);
   for (int k = 0; k < _u_0.size(); k++) _u_0[k] = u_0(k);
 
-  get_lin_discr_matrices(_x_0, _u_0, Ad, Bd, dt, N);
+  get_lin_discr_matrices(_x_0, _u_0, Ad, Bd, dt);
 }
 
 
@@ -237,10 +236,10 @@ Matrix3d RobotModel::jac_orient(double phi, double theta, double psi)
  */
 template void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0, MatrixXf &A, MatrixXf &B) const;
 template void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0, MatrixXd &A, MatrixXd &B) const;
-template void RobotModel::get_lin_discr_matrices(const state_type &x_0, const input_type &u_0, MatrixXf &Ad, MatrixXf &Bd, float dt, int N=10) const;
-template void RobotModel::get_lin_discr_matrices(const state_type &x_0, const input_type &u_0, MatrixXd &Ad, MatrixXd &Bd, float dt, int N=10) const;
-template void RobotModel::get_lin_discr_matrices(const VectorXf &x_0, const VectorXf &u_0, MatrixXf &Ad, MatrixXf &Bd, float dt, int N) const;
-template void RobotModel::get_lin_discr_matrices(const VectorXd &x_0, const VectorXd &u_0, MatrixXd &Ad, MatrixXd &Bd, float dt, int N) const;
+template void RobotModel::get_lin_discr_matrices(const state_type &x_0, const input_type &u_0, MatrixXf &Ad, MatrixXf &Bd, float dt) const;
+template void RobotModel::get_lin_discr_matrices(const state_type &x_0, const input_type &u_0, MatrixXd &Ad, MatrixXd &Bd, float dt) const;
+template void RobotModel::get_lin_discr_matrices(const VectorXf &x_0, const VectorXf &u_0, MatrixXf &Ad, MatrixXf &Bd, float dt) const;
+template void RobotModel::get_lin_discr_matrices(const VectorXd &x_0, const VectorXd &u_0, MatrixXd &Ad, MatrixXd &Bd, float dt) const;
 
 
 }  // namespace mfcpp

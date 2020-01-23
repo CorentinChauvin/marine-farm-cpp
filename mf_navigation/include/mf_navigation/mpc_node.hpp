@@ -128,9 +128,10 @@ class MPCNode {
      * \param[in]  robot_model          Robot model
      * \param[out] X_ref                Reference state to fill
      * \param[out] U_ref                Reference output to fill
+     * \return  Whether the points could be filled
      */
     template <class VectorT>
-    void fill_ref_pts(
+    bool fill_ref_pts(
       int N, int n, int m,
       const std::vector<geometry_msgs::Pose> &path,
       float desired_speed,
@@ -186,14 +187,14 @@ class MPCNode {
     /**
      * \brief  Fills the V matrix used for the linear cost wrt control input error
      *
-     * \param[in]  desired_speed        Current desired speed
-     * \param[in]  last_desired_speed   Last desired speed
-     * \param[in]  R_delta              Penalty on the control change rate
-     * \param[in]  N                    Number of steps for the MPC prediction
-     * \param[out] V                    V matrix
+     * \param[in]  control_ref   Reference control
+     * \param[in]  last_control  Last control applied to the robot
+     * \param[in]  R_delta       Penalty on the control change rate
+     * \param[in]  N             Number of steps for the MPC prediction
+     * \param[out] V             V matrix
      */
     template <class VectorT, class MatrixT>
-    void fill_V(float desired_speed, float last_desired_speed,
+    void fill_V(VectorT control_ref, VectorT last_control,
       const MatrixT &R_delta, int N, VectorT &V);
 
     /**

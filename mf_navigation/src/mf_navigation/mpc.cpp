@@ -96,12 +96,14 @@ std::vector<geometry_msgs::Pose> MPCNode::adapt_path(
     }
   }
 
+  new_path.erase(new_path.begin());  // remove first element of the path (current pose)
+
   return new_path;
 }
 
 
 template <class VectorT>
-void MPCNode::fill_ref_pts(
+bool MPCNode::fill_ref_pts(
   int N, int n, int m,
   const std::vector<geometry_msgs::Pose> &path,
   float desired_speed,
@@ -110,15 +112,16 @@ void MPCNode::fill_ref_pts(
   VectorT &X_ref,
   VectorT &U_ref)
 {
-  if (N < 1 || n < 1 || m < 1 || path.size() != N + 1) {
-    ROS_WARN("[mpc_node] Wrong input dimensions in fill_ref_pts");
-    return;
+  if (N < 1 || n < 1 || m < 1 || path.size() != N) {
+    ROS_WARN("[mpc_node] Wrong input dimensions in fill_ref_pts:");
+    ROS_WARN("[mpc_node] path size: %d ; N=%d", (int) path.size(), N);
+    return false;
   }
 
-  X_ref = VectorT::Zero(n * (N+1));
-  U_ref = VectorT::Zero(m * (N+1));
+  X_ref = VectorT::Zero(n * N);
+  U_ref = VectorT::Zero(m * N);
 
-  for (int k = 0; k <= N; k++) {
+  for (int k = 0; k < N; k++) {
     double roll, pitch, yaw;
     to_euler(path[k].orientation, roll, pitch, yaw);
 
@@ -134,9 +137,11 @@ void MPCNode::fill_ref_pts(
   U_ref(0) = robot_model.steady_propeller_speed(last_desired_speed);
   float desired_prop_speed = robot_model.steady_propeller_speed(desired_speed);
 
-  for (int k = 1; k <= N; k++) {
+  for (int k = 0; k < N; k++) {
     U_ref(k*m) = desired_prop_speed;
   }
+
+  return true;
 }
 
 
@@ -145,15 +150,15 @@ void MPCNode::fill_G(const MatrixT &Ad, const MatrixT &Bd, int N, MatrixT &G)
 {
   int n = Bd.rows();
   int m = Bd.cols();
-  G = MatrixT::Zero(n*(N+1), m*(N+1));
+  G = MatrixT::Zero(n*N, m*N);
   MatrixT M = Bd;  // Ad^k * Bd
 
-  for (int k = 1; k <= N; k++) {
-    if (k != 1)
+  for (int k = 0; k < N; k++) {
+    if (k != 0)
       M = Ad * M;
 
-    for (int l = 0; l < N-k+1; l++) {
-      G.block((k+l)*n, (1+l)*m, n, m) = M;
+    for (int l = 0; l < N-k; l++) {
+      G.block((k+l)*n, l*m, n, m) = M;
     }
   }
 }
@@ -163,12 +168,12 @@ template <class MatrixT>
 void MPCNode::fill_H(const MatrixT &Ad, int N, MatrixT &H)
 {
   int n = Ad.rows();
-  H = MatrixT(n*(N+1), n);
+  H = MatrixT(n*N, n);
 
   H.block(0, 0, n, n).setIdentity();
   MatrixT M = MatrixT::Identity(n, n);
 
-  for (int k = 1; k <= N; k++) {
+  for (int k = 1; k < N; k++) {
     M = M * Ad;
     H.block(k*n, 0, n, n) = M;
   }
@@ -179,12 +184,12 @@ template <class MatrixT>
 void MPCNode::fill_L(const MatrixT &P, const MatrixT &Q_x, int N, MatrixT &L)
 {
   int n = P.rows();
-  L = MatrixT::Zero(n*(N+1), n*(N+1));
+  L = MatrixT::Zero(n*N, n*N);
 
-  for (int k = 0; k < N; k++) {
+  for (int k = 0; k < N-1; k++) {
     L.block(k*n, k*n, n, n) = Q_x;
   }
-  L.block(N*n, N*n, n, n) = P;
+  L.block((N-1)*n, (N-1)*n, n, n) = P;
 }
 
 
@@ -192,22 +197,22 @@ template <class MatrixT>
 void MPCNode::fill_M(const MatrixT &R_u, const MatrixT &R_delta, int N, MatrixT &M)
 {
   int m = R_u.rows();
-  M = MatrixT::Zero(m*(N+1), m*(N+1));
+  M = MatrixT::Zero(m*N, m*N);
 
   // Diagonal blocks
   MatrixT A = 2*R_delta + R_u;
 
-  for (int k = 0; k <= N; k++) {
-    if (k == 0 || k == N)
-      M.block(k*m, k*m, m, m) = R_delta;
-    else
+  for (int k = 0; k < N; k++) {
+    if (k < N-1)
       M.block(k*m, k*m, m, m) = A;
+    else
+      M.block(k*m, k*m, m, m) = R_delta + R_u;
   }
 
   // Over-diagonal blocks
   MatrixT B = -R_delta;
 
-  for (int k = 0; k < N; k++) {
+  for (int k = 0; k < N-1; k++) {
     M.block(k*m, (k+1)*m, m, m) = B;
     M.block((k+1)*m, k*m, m, m) = B;
   }
@@ -215,19 +220,12 @@ void MPCNode::fill_M(const MatrixT &R_u, const MatrixT &R_delta, int N, MatrixT 
 
 
 template <class VectorT, class MatrixT>
-void MPCNode::fill_V(float desired_speed, float last_desired_speed,
+void MPCNode::fill_V(VectorT control_ref, VectorT last_control,
   const MatrixT &R_delta, int N, VectorT &V)
 {
   int m = R_delta.rows();
-  V = VectorT::Zero(m*(N+1));
-  VectorT u_0_ref(m), u_m1_ref(m);  // current and last reference control signal
-
-  u_0_ref  << desired_speed, 0, 0, 0;
-  u_m1_ref << last_desired_speed, 0, 0, 0;
-  VectorT v = 2 * R_delta * (u_0_ref - u_m1_ref);
-
-  V.block(0, 0, m, 1) = -v;
-  V.block(m, 0, m, 1) = v;
+  V = VectorT::Zero(m*N);
+  V.block(0, 0, m, 1) = 2*R_delta*(control_ref-last_control);
 }
 
 
@@ -235,17 +233,17 @@ template <class MatrixT>
 void MPCNode::fill_LG(const MatrixT &G, const MatrixT &P, const MatrixT &Q_x,
   int n, int m, int N, MatrixT &LG)
 {
-  LG = MatrixXf::Zero(n*(N+1), m*(N+1));
+  LG = MatrixXf::Zero(n*N, m*N);
 
-  for (int k = 1; k <= N; k++) {
-    MatrixXf M = Q_x * G.block(k*n, m, n, m);
+  for (int k = 0; k < N-1; k++) {
+    MatrixXf M = Q_x * G.block(k*n, 0, n, m);
 
-    for (int l = 0; l < N-k; l++) {
-      LG.block((k+l)*n, (1+l)*m, n, m) = M;
+    for (int l = 0; l < N-k-1; l++) {
+      LG.block((k+l)*n, l*m, n, m) = M;
     }
   }
   for (int l = 0; l < N; l++) {
-    LG.block(N*n, (1+l)*m, n, m) = P * G.block(N*n, (1+l)*m, n, m);
+    LG.block((N-1)*n, l*m, n, m) = P * G.block((N-1)*n, l*m, n, m);
   }
 }
 
@@ -259,11 +257,11 @@ void MPCNode::fill_bounds_objs(
   VectorT &lb, VectorT &ub, MatrixT &Ab)
 {
   // Bounds on the state
-  VectorT a = VectorT::Constant(N+1, -bounds.delta_m);
-  VectorT b = VectorT::Constant(N+1, bounds.delta_m);
-  MatrixT Kb = MatrixT::Zero(N+1, n*(N+1));
+  VectorT a = VectorT::Constant(N, -bounds.delta_m);
+  VectorT b = VectorT::Constant(N, bounds.delta_m);
+  MatrixT Kb = MatrixT::Zero(N, n*N);
 
-  for (int k = 0; k <= N; k++) {
+  for (int k = 0; k < N; k++) {
     Kb(k, n-1 + k*n) = 1;
   }
 
@@ -275,36 +273,36 @@ void MPCNode::fill_bounds_objs(
     c(k) = -bounds.input[k];
     d(k) = bounds.input[k];
   }
-  c(0) = 0;
+  c(0) = 0;  // the submarine can't go backwards
 
   // Total bounds
-  lb = VectorT::Zero((m+1)*(N+1));
-  ub = VectorT::Zero((m+1)*(N+1));
-  Ab = MatrixT::Zero((m+1)*(N+1), m*(N+1));
+  lb = VectorT::Zero((m+1)*N);
+  ub = VectorT::Zero((m+1)*N);
+  Ab = MatrixT::Zero((m+1)*N, m*N);
 
   VectorXf HX0 = H*X0;
-  VectorXf delta(N+1);  // Kb*H*X0 - Kb*X_ref
+  VectorXf delta(N);  // Kb*H*X0 - Kb*X_ref
 
-  for (int k = 0; k < N+1; k++) {
+  for (int k = 0; k < N; k++) {
     delta(k) = HX0((k+1)*n - 1) - X_ref((k+1)*n - 1);
   }
 
-  lb.block(0, 0, N+1, 1) = a - delta;
-  ub.block(0, 0, N+1, 1) = b - delta;
+  lb.block(0, 0, N, 1) = a - delta;
+  ub.block(0, 0, N, 1) = b - delta;
 
-  for (int k = 0; k < N+1; k++) {
-    lb.block(N+1 + k*m, 0, m, 1) = c;
-    ub.block(N+1 + k*m, 0, m, 1) = d;
+  for (int k = 0; k < N; k++) {
+    lb.block(N + k*m, 0, m, 1) = c;
+    ub.block(N + k*m, 0, m, 1) = d;
   }
 
-  MatrixT KbG(N+1, m*(N+1));
-  for (int i = 0; i < N+1; i++) {
-    for (int j = 0; j < m*(N+1); j++) {
+  MatrixT KbG(N, m*N);
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < m*N; j++) {
       KbG(i, j) = G((i+1)*n - 1, j);
     }
   }
-  Ab.block(0, 0, N+1, m*(N+1)) = KbG;
-  Ab.block(N+1, 0, m*(N+1), m*(N+1)) = MatrixT::Identity(m*(N+1), m*(N+1));
+  Ab.block(0, 0, N, m*N) = KbG;
+  Ab.block(N, 0, m*N, m*N) = MatrixT::Identity(m*N, m*N);
 }
 
 
@@ -317,8 +315,6 @@ bool MPCNode::solve_qp(
   const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &Ab,
   VectorT &solution)
 {
-  cout << "Entering solve_qp" << endl;
-
   typedef Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> MatrixT;
   int n = q.rows();
   int m = ub.rows();
@@ -370,12 +366,10 @@ bool MPCNode::solve_qp(
   if (settings) {
     osqp_set_default_settings(settings);
     settings->alpha = 1.0; // Change alpha parameter
-    settings->verbose = true;
+    settings->verbose = false;
   }
 
   // Setup workspace
-  cout << "Before osqp_setup" << endl;
-
   c_int setup_flag = osqp_setup(&work, data, settings);
 
   if (setup_flag != 0) {
@@ -399,13 +393,26 @@ bool MPCNode::solve_qp(
 
   // Solve Problem
   c_int solve_ret = 0;  // return code of the solving operation (0: no error)
-
-  cout << "Starting to solve..." << endl;
-
   solve_ret = osqp_solve(work);
 
   if (solve_ret != 0 || work->info->status_val != OSQP_SOLVED) {
     ROS_WARN("[mpc_node] Couldn't solve MPC problem");
+
+    // TODO: remove later
+    switch (work->info->status_val) {
+      case OSQP_DUAL_INFEASIBLE_INACCURATE: cout << "OSQP_DUAL_INFEASIBLE_INACCURATE" << endl; break;
+      case OSQP_PRIMAL_INFEASIBLE_INACCURATE: cout << "OSQP_PRIMAL_INFEASIBLE_INACCURATE" << endl; break;
+      case OSQP_SOLVED_INACCURATE: cout << "OSQP_SOLVED_INACCURATE" << endl; break;
+      case OSQP_SOLVED: cout << "OSQP_SOLVED" << endl; break;
+      case OSQP_MAX_ITER_REACHED: cout << "OSQP_MAX_ITER_REACHED" << endl; break;
+      case OSQP_PRIMAL_INFEASIBLE: cout << "OSQP_PRIMAL_INFEASIBLE" << endl; break;
+      case OSQP_DUAL_INFEASIBLE: cout << "OSQP_DUAL_INFEASIBLE" << endl; break;
+      case OSQP_SIGINT: cout << "OSQP_SIGINT" << endl; break;
+      case OSQP_NON_CVX: cout << "OSQP_NON_CVX" << endl; break;
+      case OSQP_UNSOLVED: cout << "OSQP_UNSOLVED" << endl; break;
+      default: break;
+    }
+
     return false;
   }
 
@@ -444,6 +451,7 @@ bool MPCNode::compute_control(
 
   clock_t start = clock();
   cout << "---" << endl;
+  cout << "desired speed: " << desired_speed << endl;
 
   // Parse current state
   geometry_msgs::Point current_position;
@@ -473,18 +481,25 @@ bool MPCNode::compute_control(
   int N = nbr_steps;
   VectorXf X_ref, U_ref;
 
-  fill_ref_pts(N, n, m, new_path, desired_speed, last_desired_speed, robot_model,
-    X_ref, U_ref);
+  if (!fill_ref_pts(N, n, m, new_path, desired_speed, last_desired_speed, robot_model,
+    X_ref, U_ref))
+  {
+    ROS_WARN("[mpc_node] Reference trajectory could not be filled");
+    return false;
+  }
 
   // Fill intial points
   VectorXf x0(n), X0(n);  // initial state, and initial offset to the reference
-  VectorXf u0(m), U0(m);  // initial input, and initial offset to the reference
+  VectorXf u_m1(m), U_m1(m);  // last input, and last offset to the reference
+  VectorXf u0_ref(m);  // first control reference
 
   for (int k = 0; k < n; k++) x0(k) = current_state[k];
-  for (int k = 0; k < m; k++) u0(k) = last_control[k];
+  for (int k = 0; k < m; k++) u_m1(k) = last_control[k];
+  for (int k = 0; k < m; k++) u_m1(k) = last_control[k];
 
   X0 = x0 - X_ref.block(0, 0, n, 1);
-  U0 = u0 - U_ref.block(0, 0, m, 1);
+  U_m1 = u_m1 - U_ref.block(0, 0, m, 1);  // TODO: remove if not used
+  u0_ref = U_ref.block(0, 0, m, 1);
 
   // Build MPC objects
   MatrixXf Ad, Bd;  // discretised model
@@ -492,13 +507,17 @@ bool MPCNode::compute_control(
   MatrixXf L, M;    // to compute quadratic partts of the cost function
   VectorXf V;       // to compute linear parts of the cost function
   MatrixXf LG;      // product of L and G
+  // VectorXf origin_x = VectorXf::Zero(n);  // origin for linearisation
+  // VectorXf origin_u = VectorXf::Zero(m);
+  VectorXf origin_x = X_ref.block(0, 0, n, 1);  // origin for linearisation
+  VectorXf origin_u = U_ref.block(0, 0, m, 1);
 
-  robot_model.get_lin_discr_matrices(X0, U0, Ad, Bd, time_resolution, 10);
+  robot_model.get_lin_discr_matrices(origin_x, origin_u, Ad, Bd, time_resolution);
   fill_G(Ad, Bd, N, G);
   fill_H(Ad, N, H);
   fill_L(tuning_params_.P, tuning_params_.Q_x, N, L);
   fill_M(tuning_params_.R_u, tuning_params_.R_delta, N, M);
-  fill_V(desired_speed, last_desired_speed, tuning_params_.R_delta, N, V);
+  fill_V(u0_ref, u_m1, tuning_params_.R_delta, N, V);
   fill_LG(G, tuning_params.P, tuning_params.Q_x, n, m, N, LG);
 
   // Build MPC bounds objects
@@ -520,7 +539,7 @@ bool MPCNode::compute_control(
   bool solved;
   solved = solve_qp(P, q, lb, ub, Ab, solution);
 
-  cout << "Total time: " << (clock() - start) / (double)CLOCKS_PER_SEC << endl;
+  // cout << "Total time: " << (clock() - start) / (double)CLOCKS_PER_SEC << endl;
 
   if (solved) {
     command.resize(m);
