@@ -14,6 +14,7 @@
 #include "mf_robot_simulator/Command.h"
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/PoseArray.h>
 #include <ros/ros.h>
 #include <eigen3/Eigen/Dense>
 #include <iostream>
@@ -43,13 +44,12 @@ void MPCNode::init_node()
   // ROS parameters
   vector<double> model_csts;  // model constants
   vector<double> P, Q_x, R_u, R_delta;  // MPC tuning parameters
-  bool disable_vbs;  // whether to disable Variable Buoyancy System (VBS)
 
   nh_.param<float>("main_freq", main_freq_, 10.0);
   nh_.param<float>("desired_speed", desired_speed_, 1.0);
   nh_.param<float>("time_horizon", time_horizon_, 1.0);
   nh_.param<int>("nbr_steps", nbr_steps_, 10);
-  nh_.param<bool>("disable_vbs", disable_vbs, false);
+  nh_.param<bool>("disable_vbs", disable_vbs_, false);
   nh_.param<vector<double>>("P", P, vector<double>(13, 1.0));
   nh_.param<vector<double>>("Q_x", Q_x, vector<double>(13, 1.0));
   nh_.param<vector<double>>("R_u", R_u, vector<double>(4, 1.0));
@@ -68,7 +68,7 @@ void MPCNode::init_node()
   last_desired_speed_ = desired_speed_;
   last_control_ = vector<float>(4, 0);
 
-  if (disable_vbs)
+  if (disable_vbs_)
     bounds_.delta_m = 0;
 
 
@@ -83,6 +83,9 @@ void MPCNode::init_node()
 
   // ROS publishers
   command_pub_ = nh_.advertise<mf_robot_simulator::Command>("command", 0);
+
+
+  aim_pub_ = nh_.advertise<geometry_msgs::PoseArray>("aim", 0);
 }
 
 
@@ -117,6 +120,9 @@ void MPCNode::run_node()
       last_desired_speed_ = desired_speed;
 
       if (control_computed) {
+        if (disable_vbs_)
+          control[3] = 0;
+
         mf_robot_simulator::Command msg;
         msg.n = control[0];
         msg.delta_r = control[1];

@@ -7,10 +7,13 @@
  */
 
 #include "planning_nodelet.hpp"
+#include "mf_common/common.hpp"
+#include "mf_common/spline.hpp"
 #include "mf_sensors_simulator/MultiPoses.h"
 #include "mf_mapping/UpdateGP.h"
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Path.h>
+#include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <tf2/LinearMath/Scalar.h>
@@ -297,6 +300,8 @@ bool PlanningNodelet::plan_trajectory()
 
   selected_vp_ = std::max_element(info_gain.begin(), info_gain.end()) - info_gain.begin();
 
+  selected_vp_ = 4;
+
   x_hit_pt_sel_ = camera_pts_x[selected_vp_];
   y_hit_pt_sel_ = camera_pts_y[selected_vp_];
   z_hit_pt_sel_ = camera_pts_z[selected_vp_];
@@ -306,7 +311,48 @@ bool PlanningNodelet::plan_trajectory()
   current_pose = tf_to_pose(ocean_robot_tf_);
   tf2::doTransform(lattice_[selected_vp_], selected_pose, ocean_robot_tf_);
 
-  nav_msgs::Path path = straight_line_path(current_pose, selected_pose, plan_res_);
+  vector<Eigen::Vector3f> p(4);
+  p[0] = Eigen::Vector3f(1.1, -3, 3);
+  p[1] = Eigen::Vector3f(2.1, -10, 2);
+  p[2] = Eigen::Vector3f(3.1, -15, 2);
+  p[3] = Eigen::Vector3f(4.1, -5, 3);
+  vector<Eigen::Vector3f> o(4);
+  o[0] = Eigen::Vector3f(0, -10, 0);
+  o[1] = Eigen::Vector3f(0, -10, 0);
+  o[2] = Eigen::Vector3f(5, -5, 0);
+  o[3] = Eigen::Vector3f(0, 10, 0);
+
+  const clock_t begin_time = clock();
+
+
+  Spline spline(p, o, plan_speed_);
+
+  nav_msgs::Path path;
+  path.header.frame_id = "ocean";
+  bool last_reached = false;
+  float t = 0;
+
+  while (!last_reached) {
+    Eigen::Vector3f p;
+    Eigen::Vector3f o;
+
+    spline.evaluate(t, p, o, last_reached);
+    o = o / o.norm();
+
+    geometry_msgs::PoseStamped pose;
+    pose.pose.position.x = p(0);
+    pose.pose.position.y = p(1);
+    pose.pose.position.z = p(2);
+    to_quaternion(0.0, -asin(o(2)), atan2(o(1), o(0)), pose.pose.orientation);
+
+    path.poses.emplace_back(pose);
+    t += plan_res_ / plan_speed_;
+  }
+
+  std::cout << "duration=" << float( clock () - begin_time ) /  CLOCKS_PER_SEC << endl;
+
+
+  // nav_msgs::Path path = straight_line_path(current_pose, selected_pose, plan_res_);
   path_pub_.publish(path);
 
 }

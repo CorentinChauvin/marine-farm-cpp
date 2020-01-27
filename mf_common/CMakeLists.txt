@@ -46,6 +46,7 @@ include_directories(${Eigen_INCLUDE_DIRS})
 
 add_library(mf_common
   src/mf_common/common.cpp
+  src/mf_common/spline.cpp
 )
 
 add_dependencies(mf_common

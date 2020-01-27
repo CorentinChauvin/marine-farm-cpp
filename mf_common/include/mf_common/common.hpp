@@ -146,6 +146,24 @@ inline void to_quaternion(double roll, double pitch, double yaw, geometry_msgs::
 }
 
 /**
+ * \brief  Converts Axis-angle to a quaternion
+ *
+ * \param[in]  x      X coordinate of the axis vector
+ * \param[in]  y      Y coordinate of the axis vector
+ * \param[in]  z      Z coordinate of the axis vector
+ * \param[in]  angle  Angle around the axis vector
+ * \param[out] quat   Resulting quaternion
+ */
+inline void to_quaternion(
+  float x, float y, float z, float angle,
+  geometry_msgs::Quaternion &quat)
+{
+  tf2::Vector3 vect(x, y, z);
+  tf2::Quaternion _quat(vect, angle);
+  tf2::convert(_quat, quat);
+}
+
+/**
  * \brief  Fills a Eigen DiagonalMatrix from a std::Vector
  *
  * \param[in]  v  Vector containing the diagonal terms of the matrix

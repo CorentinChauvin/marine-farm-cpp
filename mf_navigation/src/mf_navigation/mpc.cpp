@@ -12,6 +12,7 @@
 #include "osqp_eigen/SparseMatrixHelper.hpp"
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseArray.h>
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Point.h>
 #include <eigen3/Eigen/Dense>
@@ -54,13 +55,14 @@ std::vector<geometry_msgs::Pose> MPCNode::adapt_path(
     return vector<geometry_msgs::Pose>(nbr_steps, orig_path[size_path-1]);
   }
 
-  // Update resolutions if path is too short
+  // Compute length of the path
   float path_length = 0;
 
   for (int k = idx_path; k < size_path-1; k++) {
     path_length += distance(orig_path[k], orig_path[k+1]);
   }
 
+  // Update resolutions if path is too short
   if (spatial_resolution*nbr_steps > path_length) {
     float factor = path_length / (nbr_steps * spatial_resolution);
     spatial_resolution *= factor;
@@ -413,6 +415,9 @@ bool MPCNode::solve_qp(
       default: break;
     }
 
+    cout << "lb: \n" << lb.transpose() << endl;
+    cout << "ub: \n" << ub.transpose() << endl;
+
     return false;
   }
 
@@ -477,6 +482,16 @@ bool MPCNode::compute_control(
   vector<geometry_msgs::Pose> new_path = adapt_path(orig_path, current_position,
     nbr_steps, spatial_resolution, time_resolution, desired_speed);
 
+
+  geometry_msgs::PoseArray msg_aim;
+  msg_aim.header.stamp = ros::Time::now();
+  msg_aim.header.frame_id = "ocean";
+  msg_aim.poses = new_path;
+  aim_pub_.publish(msg_aim);
+
+
+
+
   // Fill reference points for MPC optimisation
   int N = nbr_steps;
   VectorXf X_ref, U_ref;
@@ -490,15 +505,13 @@ bool MPCNode::compute_control(
 
   // Fill intial points
   VectorXf x0(n), X0(n);  // initial state, and initial offset to the reference
-  VectorXf u_m1(m), U_m1(m);  // last input, and last offset to the reference
-  VectorXf u0_ref(m);  // first control reference
+  VectorXf u_m1(m);       // last control applied to the robot
+  VectorXf u0_ref(m);     // first control reference
 
   for (int k = 0; k < n; k++) x0(k) = current_state[k];
   for (int k = 0; k < m; k++) u_m1(k) = last_control[k];
-  for (int k = 0; k < m; k++) u_m1(k) = last_control[k];
 
   X0 = x0 - X_ref.block(0, 0, n, 1);
-  U_m1 = u_m1 - U_ref.block(0, 0, m, 1);  // TODO: remove if not used
   u0_ref = U_ref.block(0, 0, m, 1);
 
   // Build MPC objects
@@ -546,6 +559,7 @@ bool MPCNode::compute_control(
     for (int k = 0; k < m; k++)
       command[k] = solution(k) + U_ref(k);
 
+    // TODO: to remove
     VectorXf command_vec = (solution + U_ref).block(0, 0, m, 1);
     cout << "Command to apply: " << command_vec.transpose() << endl;
 

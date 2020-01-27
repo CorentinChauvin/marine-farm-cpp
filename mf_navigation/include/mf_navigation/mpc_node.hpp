@@ -67,6 +67,10 @@ class MPCNode {
     tf2_ros::Buffer tf_buffer_;   ///<  Buffer for tf2
     tf2_ros::TransformListener tf_listener_;  ///<  Transform listener for tf2
 
+
+    ros::Publisher aim_pub_;
+
+
     nav_msgs::Path path_;     ///<  Desired path
     bool path_received_;      ///<  Whether a new path has been received
     bool state_received_;     ///<  Whether the robot state has ever been received
@@ -84,6 +88,7 @@ class MPCNode {
     float last_desired_speed_;  ///<  Last desired speed (m/s) of the robot
     float time_horizon_;   ///<  Time horizon (s) for the MPC prediction
     int nbr_steps_;        ///<  Number of steps for the MPC prediction (fixed in CVXGEN)
+    bool disable_vbs_;     ///<  Whether to disable Variable Buoyancy System (VBS)
     ///@}
 
     /**
