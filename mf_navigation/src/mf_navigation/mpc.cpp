@@ -87,7 +87,6 @@ std::vector<geometry_msgs::Pose> MPCNode::adapt_path(
     if (s + ds < spatial_resolution) {
       // Last pose of the path
       if (k != nbr_steps) {
-        // TODO: to remove
         ROS_WARN("[mpc_node] Unexpected path length");
       }
 
@@ -171,11 +170,9 @@ void MPCNode::fill_H(const MatrixT &Ad, int N, MatrixT &H)
 {
   int n = Ad.rows();
   H = MatrixT(n*N, n);
-
-  H.block(0, 0, n, n).setIdentity();
   MatrixT M = MatrixT::Identity(n, n);
 
-  for (int k = 1; k < N; k++) {
+  for (int k = 0; k < N; k++) {
     M = M * Ad;
     H.block(k*n, 0, n, n) = M;
   }
@@ -437,19 +434,12 @@ bool MPCNode::solve_qp(
 
 
 bool MPCNode::compute_control(
-  const nav_msgs::Path &path,
-  const vector<float> &current_state,
-  const vector<float> &last_control,
-  const RobotModel &robot_model,
-  const MPCTuningParameters &tuning_params,
   float &desired_speed,
   float last_desired_speed,
-  float time_horizon,
-  int nbr_steps,
-  const MPCBounds &bounds,
-  std::vector<float> &command)
+  std::vector<float> &command,
+  geometry_msgs::PoseArray &expected_traj)
 {
-  if (path.poses.size() < 2) {
+  if (path_.poses.size() < 2) {
     ROS_WARN("[mpc_node] Path size < 2");
     return false;
   }
@@ -460,43 +450,33 @@ bool MPCNode::compute_control(
 
   // Parse current state
   geometry_msgs::Point current_position;
-  current_position.x = current_state[0];
-  current_position.y = current_state[1];
-  current_position.z = current_state[2];
+  current_position.x = state_[0];
+  current_position.y = state_[1];
+  current_position.z = state_[2];
 
-  int n = current_state.size();
-  int m = last_control.size();
+  int n = state_.size();
+  int m = last_control_.size();
 
   // Store the original path for convenience
-  int size_path = path.poses.size();
+  int size_path = path_.poses.size();
   vector<geometry_msgs::Pose> orig_path(size_path);
 
   for (int k = 0; k < size_path; k++) {
-    orig_path[k] = path.poses[k].pose;
+    orig_path[k] = path_.poses[k].pose;
   }
 
   // Get path with suitable length and resolution
-  float spatial_resolution = desired_speed * time_horizon / nbr_steps;  // spatial resolution
-  float time_resolution = time_horizon / nbr_steps;
+  float spatial_resolution = desired_speed * time_horizon_ / nbr_steps_;  // spatial resolution
+  float time_resolution = time_horizon_ / nbr_steps_;
 
   vector<geometry_msgs::Pose> new_path = adapt_path(orig_path, current_position,
-    nbr_steps, spatial_resolution, time_resolution, desired_speed);
-
-
-  geometry_msgs::PoseArray msg_aim;
-  msg_aim.header.stamp = ros::Time::now();
-  msg_aim.header.frame_id = "ocean";
-  msg_aim.poses = new_path;
-  aim_pub_.publish(msg_aim);
-
-
-
+    nbr_steps_, spatial_resolution, time_resolution, desired_speed);
 
   // Fill reference points for MPC optimisation
-  int N = nbr_steps;
+  int N = nbr_steps_;
   VectorXf X_ref, U_ref;
 
-  if (!fill_ref_pts(N, n, m, new_path, desired_speed, last_desired_speed, robot_model,
+  if (!fill_ref_pts(N, n, m, new_path, desired_speed, last_desired_speed, robot_model_,
     X_ref, U_ref))
   {
     ROS_WARN("[mpc_node] Reference trajectory could not be filled");
@@ -508,8 +488,8 @@ bool MPCNode::compute_control(
   VectorXf u_m1(m);       // last control applied to the robot
   VectorXf u0_ref(m);     // first control reference
 
-  for (int k = 0; k < n; k++) x0(k) = current_state[k];
-  for (int k = 0; k < m; k++) u_m1(k) = last_control[k];
+  for (int k = 0; k < n; k++) x0(k) = state_[k];
+  for (int k = 0; k < m; k++) u_m1(k) = last_control_[k];
 
   X0 = x0 - X_ref.block(0, 0, n, 1);
   u0_ref = U_ref.block(0, 0, m, 1);
@@ -525,19 +505,19 @@ bool MPCNode::compute_control(
   VectorXf origin_x = X_ref.block(0, 0, n, 1);  // origin for linearisation
   VectorXf origin_u = U_ref.block(0, 0, m, 1);
 
-  robot_model.get_lin_discr_matrices(origin_x, origin_u, Ad, Bd, time_resolution);
+  robot_model_.get_lin_discr_matrices(origin_x, origin_u, Ad, Bd, time_resolution);
   fill_G(Ad, Bd, N, G);
   fill_H(Ad, N, H);
   fill_L(tuning_params_.P, tuning_params_.Q_x, N, L);
   fill_M(tuning_params_.R_u, tuning_params_.R_delta, N, M);
   fill_V(u0_ref, u_m1, tuning_params_.R_delta, N, V);
-  fill_LG(G, tuning_params.P, tuning_params.Q_x, n, m, N, LG);
+  fill_LG(G, tuning_params_.P, tuning_params_.Q_x, n, m, N, LG);
 
   // Build MPC bounds objects
   VectorXf lb, ub;  // lower and upper bounds
   MatrixXf Ab;  // multiplicative factor in front of U in the bound inequalities
 
-  fill_bounds_objs(bounds, n, N, X0, X_ref, G, H, lb, ub, Ab);
+  fill_bounds_objs(bounds_, n, N, X0, X_ref, G, H, lb, ub, Ab);
 
   // Solve MPC Quadratic Program
   MatrixXf P = 2*(G.transpose()*LG + M);
@@ -551,21 +531,36 @@ bool MPCNode::compute_control(
 
   bool solved = solve_qp(P, q, lb, ub, Ab, solution);
 
-  // cout << "Total time: " << (clock() - start) / (double)CLOCKS_PER_SEC << endl;
-
-  if (solved) {
-    command.resize(m);
-    for (int k = 0; k < m; k++)
-      command[k] = solution(k) + U_ref(k);
-
-    // TODO: to remove
-    VectorXf command_vec = (solution + U_ref).block(0, 0, m, 1);
-    cout << "Command to apply: " << command_vec.transpose() << endl;
-
-    return true;
-  } else
+  if (!solved)
     return false;
 
+  cout << "Total time: " << (clock() - start) / (double)CLOCKS_PER_SEC << endl;
+
+  // Prepare command output
+  command.resize(m);
+  for (int k = 0; k < m; k++)
+    command[k] = solution(k) + U_ref(k);
+
+  // TODO: to remove
+  VectorXf command_vec = (solution + U_ref).block(0, 0, m, 1);
+  cout << "Command to apply: " << command_vec.transpose() << endl;
+
+  // Compute expected controlled trajectory
+  VectorXf X = G*solution + H*X0 + X_ref;
+  expected_traj.poses.resize(N);
+
+  for (int k = 0; k < N; k++) {
+    geometry_msgs::Pose pose;
+    pose.position.x = X(k*n);
+    pose.position.y = X(k*n + 1);
+    pose.position.z = X(k*n + 2);
+    to_quaternion(X(k*n + 3), X(k*n + 4), X(k*n + 5), pose.orientation);
+
+    expected_traj.poses[k] = pose;
+  }
+
+
+  return true;
 }
 
 }  // namespace mfcpp

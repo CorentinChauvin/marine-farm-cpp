@@ -46,6 +46,7 @@ void MPCNode::init_node()
   vector<double> P, Q_x, R_u, R_delta;  // MPC tuning parameters
 
   nh_.param<float>("main_freq", main_freq_, 10.0);
+  nh_.param<string>("fixed_frame", fixed_frame_, "ocean");
   nh_.param<float>("desired_speed", desired_speed_, 1.0);
   nh_.param<float>("time_horizon", time_horizon_, 1.0);
   nh_.param<int>("nbr_steps", nbr_steps_, 10);
@@ -83,10 +84,7 @@ void MPCNode::init_node()
 
   // ROS publishers
   command_pub_ = nh_.advertise<mf_robot_simulator::Command>("command", 0);
-
-
-  // TODO: to remove
-  aim_pub_ = nh_.advertise<geometry_msgs::PoseArray>("aim", 0);
+  expected_traj_pub_ = nh_.advertise<geometry_msgs::PoseArray>("expected_traj", 0);
 }
 
 
@@ -103,19 +101,13 @@ void MPCNode::run_node()
       vector<float> control;
       bool control_computed;
       float desired_speed = desired_speed_;
+      geometry_msgs::PoseArray expected_traj;
 
       control_computed = compute_control(
-        path_,
-        state_,
-        last_control_,
-        robot_model_,
-        tuning_params_,
         desired_speed,
         last_desired_speed_,
-        time_horizon_,
-        nbr_steps_,
-        bounds_,
-        control
+        control,
+        expected_traj
       );
 
       last_desired_speed_ = desired_speed;
@@ -133,6 +125,10 @@ void MPCNode::run_node()
         command_pub_.publish(msg);
 
         last_control_ = control;
+
+
+        expected_traj.header.frame_id = fixed_frame_;
+        expected_traj_pub_.publish(expected_traj);
       }
     }
 

@@ -14,6 +14,7 @@
 #include "mf_common/Float32Array.h"
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/PoseArray.h>
 #include <geometry_msgs/Pose.h>
 #include <tf2_ros/transform_listener.h>
 #include <ros/ros.h>
@@ -64,15 +65,11 @@ class MPCNode {
     ros::Subscriber path_sub_;    ///<  Subscriber for the desired path
     ros::Subscriber state_sub_;   ///<  Subscriber for the current robot state
     ros::Publisher command_pub_;  ///<  Publisher for the computed command
+    ros::Publisher expected_traj_pub_;  ///<  Publisher for the expected controlled trajectory
     tf2_ros::Buffer tf_buffer_;   ///<  Buffer for tf2
     tf2_ros::TransformListener tf_listener_;  ///<  Transform listener for tf2
 
-
-    // TODO: to remove
-    ros::Publisher aim_pub_;
-
-
-    nav_msgs::Path path_;     ///<  Desired path
+    nav_msgs::Path path_;     ///<  Path to follow
     bool path_received_;      ///<  Whether a new path has been received
     bool state_received_;     ///<  Whether the robot state has ever been received
     RobotModel robot_model_;  ///<  Robot model
@@ -84,6 +81,7 @@ class MPCNode {
     /// \name  ROS parameters
     ///@{
     float main_freq_;  ///<  Frequency of the main loop
+    std::string fixed_frame_;  ///<  Fixed frame
 
     float desired_speed_;  ///<  Desired speed (m/s) of the robot
     float last_desired_speed_;  ///<  Last desired speed (m/s) of the robot
@@ -256,42 +254,24 @@ class MPCNode {
       VectorT &solution
     );
 
-
-    // TODO: remove
-    int foo();
-
     /**
      * \brief  Computes the control signal to send to the robot
      *
      * The desired speed might be changed if the robot is close to the end of
      * the path.
      *
-     * \param[in]     path                Total desired path to follow
-     * \param[in]     current_state       Current state of the robot
-     * \param[in]     last_control        Last control applied to the robot
-     * \param[in]     robot_model         Robot model
-     * \param[in]     tuning_params       MPC tuning parameters
      * \param[in,out] desired_speed       Desired speed (m/s) of the robot
      * \param[in]     last_desired_speed  Last desired speed
-     * \param[in]     time_horizon        Time horizon (s) for the MPC prediction
-     * \param[in]     nbr_steps           Number of steps for the MPC prediction
-     * \param[in]     bounds              Bounds of the MPC problem
      * \param[out]    command             Computed control input to apply
+     * \param[out]    expected_traj       Expected controlled trajectory
      *
      * \return  Whether the control could be computed
      */
     bool compute_control(
-      const nav_msgs::Path &path,
-      const std::vector<float> &current_state,
-      const std::vector<float> &last_control,
-      const RobotModel &robot_model,
-      const MPCTuningParameters &tuning_params,
       float &desired_speed,
       float last_desired_speed,
-      float time_horizon,
-      int nbr_steps,
-      const MPCBounds &bounds,
-      std::vector<float> &command
+      std::vector<float> &command,
+      geometry_msgs::PoseArray &expected_traj
     );
 
     /**

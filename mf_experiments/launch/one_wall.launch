@@ -92,6 +92,7 @@
 
       <remap from="~odom" to="/simu/robot_simulator/odom" />
       <remap from="~path" to="/nav/path" />
+      <remap from="~expected_traj" to="/nav/expected_traj" />
     </node>
 
   </group>

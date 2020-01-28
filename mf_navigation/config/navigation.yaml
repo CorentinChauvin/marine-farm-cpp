@@ -26,10 +26,11 @@ cart_control_nodelet:
 
 mpc_node:
   main_freq: 10
+  fixed_frame: "ocean"
 
   desired_speed: 0.5  # desired speed (m/s) of the robot
   time_horizon: 5.0   # time horizon (s) for the MPC prediction
-  nbr_steps: 30       # number of steps for the MPC prediction (fixed in CVXGEN)
+  nbr_steps: 10       # number of steps for the MPC prediction
   disable_vbs: false   # whether to disable the Variable Buoyancy System (VBS)
 
   P: [100.0, 100.0, 100.0,
@@ -43,4 +44,4 @@ mpc_node:
         0.1, 0.1, 0.1,
         0.1]  # diagonal of the penalty on the intermediary states error
   R_u: [0.001, 0.001, 0.001, 10000000.0]      # diagonal of the penalty on the control input error
-  R_delta: [0.0, 0.1, 0.1, 0.0]  # diagonal of the penalty on the control change rate
+  R_delta: [0.0, 0.05, 0.05, 0.0]  # diagonal of the penalty on the control change rate
