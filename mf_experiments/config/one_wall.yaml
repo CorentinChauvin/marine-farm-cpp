@@ -41,3 +41,10 @@ simu:
                  0, 0, 0,  # u, v, w (linear speed)
                  0, 0, 0,  # p, q, r (angular speed)
                  0.0]      # delta_m (ballast)
+
+experiments:
+  control_tester:
+    main_freq: 1.0
+    path_frame: 'ocean'  # frame in which the path is expressed
+    plan_res: 0.1        # spatial resolution (m) of the planned trajectory
+    wp_file_name: 'resources/waypoints.txt'  # relative path of the text file containing the waypoints

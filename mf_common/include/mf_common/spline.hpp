@@ -83,7 +83,7 @@ class Spline {
     float speed_;  ///<  Constant speed to adopt on the path
     std::vector<Eigen::Vector3f> p_;  ///<  Positions to interpolate
     std::vector<Eigen::Vector3f> o_;  ///<  Corresponding orientations
-    std::vector<std::vector<Eigen::Vector3f>> a_;  ///<  Spline parameters for each segment (ie between each pose)
+    std::vector< std::vector<Eigen::Vector3f> > a_;  ///<  Spline parameters for each segment (ie between each pose)
     bool prepared_;    ///<  Whether the class is ready for interpolation
     float last_s_;  ///<  Curvilinear abscissa of the last evaluated point
     float last_t_;  ///<  Time instant of the last evaluated point

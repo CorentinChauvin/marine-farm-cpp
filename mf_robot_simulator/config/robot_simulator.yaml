@@ -19,4 +19,4 @@ robot_simulator:
 
   # Bounds on the state and the input
   bnd_delta_m: 0.02
-  bnd_input: [4300, 15, 10, 0.01]
+  bnd_input: [4300, 20, 20, 0.01]

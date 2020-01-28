@@ -73,6 +73,7 @@ void PlanningNodelet::onInit()
   private_nh_.param<vector<double>>("bnd_input", bnd_input, vector<double>(4, 0.0));
   private_nh_.param<bool>("horiz_motion", horiz_motion_, true);
   private_nh_.param<bool>("vert_motion", vert_motion_, true);
+  private_nh_.param<bool>("linear_path", linear_path_, false);
   private_nh_.param<float>("plan_speed", plan_speed_, 1.0);
   private_nh_.param<float>("plan_horizon", plan_horizon_, 1.0);
   private_nh_.param<float>("plan_res", plan_res_, 0.1);

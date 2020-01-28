@@ -68,6 +68,7 @@ class MPCNode {
     tf2_ros::TransformListener tf_listener_;  ///<  Transform listener for tf2
 
 
+    // TODO: to remove
     ros::Publisher aim_pub_;
 
 
@@ -255,6 +256,8 @@ class MPCNode {
       VectorT &solution
     );
 
+
+    // TODO: remove
     int foo();
 
     /**

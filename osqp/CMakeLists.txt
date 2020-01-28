@@ -43,8 +43,8 @@ LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/include/osqp/configure/cmake
 INCLUDE(FindPythonModule)
 INCLUDE(Utils)
 option (DFLOAT "Use float numbers instead of doubles" ON)
-# option (PRINTING "Enable solver printing" ON)
-# option (PROFILING "Enable solver profiling (timing)" ON)
+option (PRINTING "Enable solver printing" ON)
+option (PROFILING "Enable solver profiling (timing)" ON)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/osqp/configure/osqp_configure.h.in
                ${CMAKE_CURRENT_SOURCE_DIR}/include/osqp/include/osqp_configure.h

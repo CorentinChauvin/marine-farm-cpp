@@ -545,12 +545,11 @@ bool MPCNode::compute_control(
   VectorXf solution;
 
   // TODO: to remove
-  Eigen::LLT<Eigen::MatrixXf> lltOfA(P); // compute the Cholesky decomposition of A
-  if(lltOfA.info() == Eigen::NumericalIssue)
-    ROS_WARN("Possibly non semi-positive definite matrix!");
+  // Eigen::LLT<Eigen::MatrixXf> lltOfA(P); // compute the Cholesky decomposition of A
+  // if(lltOfA.info() == Eigen::NumericalIssue)
+  //   ROS_WARN("Possibly non semi-positive definite matrix!");
 
-  bool solved;
-  solved = solve_qp(P, q, lb, ub, Ab, solution);
+  bool solved = solve_qp(P, q, lb, ub, Ab, solution);
 
   // cout << "Total time: " << (clock() - start) / (double)CLOCKS_PER_SEC << endl;
 

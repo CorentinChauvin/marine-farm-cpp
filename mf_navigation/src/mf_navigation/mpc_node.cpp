@@ -85,6 +85,7 @@ void MPCNode::init_node()
   command_pub_ = nh_.advertise<mf_robot_simulator::Command>("command", 0);
 
 
+  // TODO: to remove
   aim_pub_ = nh_.advertise<geometry_msgs::PoseArray>("aim", 0);
 }
 
@@ -137,8 +138,6 @@ void MPCNode::run_node()
 
     loop_rate.sleep();
   }
-
-  ros::spin();
 }
 
 
@@ -164,8 +163,9 @@ void MPCNode::state_cb(const mf_common::Float32Array msg)
  */
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "mpc_node");
+  ros::init(argc, argv, "mpc");
   mfcpp::MPCNode mpc_node;
   mpc_node.run_node();
+
   return 0;
 }

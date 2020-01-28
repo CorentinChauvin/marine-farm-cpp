@@ -3,8 +3,11 @@
   <arg name="rviz" value="true" />
   <arg name="display_img_gp" value="false" />
   <arg name="display_cov_gp" value="false" />
+
+  <arg name="path_planning" value="false" />
   <arg name="cart_control" value="false" />
   <arg name="mpc_control" value="true" />
+  <arg name="control_tester" value="true" />
 
   <!-- ROS parameters -->
   <rosparam file="$(find mf_farm_simulator)/config/farm_simulator.yaml" command="load" ns="simu" />
@@ -52,7 +55,7 @@
 
     <!-- Planning -->
     <node pkg="nodelet" type="nodelet" args="load mf_navigation/PlanningNodelet nav_nodelet_manager"
-      name="planning_nodelet" output="screen">
+      name="planning_nodelet" output="screen" if="$(arg path_planning)">
       <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
       <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />
 
@@ -70,7 +73,8 @@
     <!-- <node pkg="nodelet" type="nodelet" args="manager" name="mpc_nodelet_manager" output="screen"
       launch-prefix="gdb -ex run - -args" /> -->
 
-    <node name="mpc_node" type="mpc_node" pkg="mf_navigation" output="screen" if="$(arg mpc_control)">
+    <node
+      name="mpc_node" type="mpc_node" pkg="mf_navigation" output="screen" if="$(arg mpc_control)">
       <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
       <remap from="~bnd_delta_m" to="/simu/robot_simulator/bnd_delta_m" />
       <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />
@@ -79,6 +83,17 @@
       <remap from="~path" to="/nav/path" />
       <remap from="~command" to="/simu/robot_simulator/control_input" />
     </node>
+  </group>
+
+  <!-- Experimentation tools -->
+  <group ns="experiments">
+    <node name="control_tester" type="control_tester" pkg="mf_experiments" output="screen" if="$(arg control_tester)">
+      <!-- <remap from="~model_constants" to="/simu/robot_simulator/model_constants" /> -->
+
+      <remap from="~odom" to="/simu/robot_simulator/odom" />
+      <remap from="~path" to="/nav/path" />
+    </node>
+
   </group>
 
   <!-- Visualisation -->

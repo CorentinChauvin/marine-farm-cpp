@@ -82,6 +82,7 @@ class PlanningNodelet: public nodelet::Nodelet {
 
     bool horiz_motion_;    ///<  Whether to allow motion in the horizontal plane
     bool vert_motion_;     ///<  Whether to allow motion in the vertical plane
+    bool linear_path_;      ///<  Whether to create a linear path, or a spline one
     float plan_speed_;     ///<  Planned speed (m/s) of the robot
     float plan_horizon_;   ///<  Horizon (m) of the planning
     float plan_res_;       ///<  Spatial resolution (m) of the planned trajectory
@@ -171,6 +172,18 @@ class PlanningNodelet: public nodelet::Nodelet {
      */
     nav_msgs::Path straight_line_path(const geometry_msgs::Pose &start,
       const geometry_msgs::Pose &end, float resolution);
+
+    /**
+     * \brief  Interpolates a spline path between two poses
+     *
+     * \param p1          Start of the path
+     * \param p2          End of the path
+     * \param resolution  Spatial resolution of the path
+     * \param speed       Desired speed along the path
+     * \return  Generated path
+     */
+    nav_msgs::Path spline_path(const geometry_msgs::Pose &start,
+      const geometry_msgs::Pose &end, float resolution, float speed);
 
     /**
      * \brief  Main function to compute a trajectory plan
