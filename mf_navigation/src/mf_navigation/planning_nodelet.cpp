@@ -13,6 +13,7 @@
 #include "mf_mapping/UpdateGP.h"
 #include "mf_mapping/Float32Array.h"
 #include "mf_mapping/Array2D.h"
+#include "mf_common/Float32Array.h"
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/PoseArray.h>
 #include <visualization_msgs/Marker.h>
@@ -68,23 +69,35 @@ void PlanningNodelet::onInit()
   private_nh_.param<string>("wall_frame", wall_frame_, "wall");
   private_nh_.param<string>("robot_frame", robot_frame_, "base_link");
   private_nh_.param<string>("camera_frame", camera_frame_, "camera");
-  private_nh_.param<int>("nbr_int_steps", nbr_int_steps_, 10);
+
   private_nh_.param<vector<double>>("model_constants", model_csts, vector<double>(11, 0.0));
   private_nh_.param<vector<double>>("bnd_input", bnd_input, vector<double>(4, 0.0));
+
   private_nh_.param<bool>("horiz_motion", horiz_motion_, true);
   private_nh_.param<bool>("vert_motion", vert_motion_, true);
-  private_nh_.param<bool>("linear_path", linear_path_, false);
+  private_nh_.param<bool>("cart_lattice", cart_lattice_, false);
   private_nh_.param<float>("plan_speed", plan_speed_, 1.0);
   private_nh_.param<float>("plan_horizon", plan_horizon_, 1.0);
-  private_nh_.param<float>("plan_res", plan_res_, 0.1);
+  private_nh_.param<int>("lattice_size_horiz", lattice_size_horiz_, 1);
+  private_nh_.param<int>("lattice_size_vert", lattice_size_vert_, 1);
   private_nh_.param<float>("lattice_res", lattice_res_, 0.5);
-  private_nh_.param<float>("min_wall_dist", min_wall_dist_, 0.3);
-  private_nh_.param<float>("gp_weight", gp_weight_, 1.0);
+  private_nh_.param<vector<float>>("bnd_wall_dist", bnd_wall_dist_, {0.5, 1.0});
+  private_nh_.param<vector<float>>("bnd_depth", bnd_depth_, {0.0, 1.0});
+
   private_nh_.param<int>("camera_width", camera_width_, -1);
   private_nh_.param<int>("camera_height", camera_height_, -1);
+  private_nh_.param<float>("gp_weight", gp_weight_, 1.0);
+
+  private_nh_.param<bool>("linear_path", linear_path_, false);
+  private_nh_.param<float>("path_res", path_res_, 0.1);
 
   max_lat_rudder_ = bnd_input[1];
   max_elev_rudder_ = bnd_input[2];
+
+  if (!vert_motion_)
+    lattice_size_vert_ = 0;
+  if (!horiz_motion_)
+    lattice_size_horiz_ = 0;
 
   // Other variables
   robot_model_ = RobotModel(model_csts);
@@ -93,12 +106,13 @@ void PlanningNodelet::onInit()
   x_hit_pt_sel_.resize(0);
   y_hit_pt_sel_.resize(0);
   z_hit_pt_sel_.resize(0);
+  state_received_ = false;
+
 
   // ROS subscribers
-  gp_mean_sub_ = nh_.subscribe<mf_mapping::Float32ArrayConstPtr>("gp_mean", 1,
-    &PlanningNodelet::gp_mean_cb, this);
-  gp_cov_sub_ = nh_.subscribe<mf_mapping::Array2DConstPtr>("gp_cov", 1,
-    &PlanningNodelet::gp_cov_cb, this);
+  gp_mean_sub_ = nh_.subscribe<mf_mapping::Float32ArrayConstPtr>("gp_mean", 1, &PlanningNodelet::gp_mean_cb, this);
+  gp_cov_sub_ = nh_.subscribe<mf_mapping::Array2DConstPtr>("gp_cov", 1, &PlanningNodelet::gp_cov_cb, this);
+  state_sub_ = nh_.subscribe<mf_common::Float32Array>("state", 1, &PlanningNodelet::state_cb, this);
 
   // ROS publishers
   lattice_pub_ = nh_.advertise<visualization_msgs::Marker>("wp_lattice", 0);
@@ -122,7 +136,7 @@ void PlanningNodelet::main_cb(const ros::TimerEvent &timer_event)
   if (!ros::ok() || ros::isShuttingDown() || b_sigint_)
     return;
 
-  if (get_tf()) {
+  if (state_received_ && get_tf()) {
     plan_trajectory();
 
     // Debugging display
@@ -210,19 +224,21 @@ void PlanningNodelet::pub_lattice_markers()
 
 bool PlanningNodelet::get_tf()
 {
-  geometry_msgs::TransformStamped t1, t2;
+  geometry_msgs::TransformStamped t1, t2, t3;
 
   try {
-    t1 = tf_buffer_.lookupTransform(wall_frame_, robot_frame_, ros::Time(0));
+    t1 = tf_buffer_.lookupTransform(wall_frame_,  robot_frame_, ros::Time(0));
     t2 = tf_buffer_.lookupTransform(ocean_frame_, robot_frame_, ros::Time(0));
+    t3 = tf_buffer_.lookupTransform(robot_frame_, ocean_frame_, ros::Time(0));
   }
   catch (tf2::TransformException &ex) {
     NODELET_WARN("[planning_nodelet] %s", ex.what());
     return false;
   }
 
-  wall_robot_tf_ = t1;
+  wall_robot_tf_  = t1;
   ocean_robot_tf_ = t2;
+  robot_ocean_tf_ = t3;
   return true;
 }
 
@@ -236,6 +252,13 @@ void PlanningNodelet::gp_mean_cb(const mf_mapping::Float32ArrayConstPtr msg)
 void PlanningNodelet::gp_cov_cb(const mf_mapping::Array2DConstPtr msg)
 {
   last_gp_cov_ = array_to_vector2D(msg->data);
+}
+
+
+void PlanningNodelet::state_cb(const mf_common::Float32Array msg)
+{
+  state_ = RobotModel::state_type(msg.array.begin(), msg.array.end());
+  state_received_ = true;
 }
 
 

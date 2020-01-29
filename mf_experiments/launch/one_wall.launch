@@ -4,10 +4,10 @@
   <arg name="display_img_gp" value="false" />
   <arg name="display_cov_gp" value="false" />
 
-  <arg name="path_planning" value="false" />
+  <arg name="path_planning" value="true" />
   <arg name="cart_control" value="false" />
   <arg name="mpc_control" value="true" />
-  <arg name="control_tester" value="true" />
+  <arg name="control_tester" value="false" />
 
   <!-- ROS parameters -->
   <rosparam file="$(find mf_farm_simulator)/config/farm_simulator.yaml" command="load" ns="simu" />
@@ -59,6 +59,7 @@
       <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
       <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />
 
+      <remap from="state" to="/simu/robot_simulator/state" />
       <remap from="raycast_multi" to="/simu/raycast_multi" />
     </node>
 
@@ -73,8 +74,7 @@
     <!-- <node pkg="nodelet" type="nodelet" args="manager" name="mpc_nodelet_manager" output="screen"
       launch-prefix="gdb -ex run - -args" /> -->
 
-    <node
-      name="mpc_node" type="mpc_node" pkg="mf_navigation" output="screen" if="$(arg mpc_control)">
+    <node name="mpc_node" type="mpc_node" pkg="mf_navigation" output="screen" if="$(arg mpc_control)">
       <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
       <remap from="~bnd_delta_m" to="/simu/robot_simulator/bnd_delta_m" />
       <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />

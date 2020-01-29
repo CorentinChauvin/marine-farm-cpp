@@ -71,7 +71,7 @@ vector<vector<float>> PlanningNodelet::array_to_vector2D(
 }
 
 
-void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle,
+void PlanningNodelet::generate_cart_lattice(float max_lat_angle, float max_elev_angle,
   float horizon, float resolution, std::vector<geometry_msgs::Pose> &lattice)
 {
   int n_x = horizon / resolution + 1;  // size of the lattice in x direction
@@ -100,23 +100,16 @@ void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle
           pose.position.y = y;
           pose.position.z = z;
 
-          // Transform point in wall frame to check for collision
-          geometry_msgs::Pose transf_pose;
-          tf2::doTransform(pose, transf_pose, wall_robot_tf_);
+          // Account for rotation needed to reach the waypoint
+          tf2::Quaternion q_orig, q_rot, q_new;
+          q_orig.setRPY(0, 0, 0);
+          q_rot.setRPY(0.0, -elev_angle, lat_angle);
 
-          if (transf_pose.position.z >= min_wall_dist_) {
-            // Account for rotation needed to reach the waypoint
-            tf2::Quaternion q_orig, q_rot, q_new;
-            q_orig.setRPY(0, 0, 0);
-            q_rot.setRPY(0.0, -elev_angle, lat_angle);
+          q_new = q_rot * q_orig;
+          q_new.normalize();
+          tf2::convert(q_new, pose.orientation);
 
-            q_new = q_rot * q_orig;
-            q_new.normalize();
-            tf2::convert(q_new, pose.orientation);
-
-            // Add the waypoint to the lattice
-            lattice.emplace_back(pose);
-          }
+          lattice.emplace_back(pose);
         }
 
         z += resolution;
@@ -127,6 +120,62 @@ void PlanningNodelet::generate_lattice(float max_lat_angle, float max_elev_angle
 
     x += resolution;
   }
+}
+
+
+void PlanningNodelet::generate_lattice(std::vector<geometry_msgs::Pose> &lattice)
+{
+  float duration = plan_horizon_/plan_speed_;
+  int n_horiz = 2*lattice_size_horiz_ + 1;
+  int n_vert = 2*lattice_size_vert_ + 1;
+  lattice.resize(n_horiz*n_vert);
+  int counter = 0;
+
+  for (int k = -lattice_size_horiz_; k <= lattice_size_horiz_; k++) {
+    for (int l = -lattice_size_vert_; l <= lattice_size_vert_; l++) {
+
+      // Apply a constant command during a fixed duration
+      float prop_speed = robot_model_.steady_propeller_speed(plan_speed_);
+      float horiz_angle = max_lat_rudder_ * k / max(lattice_size_horiz_, 1);
+      float vert_angle = max_elev_rudder_ * l / max(lattice_size_vert_, 1);
+
+      RobotModel::state_type state = state_;
+      RobotModel::input_type input = {prop_speed, horiz_angle, vert_angle, 0};
+      robot_model_.integrate(state, input, 0.0, duration, duration/10);
+
+      // Transform the predicted pose from ocean frame to robot frame
+      geometry_msgs::Pose pose;
+      pose.position.x = state[0];
+      pose.position.y = state[1];
+      pose.position.z = state[2];
+      to_quaternion(state[3], state[4], state[5], pose.orientation);
+
+      tf2::doTransform(pose, lattice[counter], robot_ocean_tf_);
+      counter++;
+    }
+  }
+}
+
+
+std::vector<geometry_msgs::Pose> PlanningNodelet::filter_lattice(
+  const std::vector<geometry_msgs::Pose> &lattice_in)
+{
+  vector<geometry_msgs::Pose> lattice(0);
+  lattice.reserve(lattice_in.size());
+
+  for (int k = 0; k < lattice_in.size(); k++) {
+    // Transform point in wall frame
+    geometry_msgs::Pose p;
+    tf2::doTransform(lattice_in[k], p, wall_robot_tf_);
+
+    // Check bounds
+    if (p.position.z >= bnd_wall_dist_[0] && p.position.z <= bnd_wall_dist_[1]
+      && p.position.x >= bnd_depth_[0] && p.position.x <= bnd_depth_[1]) {
+      lattice.emplace_back(lattice_in[k]);
+    }
+  }
+
+  return lattice;
 }
 
 
@@ -307,18 +356,30 @@ bool PlanningNodelet::plan_trajectory()
   if (last_gp_cov_.size() == 0 || last_gp_mean_.size() == 0)
     return false;
 
-  // Compute maximum angles for lattice generation
-  float lat_turn_radius  = robot_model_.lat_turn_radius(plan_speed_, max_lat_rudder_);
-  float elev_turn_radius = robot_model_.elev_turn_radius(plan_speed_, max_lat_rudder_);
-
-  float max_lat_angle  = plan_horizon_ / (2 * lat_turn_radius);
-  float max_elev_angle = plan_horizon_ / (2 * elev_turn_radius);
-
-  if (!horiz_motion_) max_lat_angle = 0;
-  if (!vert_motion_)  max_elev_angle = 0;
-
   // Generate a lattice of possible waypoints (in robot frame)
-  generate_lattice(max_lat_angle, max_elev_angle, plan_horizon_, lattice_res_, lattice_);
+  vector<geometry_msgs::Pose> lattice_tmp;
+
+  if (cart_lattice_) {
+    float lat_turn_radius  = robot_model_.lat_turn_radius(plan_speed_, max_lat_rudder_);
+    float elev_turn_radius = robot_model_.elev_turn_radius(plan_speed_, max_lat_rudder_);
+
+    float max_lat_angle  = plan_horizon_ / (2 * lat_turn_radius);
+    float max_elev_angle = plan_horizon_ / (2 * elev_turn_radius);
+
+    if (!horiz_motion_) max_lat_angle = 0;
+    if (!vert_motion_)  max_elev_angle = 0;
+
+    generate_cart_lattice(max_lat_angle, max_elev_angle, plan_horizon_, lattice_res_, lattice_tmp);
+  } else {
+    generate_lattice(lattice_tmp);
+  }
+
+  lattice_ = filter_lattice(lattice_tmp);
+
+  if (lattice_.size() == 0) {
+    NODELET_WARN("[planning_nodelet] No valid waypoint found");
+    return false;
+  }
 
   // Update the GP covariance for each viewpoint
   int size_lattice = lattice_.size();
@@ -354,9 +415,9 @@ bool PlanningNodelet::plan_trajectory()
   tf2::doTransform(lattice_[selected_vp_], selected_pose, ocean_robot_tf_);
 
   if (linear_path_)
-    path = straight_line_path(current_pose, selected_pose, plan_res_);
+    path = straight_line_path(current_pose, selected_pose, path_res_);
   else
-    path = spline_path(current_pose, selected_pose, plan_res_, plan_speed_);
+    path = spline_path(current_pose, selected_pose, path_res_, plan_speed_);
 
   path_pub_.publish(path);
 }

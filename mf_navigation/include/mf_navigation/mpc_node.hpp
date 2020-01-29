@@ -18,6 +18,7 @@
 #include <geometry_msgs/Pose.h>
 #include <tf2_ros/transform_listener.h>
 #include <ros/ros.h>
+#include <eigen3/Eigen/Dense>
 #include <string>
 #include <vector>
 
@@ -76,7 +77,11 @@ class MPCNode {
     std::vector<float> state_;           ///<  Current robot state
     std::vector<float> last_control_;    ///<  Last control applied to the robot
     MPCTuningParameters tuning_params_;  ///<  MPC tuning parameters
-    MPCBounds bounds_;
+    MPCBounds bounds_;  ///<  Bounds for the MPC
+
+    Eigen::VectorXf qp_last_primal_;  ///<  Last primal solution of the Quadratic Problem
+    Eigen::VectorXf qp_last_dual_;    ///<  Last dual solution of the Quadratic Problem
+    bool qp_warm_start_;              ///<  Whether the QP can start warm
 
     /// \name  ROS parameters
     ///@{

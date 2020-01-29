@@ -76,12 +76,12 @@ void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0,
   // A matrix
   A(0, 3) = (s5*s3 + c5*s4*c3)*x[7] + (s5*c3 - c5*s3*s4)*x[8];
   A(0, 4) = -c5*s4*x[6] + c5*c4*s3*x[7] + c5*c3*c4*x[8];
-  A(0, 5) = -s5*c4*x[6] +(-c5*c3 - s5*s4*s3)*x[7] + (c5*s3 - s5*c3*s4)*x[8];
+  A(0, 5) = -s5*c4*x[6] - (c5*c3 + s5*s4*s3)*x[7] + (c5*s3 - s5*c3*s4)*x[8];
   A(0, 6) = c5*c4;
   A(0, 7) = -s5*c3 + c5*s4*s3;
   A(0, 8) = s5*s3 + c5*c3*s4;
 
-  A(1, 3) = (-c5*s3 + s5*s4*c3)*x[7] + (-c5*c3 - s5*s3*s4)*x[8];
+  A(1, 3) = (-c5*s3 + s5*s4*c3)*x[7] - (c5*c3 + s5*s3*s4)*x[8];
   A(1, 4) = -s5*s4*x[6] + s5*c4*s3*x[7] + s5*c3*c4*x[8];
   A(1, 5) = c5*c4*x[6] + (-s5*c3 + c5*s4*s3)*x[7] + (s5*s3 + c5*c3*s4)*x[8];
   A(1, 6) = s5*c4;
@@ -206,8 +206,8 @@ Matrix3d RobotModel::jac_pos(double phi, double theta, double psi)
   double c_ps = cos(psi);
   double s_ps = sin(psi);
 
-  J << c_ps*c_th, -s_ps*c_th + c_ps*s_th*s_ph,  s_ps*s_th + c_ps*c_ph*s_th,
-       s_ps*c_th,  c_ps*c_ph + s_ph*s_th*s_ps, -c_ps*s_th + s_th*s_ps*c_ph,
+  J << c_ps*c_th, -s_ps*c_ph + c_ps*s_th*s_ph,  s_ps*s_ph + c_ps*c_ph*s_th,
+       s_ps*c_th,  c_ps*c_ph + s_ph*s_th*s_ps, -c_ps*s_ph + s_th*s_ps*c_ph,
        -s_th, c_th*s_ph, c_th*c_ph;
 
   return J;

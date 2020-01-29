@@ -373,22 +373,27 @@ bool MPCNode::solve_qp(
 
   if (setup_flag != 0) {
     ROS_WARN("[mpc_node] Setup of MPC problem failed");
+    string flag_string = "";
 
-    // TODO: remove later
     switch (setup_flag) {
-      case OSQP_DATA_VALIDATION_ERROR: cout << "OSQP_DATA_VALIDATION_ERROR" << endl; break;
-      case OSQP_SETTINGS_VALIDATION_ERROR: cout << "OSQP_SETTINGS_VALIDATION_ERROR" << endl; break;
-      case OSQP_LINSYS_SOLVER_LOAD_ERROR: cout << "OSQP_LINSYS_SOLVER_LOAD_ERROR" << endl; break;
-      case OSQP_LINSYS_SOLVER_INIT_ERROR: cout << "OSQP_LINSYS_SOLVER_INIT_ERROR" << endl; break;
-      case OSQP_NONCVX_ERROR: cout << "OSQP_NONCVX_ERROR" << endl; break;
-      case OSQP_MEM_ALLOC_ERROR: cout << "OSQP_MEM_ALLOC_ERROR" << endl; break;
-      case OSQP_WORKSPACE_NOT_INIT_ERROR: cout << "OSQP_WORKSPACE_NOT_INIT_ERROR" << endl; break;
+      case OSQP_DATA_VALIDATION_ERROR: flag_string = "OSQP_DATA_VALIDATION_ERROR"; break;
+      case OSQP_SETTINGS_VALIDATION_ERROR: flag_string = "OSQP_SETTINGS_VALIDATION_ERROR"; break;
+      case OSQP_LINSYS_SOLVER_LOAD_ERROR: flag_string = "OSQP_LINSYS_SOLVER_LOAD_ERROR"; break;
+      case OSQP_LINSYS_SOLVER_INIT_ERROR: flag_string = "OSQP_LINSYS_SOLVER_INIT_ERROR"; break;
+      case OSQP_NONCVX_ERROR: flag_string = "OSQP_NONCVX_ERROR"; break;
+      case OSQP_MEM_ALLOC_ERROR: flag_string = "OSQP_MEM_ALLOC_ERROR"; break;
+      case OSQP_WORKSPACE_NOT_INIT_ERROR: flag_string = "OSQP_WORKSPACE_NOT_INIT_ERROR"; break;
       default: break;
     }
-
+    ROS_WARN_STREAM("[mpc_node] " << flag_string);
+    qp_warm_start_ = false;
     return false;
   }
 
+  // Warm start (FIXME)
+  qp_warm_start_ = false;  // FIXME: warm start leads to big issues
+  if (qp_warm_start_)
+    osqp_warm_start(work, qp_last_primal_.data(), qp_last_dual_.data());
 
   // Solve Problem
   c_int solve_ret = 0;  // return code of the solving operation (0: no error)
@@ -396,32 +401,38 @@ bool MPCNode::solve_qp(
 
   if (solve_ret != 0 || work->info->status_val != OSQP_SOLVED) {
     ROS_WARN("[mpc_node] Couldn't solve MPC problem");
+    string flag_string = "";
 
-    // TODO: remove later
     switch (work->info->status_val) {
-      case OSQP_DUAL_INFEASIBLE_INACCURATE: cout << "OSQP_DUAL_INFEASIBLE_INACCURATE" << endl; break;
-      case OSQP_PRIMAL_INFEASIBLE_INACCURATE: cout << "OSQP_PRIMAL_INFEASIBLE_INACCURATE" << endl; break;
-      case OSQP_SOLVED_INACCURATE: cout << "OSQP_SOLVED_INACCURATE" << endl; break;
-      case OSQP_SOLVED: cout << "OSQP_SOLVED" << endl; break;
-      case OSQP_MAX_ITER_REACHED: cout << "OSQP_MAX_ITER_REACHED" << endl; break;
-      case OSQP_PRIMAL_INFEASIBLE: cout << "OSQP_PRIMAL_INFEASIBLE" << endl; break;
-      case OSQP_DUAL_INFEASIBLE: cout << "OSQP_DUAL_INFEASIBLE" << endl; break;
-      case OSQP_SIGINT: cout << "OSQP_SIGINT" << endl; break;
-      case OSQP_NON_CVX: cout << "OSQP_NON_CVX" << endl; break;
-      case OSQP_UNSOLVED: cout << "OSQP_UNSOLVED" << endl; break;
+      case OSQP_DUAL_INFEASIBLE_INACCURATE: flag_string = "OSQP_DUAL_INFEASIBLE_INACCURATE"; break;
+      case OSQP_PRIMAL_INFEASIBLE_INACCURATE: flag_string = "OSQP_PRIMAL_INFEASIBLE_INACCURATE"; break;
+      case OSQP_SOLVED_INACCURATE: flag_string = "OSQP_SOLVED_INACCURATE"; break;
+      case OSQP_SOLVED: flag_string = "OSQP_SOLVED"; break;
+      case OSQP_MAX_ITER_REACHED: flag_string = "OSQP_MAX_ITER_REACHED"; break;
+      case OSQP_PRIMAL_INFEASIBLE: flag_string = "OSQP_PRIMAL_INFEASIBLE"; break;
+      case OSQP_DUAL_INFEASIBLE: flag_string = "OSQP_DUAL_INFEASIBLE"; break;
+      case OSQP_SIGINT: flag_string = "OSQP_SIGINT"; break;
+      case OSQP_NON_CVX: flag_string = "OSQP_NON_CVX"; break;
+      case OSQP_UNSOLVED: flag_string = "OSQP_UNSOLVED"; break;
       default: break;
     }
-
-    cout << "lb: \n" << lb.transpose() << endl;
-    cout << "ub: \n" << ub.transpose() << endl;
-
+    ROS_WARN_STREAM("[mpc_node] " << flag_string);
+    qp_warm_start_ = false;
     return false;
   }
 
   // Parse solution
   solution = VectorT(n);
-  for (int k = 0; k < n; k++)
+  qp_last_primal_ = VectorT(n);
+  qp_last_dual_ = VectorT(n);
+
+  for (int k = 0; k < n; k++) {
     solution(k) = work->solution->x[k];
+    qp_last_primal_(k) = work->solution->x[k];
+    qp_last_dual_(k) = work->solution->y[k];
+  }
+
+  qp_warm_start_ = true;
 
   // Cleanup
   if (data) {
@@ -443,10 +454,6 @@ bool MPCNode::compute_control(
     ROS_WARN("[mpc_node] Path size < 2");
     return false;
   }
-
-  clock_t start = clock();
-  cout << "---" << endl;
-  cout << "desired speed: " << desired_speed << endl;
 
   // Parse current state
   geometry_msgs::Point current_position;
@@ -486,13 +493,13 @@ bool MPCNode::compute_control(
   // Fill intial points
   VectorXf x0(n), X0(n);  // initial state, and initial offset to the reference
   VectorXf u_m1(m);       // last control applied to the robot
-  VectorXf u0_ref(m);     // first control reference
 
   for (int k = 0; k < n; k++) x0(k) = state_[k];
   for (int k = 0; k < m; k++) u_m1(k) = last_control_[k];
 
   X0 = x0 - X_ref.block(0, 0, n, 1);
-  u0_ref = U_ref.block(0, 0, m, 1);
+  VectorXf x0_ref = X_ref.block(0, 0, n, 1);  // first state reference
+  VectorXf u0_ref = U_ref.block(0, 0, m, 1);  // first control reference
 
   // Build MPC objects
   MatrixXf Ad, Bd;  // discretised model
@@ -500,12 +507,8 @@ bool MPCNode::compute_control(
   MatrixXf L, M;    // to compute quadratic partts of the cost function
   VectorXf V;       // to compute linear parts of the cost function
   MatrixXf LG;      // product of L and G
-  // VectorXf origin_x = VectorXf::Zero(n);  // origin for linearisation
-  // VectorXf origin_u = VectorXf::Zero(m);
-  VectorXf origin_x = X_ref.block(0, 0, n, 1);  // origin for linearisation
-  VectorXf origin_u = U_ref.block(0, 0, m, 1);
 
-  robot_model_.get_lin_discr_matrices(origin_x, origin_u, Ad, Bd, time_resolution);
+  robot_model_.get_lin_discr_matrices(x0_ref, u0_ref, Ad, Bd, time_resolution);
   fill_G(Ad, Bd, N, G);
   fill_H(Ad, N, H);
   fill_L(tuning_params_.P, tuning_params_.Q_x, N, L);
@@ -524,26 +527,15 @@ bool MPCNode::compute_control(
   VectorXf q = 2*LG.transpose()*(H*X0) + V;
   VectorXf solution;
 
-  // TODO: to remove
-  // Eigen::LLT<Eigen::MatrixXf> lltOfA(P); // compute the Cholesky decomposition of A
-  // if(lltOfA.info() == Eigen::NumericalIssue)
-  //   ROS_WARN("Possibly non semi-positive definite matrix!");
-
   bool solved = solve_qp(P, q, lb, ub, Ab, solution);
 
   if (!solved)
     return false;
 
-  cout << "Total time: " << (clock() - start) / (double)CLOCKS_PER_SEC << endl;
-
   // Prepare command output
   command.resize(m);
   for (int k = 0; k < m; k++)
     command[k] = solution(k) + U_ref(k);
-
-  // TODO: to remove
-  VectorXf command_vec = (solution + U_ref).block(0, 0, m, 1);
-  cout << "Command to apply: " << command_vec.transpose() << endl;
 
   // Compute expected controlled trajectory
   VectorXf X = G*solution + H*X0 + X_ref;

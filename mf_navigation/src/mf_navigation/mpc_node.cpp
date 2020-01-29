@@ -65,13 +65,13 @@ void MPCNode::init_node()
   robot_model_ = RobotModel(model_csts);
   path_received_ = false;
   state_received_ = false;
+  qp_warm_start_ = false;
 
   last_desired_speed_ = desired_speed_;
   last_control_ = vector<float>(4, 0);
 
   if (disable_vbs_)
     bounds_.delta_m = 0;
-
 
   fill_diag_mat(P, tuning_params_.P);
   fill_diag_mat(Q_x, tuning_params_.Q_x);
@@ -103,16 +103,13 @@ void MPCNode::run_node()
       float desired_speed = desired_speed_;
       geometry_msgs::PoseArray expected_traj;
 
-      control_computed = compute_control(
-        desired_speed,
-        last_desired_speed_,
-        control,
-        expected_traj
+      control_computed = compute_control(desired_speed, last_desired_speed_,
+        control, expected_traj
       );
 
-      last_desired_speed_ = desired_speed;
-
       if (control_computed) {
+        last_desired_speed_ = desired_speed;
+
         if (disable_vbs_)
           control[3] = 0;
 

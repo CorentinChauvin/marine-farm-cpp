@@ -5,18 +5,26 @@ planning_nodelet:
   robot_frame: "base_link"
   camera_frame: "camera"
 
-  horiz_motion: false  # whether to allow motion in the horizontal plane
-  vert_motion: true    # whether to allow motion in the vertical plane
-  linear_path: false   # whether to create a linear path, or a spline one
-  plan_speed: 1.0      # planned speed (m/s) of the robot
-  plan_horizon: 1.5    # horizon (m) of the planning
-  plan_res: 0.1        # spatial resolution (m) of the planned trajectory
-  lattice_res: 0.4     # resolution (m) of the waypoints lattice
-  min_wall_dist: 0.2   # minimum distance to the wall that can be planned
-  gp_weight: 100       # weight attributed to the Gaussian Process values in viewpoint selection
+  # Lattice of viewpoint generation
+  horiz_motion: true     # whether to allow motion in the horizontal plane
+  vert_motion: true      # whether to allow motion in the vertical plane
+  cart_lattice: false    # whether to create a cartesian lattice, or use motion model instead
+  plan_speed: 0.5        # planned speed (m/s) of the robot
+  plan_horizon: 1.5      # horizon (m) of the planning
+  lattice_size_horiz: 4  # half size of the lattice in the horizontal direction
+  lattice_size_vert: 4   # half size of the lattice in the vertical direction
+  lattice_res: 0.4       # resolution (m) of the waypoints lattice (for cartesian lattice)
+  bnd_wall_dist: [0.2, 1.5]  # bounds on the distance to the wall for waypoint selection
+  bnd_depth: [-0.2, 2.2]      # bounds on the depth (in wall frame) for waypoint selection
 
+  # Viewpoint selection
   camera_height: 5  # number of pixels of the camera along height (-1 for actual camera size)
   camera_width: 10  # number of pixels of the camera along width  (-1 for actual camera size)
+  gp_weight: 100         # weight attributed to the Gaussian Process values in viewpoint selection
+
+  # Path generation
+  linear_path: false     # whether to create a linear path, or a spline one
+  plan_res: 0.1          # spatial resolution (m) of the planned trajectory
 
 
 cart_control_nodelet:
@@ -25,23 +33,23 @@ cart_control_nodelet:
 
 
 mpc_node:
-  main_freq: 10
+  main_freq: 50
   fixed_frame: "ocean"
 
   desired_speed: 0.5  # desired speed (m/s) of the robot
-  time_horizon: 5.0   # time horizon (s) for the MPC prediction
+  time_horizon: 1.5   # time horizon (s) for the MPC prediction
   nbr_steps: 10       # number of steps for the MPC prediction
-  disable_vbs: false   # whether to disable the Variable Buoyancy System (VBS)
+  disable_vbs: false  # whether to disable the Variable Buoyancy System (VBS)
 
-  P: [100.0, 100.0, 100.0,
-      10000.0, 10000.0, 10000.0,
+  P: [10000.0, 10000.0, 10000.0,
+      0.0, 0.0, 0.0,
       0.001, 0.001, 0.001,
       0.001, 0.001, 0.001,
       1.0]  # diagonal of the penalty on the last state error
   Q_x: [10000.0, 10000.0, 10000.0,
-        0.00000001, 0.00000001, 0.00000001,
+        0.0, 0.0, 0.0,
         0.1, 0.1, 0.1,
         0.1, 0.1, 0.1,
         0.1]  # diagonal of the penalty on the intermediary states error
   R_u: [0.001, 0.001, 0.001, 10000000.0]      # diagonal of the penalty on the control input error
-  R_delta: [0.0, 0.05, 0.05, 0.0]  # diagonal of the penalty on the control change rate
+  R_delta: [0.0, 0.0, 0.0, 0.0]  # diagonal of the penalty on the control change rate
