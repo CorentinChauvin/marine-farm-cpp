@@ -318,26 +318,6 @@ bool MPCNode::solve_qp(
   int n = q.rows();
   int m = ub.rows();
 
-
-  // cout << "P:\n" << P << endl;
-  // cout << "q:\n" << q << endl;
-  // cout << "lb:\n" << lb << endl;
-  // cout << "ub:\n" << ub << endl;
-  // cout << "Ab:\n" << Ab << endl;
-
-  // Debug data
-  // n = 2;
-  // m = 3;
-  // MatrixXf P_(n, n), Ab_(m, n);
-  // VectorXf lb_(m), ub_(m), q_(n);
-  //
-  // P_ << 5, 1, 1, 2;
-  // q_ << 1, 1;
-  // lb_ << 1, 0, 0;
-  // ub_ << 1, 0.7, 0.7;
-  // Ab_ << 1, 1, 1, 0, 0, 1;
-
-
   // Workspace structures
   OSQPWorkspace *work;
   OSQPSettings  *settings = (OSQPSettings *)c_malloc(sizeof(OSQPSettings));

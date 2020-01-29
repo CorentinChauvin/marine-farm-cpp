@@ -45,6 +45,8 @@ INCLUDE(Utils)
 option (DFLOAT "Use float numbers instead of doubles" ON)
 option (PRINTING "Enable solver printing" ON)
 option (PROFILING "Enable solver profiling (timing)" ON)
+option (DLONG "Use long integers (64bit) for indexing" ON)
+option (DEBUG "Debug mode" OFF)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/osqp/configure/osqp_configure.h.in
                ${CMAKE_CURRENT_SOURCE_DIR}/include/osqp/include/osqp_configure.h

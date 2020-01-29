@@ -42,7 +42,7 @@ mpc_node:
   disable_vbs: false  # whether to disable the Variable Buoyancy System (VBS)
 
   P: [10000.0, 10000.0, 10000.0,
-      0.0, 0.0, 0.0,
+      0.01, 0.01, 0.01,
       0.001, 0.001, 0.001,
       0.001, 0.001, 0.001,
       1.0]  # diagonal of the penalty on the last state error
