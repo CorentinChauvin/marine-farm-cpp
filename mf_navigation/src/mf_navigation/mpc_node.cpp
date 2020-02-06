@@ -51,6 +51,7 @@ void MPCNode::init_node()
   nh_.param<float>("time_horizon", time_horizon_, 1.0);
   nh_.param<int>("nbr_steps", nbr_steps_, 10);
   nh_.param<bool>("disable_vbs", disable_vbs_, false);
+  nh_.param<bool>("ltv_mpc", ltv_mpc_, true);
   nh_.param<vector<double>>("P", P, vector<double>(13, 1.0));
   nh_.param<vector<double>>("Q_x", Q_x, vector<double>(13, 1.0));
   nh_.param<vector<double>>("R_u", R_u, vector<double>(4, 1.0));
@@ -103,9 +104,12 @@ void MPCNode::run_node()
       float desired_speed = desired_speed_;
       geometry_msgs::PoseArray expected_traj;
 
+
+      const clock_t begin_time = clock();
       control_computed = compute_control(desired_speed, last_desired_speed_,
         control, expected_traj
       );
+      std::cout << float( clock () - begin_time ) /  CLOCKS_PER_SEC << endl;
 
       if (control_computed) {
         last_desired_speed_ = desired_speed;

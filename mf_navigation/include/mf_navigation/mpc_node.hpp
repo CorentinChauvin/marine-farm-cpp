@@ -91,8 +91,9 @@ class MPCNode {
     float desired_speed_;  ///<  Desired speed (m/s) of the robot
     float last_desired_speed_;  ///<  Last desired speed (m/s) of the robot
     float time_horizon_;   ///<  Time horizon (s) for the MPC prediction
-    int nbr_steps_;        ///<  Number of steps for the MPC prediction (fixed in CVXGEN)
+    int nbr_steps_;        ///<  Number of steps for the MPC prediction
     bool disable_vbs_;     ///<  Whether to disable Variable Buoyancy System (VBS)
+    bool ltv_mpc_;         ///<  Whether to use the Linear Time Varying (LTV) version of MPC
     ///@}
 
     /**
@@ -115,6 +116,7 @@ class MPCNode {
      * \param[in,out] spatial_resolution  Distance between two MPC steps
      * \param[in,out] time_resolution     Time between two MPC steps
      * \param[in,out] desired_speed       Desired speed
+     * \return  Path of size nbr_steps+1
      */
     std::vector<geometry_msgs::Pose> adapt_path(
       const std::vector<geometry_msgs::Pose> &orig_path,
@@ -131,12 +133,12 @@ class MPCNode {
      * \param[in]  N                    Number of steps for the MPC prediction
      * \param[in]  n                    Dimension of the state vector
      * \param[in]  m                    Dimension of the control vector
-     * \param[in]  path                 Reference path to follow
+     * \param[in]  path                 Reference path to follow (of size N+1)
      * \param[in]  desired_speed        Desired speed (m/s) of the robot
      * \param[in]  last_desired_speed   Last desired speed (m/s) of the robot
      * \param[in]  robot_model          Robot model
-     * \param[out] X_ref                Reference state to fill
-     * \param[out] U_ref                Reference output to fill
+     * \param[out] X_ref                Reference state to fill (x0_ref, ..., xN_ref)
+     * \param[out] U_ref                Reference output to fill (u0_ref, ..., uN_ref)
      * \return  Whether the points could be filled
      */
     template <class VectorT>
@@ -151,7 +153,28 @@ class MPCNode {
     );
 
     /**
+     * \brief  Fills the G and H matrices used to express X with respect to U and X0
+     *
+     * Linear Time Varying MPC version.
+     *
+     * \param[in]  X_ref  State reference
+     * \param[in]  U_ref  Control reference
+     * \param[in]  N      Number of steps for the MPC prediction
+     * \param[in]  dt     Sampling time
+     * \param[in]  ds     Spatial resolution of reference path
+     * \param[out] G      G matrix
+     * \param[out] H      H matrix
+     * \param[out] D      D vector
+     */
+    template <class VectorT, class MatrixT>
+    void fill_ltv_G_H_D(const VectorT &X_ref, const VectorT &U_ref,
+      int N, float dt, float ds,
+      MatrixT &G, MatrixT &H, VectorT &D);
+
+    /**
      * \brief  Fills the G matrix used to express X with respect to U and X0
+     *
+     * Linear Time Invariant MPC version.
      *
      * \param[in]  Ad  Discretised model matrix
      * \param[in]  Bd  Discretised model matrix
@@ -159,17 +182,19 @@ class MPCNode {
      * \param[out] G   G matrix
      */
     template <class MatrixT>
-    void fill_G(const MatrixT &Ad, const MatrixT &Bd, int N, MatrixT &G);
+    void fill_lti_G(const MatrixT &Ad, const MatrixT &Bd, int N, MatrixT &G);
 
     /**
      * \brief  Fills the H matrix used to express X with respect to U and X0
+     *
+     * Linear Time Invariant MPC version
      *
      * \param[in]  Ad  Discretised model matrix
      * \param[in]  N   Number of steps for the MPC prediction
      * \param[out] H   H matrix
      */
     template <class MatrixT>
-    void fill_H(const MatrixT &Ad, int N, MatrixT &H);
+    void fill_lti_H(const MatrixT &Ad, int N, MatrixT &H);
 
     /**
      * \brief  Fills the L matrix used for quadratic cost wrt state error
@@ -209,6 +234,8 @@ class MPCNode {
     /**
      * \brief  Fills the product of L and G matrices
      *
+     * Optimisation in the Linear Time Invariant MPC case
+     *
      * \param[in]  G    G matrix
      * \param[in]  P    Penalty on the last state error
      * \param[in]  Q_x  Penalty on the intermediary states errors
@@ -218,7 +245,7 @@ class MPCNode {
      * \param[out] LG   LG matrix
      */
     template <class MatrixT>
-    void fill_LG(const MatrixT &G, const MatrixT &P, const MatrixT &Q_x, int n,
+    void fill_lti_LG(const MatrixT &G, const MatrixT &P, const MatrixT &Q_x, int n,
       int m, int N, MatrixT &LG);
 
     /**
@@ -228,7 +255,7 @@ class MPCNode {
      * \param[in]  n       Size of the state
      * \param[in]  N       Number of steps for the MPC prediction
      * \param[in]  X0      Initial state
-     * \param[in]  X_ref   Reference state
+     * \param[in]  X_ref   Reference state (X_0_ref, ..., X_N_ref)
      * \param[in]  G       Used to express X with respect to U and X0
      * \param[in]  H       Used to express X with respect to U and X0
      * \param[out] lb      Lower bound on Ab*U

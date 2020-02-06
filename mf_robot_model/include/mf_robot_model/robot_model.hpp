@@ -55,6 +55,19 @@ class RobotModel
     RobotModel(const std::vector<double> &c);
     ~RobotModel();
 
+
+    /**
+     * \brief  Evaluate the ODE
+     *
+     * Public version of the ODE
+     *
+     * \param x     Current state
+     * \param u     Current input
+     * \param dxdt  Current time derivative of the state
+     * \param t     Current time
+     */
+    void eval_ode(const state_type &x, const input_type &u, state_type &dxdt, const double t);
+
     /**
      * \brief  Integrates the model over a period of time
      *
@@ -167,8 +180,6 @@ class RobotModel
 
     /**
      * \brief  ODE used to integrate the model
-     *
-     * \note  ODE stands for Ordinary Differential Equation!
      *
      * \param x     Current state
      * \param dxdt  Current time derivative of the state

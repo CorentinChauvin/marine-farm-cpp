@@ -52,7 +52,7 @@ std::vector<geometry_msgs::Pose> MPCNode::adapt_path(
 
   // Handle case when the robot is already at the end of the path
   if (idx_path >= size_path - 1) {
-    return vector<geometry_msgs::Pose>(nbr_steps, orig_path[size_path-1]);
+    return vector<geometry_msgs::Pose>(nbr_steps+1, orig_path[size_path-1]);
   }
 
   // Compute length of the path
@@ -97,8 +97,6 @@ std::vector<geometry_msgs::Pose> MPCNode::adapt_path(
     }
   }
 
-  new_path.erase(new_path.begin());  // remove first element of the path (current pose)
-
   return new_path;
 }
 
@@ -113,16 +111,16 @@ bool MPCNode::fill_ref_pts(
   VectorT &X_ref,
   VectorT &U_ref)
 {
-  if (N < 1 || n < 1 || m < 1 || path.size() != N) {
+  if (N < 1 || n < 1 || m < 1 || path.size() != N+1) {
     ROS_WARN("[mpc_node] Wrong input dimensions in fill_ref_pts:");
-    ROS_WARN("[mpc_node] path size: %d ; N=%d", (int) path.size(), N);
+    ROS_WARN("[mpc_node] path size: %d ; N+1=%d", (int) path.size(), N+1);
     return false;
   }
 
-  X_ref = VectorT::Zero(n * N);
-  U_ref = VectorT::Zero(m * N);
+  X_ref = VectorT::Zero(n * (N+1));
+  U_ref = VectorT::Zero(m * (N+1));
 
-  for (int k = 0; k < N; k++) {
+  for (int k = 0; k <= N; k++) {
     double roll, pitch, yaw;
     to_euler(path[k].orientation, roll, pitch, yaw);
 
@@ -138,7 +136,7 @@ bool MPCNode::fill_ref_pts(
   U_ref(0) = robot_model.steady_propeller_speed(last_desired_speed);
   float desired_prop_speed = robot_model.steady_propeller_speed(desired_speed);
 
-  for (int k = 0; k < N; k++) {
+  for (int k = 0; k <= N; k++) {
     U_ref(k*m) = desired_prop_speed;
   }
 
@@ -146,8 +144,85 @@ bool MPCNode::fill_ref_pts(
 }
 
 
+template <class VectorT, class MatrixT>
+void MPCNode::fill_ltv_G_H_D(const VectorT &X_ref, const VectorT &U_ref,
+  int N, float dt, float ds,
+  MatrixT &G, MatrixT &H, VectorT &D)
+{
+  int n = X_ref.rows() / (N+1);
+  int m = U_ref.rows() / (N+1);
+  G = MatrixT::Zero(n*N, m*N);
+  H = MatrixT::Zero(n*N, n);
+  D = VectorT::Zero(n*N);
+
+  // Linearise the system at each reference point
+  MatrixT Ad_0;  // Ad[0] matrix (linearised at first reference point)
+  vector<MatrixT> Ad_m(N);  // multiples of Ad[k]: Ad_m[k] = Ad[k]*Ad[k-1]*...*Ad[1] (Ad_m[0]=identity)
+  vector<MatrixT> Bd(N);  // Bd matrices
+
+  for (int k = 0; k < N; k++) {
+    MatrixT _Ad, _Bd;
+    VectorT x_ref = X_ref.block(k*n, 0, n, 1);
+    VectorT u_ref = U_ref.block(k*m, 0, m, 1);
+    robot_model_.get_lin_discr_matrices(x_ref, u_ref, _Ad, _Bd, dt);
+
+    if (k == 0) {
+      Ad_0 = _Ad;
+      Ad_m[0] = MatrixT::Identity(n, n);
+    } else if (k == 1)
+      Ad_m[1] = _Ad;
+    else if (k > 1)
+      Ad_m[k] = _Ad * Ad_m[k-1];
+
+    Bd[k] = _Bd;
+  }
+
+  // Build G (column by column)
+  for (int j = 0; j < N; j++) {
+    for (int i = j; i < N; i++) {
+      G.block(i*n, j*m, n, m) = Ad_m[i-j] * Bd[j];
+    }
+  }
+
+  // Build H
+  H.block(0, 0, n, n) = Ad_0;
+  for (int i = 1; i < N; i++) {
+    H.block(i*n, 0, n, n) = Ad_m[i] * Ad_0;
+  }
+
+  // Build D
+  vector<VectorT>delta(N);
+
+  for (int k = 0; k < N; k++) {
+    // Evaluate the ODE at the k-th reference point
+    RobotModel::state_type x_k_ref(n);
+    RobotModel::input_type u_k_ref(m);
+    RobotModel::state_type _f_k(n);
+
+    for (int l = 0; l < n; l++)
+      x_k_ref[l] = X_ref(k*n + l);
+    for (int l = 0; l < m; l++)
+      u_k_ref[l] = U_ref(k*m + l);
+
+    robot_model_.eval_ode(x_k_ref, u_k_ref, _f_k, 0.0);
+
+    VectorT f_k(n);
+    for (int l = 0; l < n; l++)
+      f_k(l) = _f_k[l];
+
+    // Compute k-th reference error
+    delta[k] = X_ref.block(k*n, 0, n, 1) + dt*f_k - X_ref.block((k+1)*n, 0, n, 1);
+
+    // Fill D
+    for (int l = 0; l <= k; l++) {
+      D.block(k*n, 0, n, 1) += Ad_m[k-l] * delta[l];
+    }
+  }
+}
+
+
 template <class MatrixT>
-void MPCNode::fill_G(const MatrixT &Ad, const MatrixT &Bd, int N, MatrixT &G)
+void MPCNode::fill_lti_G(const MatrixT &Ad, const MatrixT &Bd, int N, MatrixT &G)
 {
   int n = Bd.rows();
   int m = Bd.cols();
@@ -166,7 +241,7 @@ void MPCNode::fill_G(const MatrixT &Ad, const MatrixT &Bd, int N, MatrixT &G)
 
 
 template <class MatrixT>
-void MPCNode::fill_H(const MatrixT &Ad, int N, MatrixT &H)
+void MPCNode::fill_lti_H(const MatrixT &Ad, int N, MatrixT &H)
 {
   int n = Ad.rows();
   H = MatrixT(n*N, n);
@@ -229,7 +304,7 @@ void MPCNode::fill_V(VectorT control_ref, VectorT last_control,
 
 
 template <class MatrixT>
-void MPCNode::fill_LG(const MatrixT &G, const MatrixT &P, const MatrixT &Q_x,
+void MPCNode::fill_lti_LG(const MatrixT &G, const MatrixT &P, const MatrixT &Q_x,
   int n, int m, int N, MatrixT &LG)
 {
   LG = MatrixXf::Zero(n*N, m*N);
@@ -283,7 +358,7 @@ void MPCNode::fill_bounds_objs(
   VectorXf delta(N);  // Kb*H*X0 - Kb*X_ref
 
   for (int k = 0; k < N; k++) {
-    delta(k) = HX0((k+1)*n - 1) - X_ref((k+1)*n - 1);
+    delta(k) = HX0((k+1)*n - 1) - X_ref((k+2)*n - 1);
   }
 
   lb.block(0, 0, N, 1) = a - delta;
@@ -482,19 +557,30 @@ bool MPCNode::compute_control(
   VectorXf u0_ref = U_ref.block(0, 0, m, 1);  // first control reference
 
   // Build MPC objects
-  MatrixXf Ad, Bd;  // discretised model
-  MatrixXf G, H;    // to express X with respect to U and X0
-  MatrixXf L, M;    // to compute quadratic partts of the cost function
-  VectorXf V;       // to compute linear parts of the cost function
-  MatrixXf LG;      // product of L and G
+  MatrixXf G, H;  // to express X with respect to U and X0
+  VectorXf D;     // idem
+  MatrixXf L, M;  // to compute quadratic partts of the cost function
+  VectorXf V;     // to compute linear parts of the cost function
+  MatrixXf LG;    // product of L and G
 
-  robot_model_.get_lin_discr_matrices(x0_ref, u0_ref, Ad, Bd, time_resolution);
-  fill_G(Ad, Bd, N, G);
-  fill_H(Ad, N, H);
   fill_L(tuning_params_.P, tuning_params_.Q_x, N, L);
   fill_M(tuning_params_.R_u, tuning_params_.R_delta, N, M);
   fill_V(u0_ref, u_m1, tuning_params_.R_delta, N, V);
-  fill_LG(G, tuning_params_.P, tuning_params_.Q_x, n, m, N, LG);
+
+  if (ltv_mpc_) {
+    // LTV MPC: linearise at each reference point
+    fill_ltv_G_H_D(X_ref, U_ref, N, time_resolution, spatial_resolution, G, H, D);
+    LG = L * G;
+  } else {
+    // LTI MPC: only linearise at first reference point
+    MatrixXf Ad, Bd;  // discretised model
+    robot_model_.get_lin_discr_matrices(x0_ref, u0_ref, Ad, Bd, time_resolution);
+
+    fill_lti_G(Ad, Bd, N, G);
+    fill_lti_H(Ad, N, H);
+    fill_lti_LG(G, tuning_params_.P, tuning_params_.Q_x, n, m, N, LG);
+    D = VectorXf::Zero(n*N);
+  }
 
   // Build MPC bounds objects
   VectorXf lb, ub;  // lower and upper bounds
@@ -504,7 +590,7 @@ bool MPCNode::compute_control(
 
   // Solve MPC Quadratic Program
   MatrixXf P = 2*(G.transpose()*LG + M);
-  VectorXf q = 2*LG.transpose()*(H*X0) + V;
+  VectorXf q = 2*LG.transpose()*(H*X0 + D) + V;
   VectorXf solution;
 
   bool solved = solve_qp(P, q, lb, ub, Ab, solution);
@@ -518,7 +604,7 @@ bool MPCNode::compute_control(
     command[k] = solution(k) + U_ref(k);
 
   // Compute expected controlled trajectory
-  VectorXf X = G*solution + H*X0 + X_ref;
+  VectorXf X = G*solution + H*X0 + D + X_ref.block(n, 0, n*N, 1);
   expected_traj.poses.resize(N);
 
   for (int k = 0; k < N; k++) {

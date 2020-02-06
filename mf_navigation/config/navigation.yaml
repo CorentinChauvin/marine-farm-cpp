@@ -40,6 +40,7 @@ mpc_node:
   time_horizon: 1.5   # time horizon (s) for the MPC prediction
   nbr_steps: 10       # number of steps for the MPC prediction
   disable_vbs: false  # whether to disable the Variable Buoyancy System (VBS)
+  ltv_mpc: true       # whether to use the Linear Time Varying (LTV) version of MPC
 
   P: [10000.0, 10000.0, 10000.0,
       0.01, 0.01, 0.01,
