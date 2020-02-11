@@ -1,0 +1,50 @@
+<launch>
+  <!-- Launchfile arguments -->
+  <arg name="rviz" value="true" />
+
+  <!-- ROS parameters -->
+  <rosparam file="$(find mf_robot_simulator)/config/robot_simulator.yaml" command="load" ns="simu" />
+  <rosparam file="$(find mf_navigation)/config/navigation.yaml" command="load" ns="nav" />
+  <rosparam file="$(find mf_experiments)/config/mpc_test.yaml" command="load" />
+
+  <!-- Static transforms -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_world_ocean" args="0 0 0 0 0 3.14159265359 world ocean" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_world_wall" args="0 0 -2.1 0 1.5707963267948966 0 world wall" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_base_camera" args="0 0 0 0 0 1.5707963267948966 base_link camera" />
+
+  <!-- Simulation -->
+  <group ns="simu">
+    <node pkg="nodelet" type="nodelet" args="manager" name="simu_nodelet_manager" output="screen" />
+
+    <!-- Robot simulator -->
+    <node name="robot_simulator" type="robot_simulator" pkg="mf_robot_simulator"
+      output="screen" />
+  </group>
+
+  <!-- Controller -->
+  <group ns="nav">
+    <node name="mpc_node" type="mpc_node" pkg="mf_navigation" output="screen">
+      <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
+      <remap from="~bnd_delta_m" to="/simu/robot_simulator/bnd_delta_m" />
+      <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />
+
+      <remap from="~state" to="/simu/robot_simulator/state" />
+      <remap from="~path" to="/nav/path" />
+      <remap from="~command" to="/simu/robot_simulator/control_input" />
+    </node>
+  </group>
+
+  <!-- Experimentation tools -->
+  <group ns="experiments">
+    <node name="control_tester" type="control_tester" pkg="mf_experiments" output="screen">
+      <remap from="~odom" to="/simu/robot_simulator/odom" />
+      <remap from="~path" to="/nav/path" />
+      <remap from="~expected_traj" to="/nav/expected_traj" />
+    </node>
+  </group>
+
+  <!-- Visualisation -->
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find mf_farm_simulator)/rviz/farm_simulator.rviz" if="$(arg rviz)" />
+
+
+</launch>

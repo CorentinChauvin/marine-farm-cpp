@@ -94,6 +94,7 @@ class PlanningNodelet: public nodelet::Nodelet {
     float plan_horizon_;   ///<  Horizon (m) of the planning
     int lattice_size_horiz_;  ///<  Half size of the lattice in the horizontal direction
     int lattice_size_vert_;   ///<  Half size of the lattice in the vertical direction
+    float wall_orientation_;   ///<  Orientation of the wall (absolute value)
     float lattice_res_;    ///<  Resolution (m) of the waypoints lattice
     std::vector<float> bnd_wall_dist_;  ///<  Bounds on the distance to the wall for waypoint selection
     std::vector<float> bnd_depth_;       ///<  Bounds on the depth (in wall frame) for waypoint selection
@@ -172,7 +173,9 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \brief  Fills a lattice of possible waypoints based on motion model
      *
      * Generate the lattice by picking different control inputs and applying it
-     * constantly during a fixed time.
+     * during a fixed time. The speed and horizontal angle commands will be
+     * constant. The horizontal command will be interpolated to guaranty that
+     * the final pose is parallel to the algae wall.
      *
      * \param[out] lattice  Lattice to fill
      */

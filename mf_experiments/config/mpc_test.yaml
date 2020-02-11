@@ -1,0 +1,22 @@
+#
+# Configuration for testing MPC
+#
+
+simu:
+  # Parameters changed from robot_simulator
+  robot_simulator:
+    # Model parameters
+    init_state: [0, 0.0, 0,  # x, y, z (position)
+                 0, 0, 0,  # phi, theta, psi (orientation)
+                 0, 0, 0,  # u, v, w (linear speed)
+                 0, 0, 0,  # p, q, r (angular speed)
+                 0.0]      # delta_m (ballast)
+
+experiments:
+  control_tester:
+    main_freq: 10.0  # frequency of the main loop
+    path_freq: 1.0   # publish frequency of the path
+    path_frame: 'ocean'  # frame in which the path is expressed
+    plan_res: 0.005      # spatial resolution (m) of the planned trajectory
+    wp_file_name: 'resources/mpc_test_wp.txt'  # relative path of the text file containing the waypoints
+    out_file_name: '/tmp/mpc_out.csv'  # path of the output file for the results of the test

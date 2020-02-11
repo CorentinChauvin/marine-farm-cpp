@@ -6,7 +6,7 @@
 
   <arg name="path_planning" value="true" />
   <arg name="cart_control" value="false" />
-  <arg name="mpc_control" value="true" />
+  <arg name="mpc_control" value="false" />
   <arg name="control_tester" value="false" />
 
   <!-- ROS parameters -->

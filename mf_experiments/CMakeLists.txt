@@ -44,5 +44,6 @@ add_executable(control_tester
 )
 add_dependencies(control_tester
   ${catkin_EXPORTED_TARGETS}
+    mf_common_generate_messages_cpp
 )
 target_link_libraries(control_tester ${catkin_LIBRARIES})

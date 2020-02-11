@@ -1,5 +1,5 @@
 robot_simulator:
-  update_freq: 10.0
+  update_freq: 50.0
   fixed_frame: "ocean"
   robot_frame: "base_link"
 

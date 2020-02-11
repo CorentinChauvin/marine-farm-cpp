@@ -89,7 +89,7 @@ void GPNodelet::publish_wall_img()
   img.data.resize(size_img_);
 
   for (unsigned int k = 0; k < size_img_; k++) {
-    img.data[k] = 255 * (1/(1 + exp(-out_scale_*(out_values_[k] - 0.5))));
+    img.data[k] = 255 * out_values_[k];
   }
 
   wall_img_pub_.publish(img);

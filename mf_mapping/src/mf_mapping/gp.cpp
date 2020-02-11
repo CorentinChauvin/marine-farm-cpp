@@ -396,7 +396,8 @@ float GPNodelet::eval_gp(
     );
   }
 
-  return k_obs.dot(W);
+  float gp_value = k_obs.dot(W);
+  return (1/(1 + exp(-out_scale_*(gp_value - 0.5))));
 }
 
 

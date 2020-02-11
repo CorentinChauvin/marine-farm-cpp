@@ -44,7 +44,9 @@ simu:
 
 experiments:
   control_tester:
-    main_freq: 1.0
+    main_freq: 10.0  # frequency of the main loop
+    path_freq: 1.0   # publish frequency of the path
     path_frame: 'ocean'  # frame in which the path is expressed
     plan_res: 0.1        # spatial resolution (m) of the planned trajectory
     wp_file_name: 'resources/waypoints.txt'  # relative path of the text file containing the waypoints
+    out_file_name: '/tmp/mpc_out.csv'  # output file for the results of the test

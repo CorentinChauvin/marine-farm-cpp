@@ -80,6 +80,7 @@ void PlanningNodelet::onInit()
   private_nh_.param<float>("plan_horizon", plan_horizon_, 1.0);
   private_nh_.param<int>("lattice_size_horiz", lattice_size_horiz_, 1);
   private_nh_.param<int>("lattice_size_vert", lattice_size_vert_, 1);
+  private_nh_.param<float>("wall_orientation", wall_orientation_, 0);
   private_nh_.param<float>("lattice_res", lattice_res_, 0.5);
   private_nh_.param<vector<float>>("bnd_wall_dist", bnd_wall_dist_, {0.5, 1.0});
   private_nh_.param<vector<float>>("bnd_depth", bnd_depth_, {0.0, 1.0});
@@ -91,6 +92,7 @@ void PlanningNodelet::onInit()
   private_nh_.param<bool>("linear_path", linear_path_, false);
   private_nh_.param<float>("path_res", path_res_, 0.1);
 
+  wall_orientation_ = abs(wall_orientation_);
   max_lat_rudder_ = bnd_input[1];
   max_elev_rudder_ = bnd_input[2];
 

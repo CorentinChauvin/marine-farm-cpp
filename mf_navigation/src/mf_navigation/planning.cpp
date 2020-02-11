@@ -133,22 +133,28 @@ void PlanningNodelet::generate_lattice(std::vector<geometry_msgs::Pose> &lattice
 
   for (int k = -lattice_size_horiz_; k <= lattice_size_horiz_; k++) {
     for (int l = -lattice_size_vert_; l <= lattice_size_vert_; l++) {
-
-      // Apply a constant command during a fixed duration
-      float prop_speed = robot_model_.steady_propeller_speed(plan_speed_);
-      float horiz_angle = max_lat_rudder_ * k / max(lattice_size_horiz_, 1);
-      float vert_angle = max_elev_rudder_ * l / max(lattice_size_vert_, 1);
+      // Apply a command during a fixed duration
+      float prop_speed = robot_model_.steady_propeller_speed(plan_speed_);   // constant speed command
+      float vert_angle = max_elev_rudder_ * l / max(lattice_size_vert_, 1);  // constant vertical angle command
+      float ref_horiz_angle = max_lat_rudder_ * k / max(lattice_size_horiz_, 1);  // reference horizontal angle
 
       RobotModel::state_type state = state_;
-      RobotModel::input_type input = {prop_speed, horiz_angle, vert_angle, 0};
-      robot_model_.integrate(state, input, 0.0, duration, duration/10);
+      int N = 10;
+      for (int cnt = 0; cnt < N; cnt++) {
+        float t = float(cnt) / N;
+        float current_horiz_angle = ref_horiz_angle*(-2*pow(t, 3) + 4*pow(t,2) - 1);  // cubic interpolation for horizontal angle
+        RobotModel::input_type input = {prop_speed, current_horiz_angle, vert_angle, 0};
+
+        robot_model_.integrate(state, input, 0.0, duration/N, duration/N/10);
+      }
 
       // Transform the predicted pose from ocean frame to robot frame
       geometry_msgs::Pose pose;
       pose.position.x = state[0];
       pose.position.y = state[1];
       pose.position.z = state[2];
-      to_quaternion(state[3], state[4], state[5], pose.orientation);
+
+      to_quaternion(state[3], state[4], copysign(wall_orientation_, state[5]), pose.orientation);
 
       tf2::doTransform(pose, lattice[counter], robot_ocean_tf_);
       counter++;

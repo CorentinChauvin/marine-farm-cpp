@@ -9,6 +9,7 @@
 #ifndef COMMON_HPP
 #define COMMON_HPP
 
+#include "mf_common/EulerPose.h"
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Quaternion.h>
@@ -161,6 +162,55 @@ inline void to_quaternion(
   tf2::Vector3 vect(x, y, z);
   tf2::Quaternion _quat(vect, angle);
   tf2::convert(_quat, quat);
+}
+
+/**
+ * \brief  Computes the difference between two poses
+ *
+ * \param[in]  p1    First pose
+ * \param[in]  p2    Second pose
+ * \param[out] diff  Difference between p1 and p2
+ */
+inline void diff_pose(
+  const geometry_msgs::Pose &p1,
+  const geometry_msgs::Pose &p2,
+  geometry_msgs::Pose &diff)
+{
+  diff.position.x = p1.position.x - p2.position.x;
+  diff.position.y = p1.position.y - p2.position.y;
+  diff.position.z = p1.position.z - p2.position.z;
+
+  double roll1, pitch1, yaw1;
+  double roll2, pitch2, yaw2;
+  to_euler(p1.orientation, roll1, pitch1, yaw1);
+  to_euler(p2.orientation, roll2, pitch2, yaw2);
+  to_quaternion(roll1 - roll2, pitch1 - pitch2, yaw1 - yaw2, diff.orientation);
+}
+
+
+/**
+ * \brief  Computes the difference between two poses
+ *
+ * \param[in]  p1    First pose
+ * \param[in]  p2    Second pose
+ * \param[out] diff  Difference between p1 and p2
+ */
+inline void diff_pose(
+  const geometry_msgs::Pose &p1,
+  const geometry_msgs::Pose &p2,
+  mf_common::EulerPose &diff)
+{
+  diff.x = p1.position.x - p2.position.x;
+  diff.y = p1.position.y - p2.position.y;
+  diff.z = p1.position.z - p2.position.z;
+
+  double roll1, pitch1, yaw1;
+  double roll2, pitch2, yaw2;
+  to_euler(p1.orientation, roll1, pitch1, yaw1);
+  to_euler(p2.orientation, roll2, pitch2, yaw2);
+  diff.roll = roll1 - roll2;
+  diff.pitch = pitch1 - pitch2;
+  diff.yaw = yaw1 - yaw2;
 }
 
 /**

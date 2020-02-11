@@ -13,14 +13,15 @@ planning_nodelet:
   plan_horizon: 1.5      # horizon (m) of the planning
   lattice_size_horiz: 4  # half size of the lattice in the horizontal direction
   lattice_size_vert: 4   # half size of the lattice in the vertical direction
+  wall_orientation: 1.5707963  # orientation of the algae wall (absolute value)
   lattice_res: 0.4       # resolution (m) of the waypoints lattice (for cartesian lattice)
   bnd_wall_dist: [0.2, 1.5]  # bounds on the distance to the wall for waypoint selection
-  bnd_depth: [-0.2, 2.2]      # bounds on the depth (in wall frame) for waypoint selection
+  bnd_depth: [-0.2, 2.2]     # bounds on the depth (in wall frame) for waypoint selection
 
   # Viewpoint selection
   camera_height: 5  # number of pixels of the camera along height (-1 for actual camera size)
   camera_width: 10  # number of pixels of the camera along width  (-1 for actual camera size)
-  gp_weight: 100         # weight attributed to the Gaussian Process values in viewpoint selection
+  gp_weight: 100    # weight attributed to the Gaussian Process values in viewpoint selection
 
   # Path generation
   linear_path: false     # whether to create a linear path, or a spline one
@@ -52,5 +53,5 @@ mpc_node:
         0.1, 0.1, 0.1,
         0.1, 0.1, 0.1,
         0.1]  # diagonal of the penalty on the intermediary states error
-  R_u: [0.001, 0.001, 0.001, 10000000.0]      # diagonal of the penalty on the control input error
+  R_u: [0.001, 0.001, 0.001, 100000.0]      # diagonal of the penalty on the control input error
   R_delta: [0.0, 0.0, 0.0, 0.0]  # diagonal of the penalty on the control change rate

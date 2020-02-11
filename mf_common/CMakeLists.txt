@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
     Float32Array.msg
+    EulerPose.msg
 )
 
 generate_messages(
@@ -51,6 +52,7 @@ add_library(mf_common
 
 add_dependencies(mf_common
   ${catkin_EXPORTED_TARGETS}
+  ${PROJECT_NAME}_generate_messages_cpp
 )
 
 target_link_libraries(mf_common ${catkin_LIBRARIES})
