@@ -12,4 +12,4 @@ geometry_msgs/Quaternion orientation
 geometry_msgs/Point32 dimensions
 
 # Disease heatmap
-Float32Array[] disease_heatmap
+mf_common/Float32Array[] disease_heatmap

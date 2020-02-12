@@ -29,11 +29,11 @@ using Eigen::Vector3f;
 
 namespace mfcpp {
 
-vector<mf_mapping::Float32Array> PlanningNodelet::vector2D_to_array(
+vector<mf_common::Float32Array> PlanningNodelet::vector2D_to_array(
   const vector<vector<float>> &vector2D)
 {
   int n = vector2D.size();
-  vector<mf_mapping::Float32Array> out(n);
+  vector<mf_common::Float32Array> out(n);
 
   for (int k = 0; k < n; k++) {
     out[k].data = vector2D[k];
@@ -44,7 +44,7 @@ vector<mf_mapping::Float32Array> PlanningNodelet::vector2D_to_array(
 
 
 vector<vector<float>> PlanningNodelet::array_to_vector2D(
-  const vector<mf_mapping::Float32Array> &array)
+  const vector<mf_common::Float32Array> &array)
 {
   int n = array.size();
   vector<vector<float>> out(n);
@@ -58,7 +58,7 @@ vector<vector<float>> PlanningNodelet::array_to_vector2D(
 
 
 vector<vector<float>> PlanningNodelet::array_to_vector2D(
-  const mf_mapping::Array2D &array)
+  const mf_common::Array2D &array)
 {
   int n = array.data.size();
   vector<vector<float>> out(n);
@@ -154,7 +154,7 @@ void PlanningNodelet::generate_lattice(std::vector<geometry_msgs::Pose> &lattice
       pose.position.y = state[1];
       pose.position.z = state[2];
 
-      to_quaternion(state[3], state[4], copysign(wall_orientation_, state[5]), pose.orientation);
+      to_quaternion(state[3], state[4], copysign(wall_orientation_, modulo_2pi(state[5])), pose.orientation);
 
       tf2::doTransform(pose, lattice[counter], robot_ocean_tf_);
       counter++;
@@ -170,15 +170,42 @@ std::vector<geometry_msgs::Pose> PlanningNodelet::filter_lattice(
   lattice.reserve(lattice_in.size());
 
   for (int k = 0; k < lattice_in.size(); k++) {
-    // Transform point in wall frame
-    geometry_msgs::Pose p;
-    tf2::doTransform(lattice_in[k], p, wall_robot_tf_);
+    bool position_ok = false;
+    bool pitch_ok = false;
+    bool orientation_ok = false;
 
-    // Check bounds
-    if (p.position.z >= bnd_wall_dist_[0] && p.position.z <= bnd_wall_dist_[1]
-      && p.position.x >= bnd_depth_[0] && p.position.x <= bnd_depth_[1]) {
-      lattice.emplace_back(lattice_in[k]);
+    // Transform point in wall and ocean frames
+    geometry_msgs::Pose p1, p2;
+    tf2::doTransform(lattice_in[k], p1, wall_robot_tf_);
+    tf2::doTransform(lattice_in[k], p2, ocean_robot_tf_);
+
+    // Check position bounds
+    if (p1.position.z >= bnd_wall_dist_[0] && p1.position.z <= bnd_wall_dist_[1]
+      && p1.position.x >= bnd_depth_[0] && p1.position.x <= bnd_depth_[1]) {
+      position_ok = true;
     }
+
+    // Check pitch angle of the viewpoint (not being to vertically inclined)
+    double roll, pitch, yaw;
+    to_euler(p2.orientation, roll, pitch, yaw);
+
+    if (abs(pitch) <= bnd_pitch_)
+      pitch_ok = true;
+
+    // Check orientation of the viewpoint (not going backwards)
+    Eigen::Vector3f orientation_vp;
+    get_orientation(roll, pitch, yaw, orientation_vp); // orientation of the viewpoint
+
+    to_euler(ocean_robot_tf_.transform.rotation, roll, pitch, yaw);
+    float wall_orientation = copysign(wall_orientation_, modulo_2pi(yaw));
+    Eigen::Vector3f orientation_wall(cos(wall_orientation), sin(wall_orientation), 0.0);  // orientation of the wall
+
+    if (orientation_vp.dot(orientation_wall) >= 0.0)
+      orientation_ok = true;
+
+    // Add the viewpoints if it passed all the checks
+    if (position_ok && pitch_ok && orientation_ok)
+      lattice.emplace_back(lattice_in[k]);
   }
 
   return lattice;

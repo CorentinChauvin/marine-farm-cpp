@@ -254,10 +254,12 @@ class MPCNode {
      * \param[in]  bounds  Bounds of the MPC problem
      * \param[in]  n       Size of the state
      * \param[in]  N       Number of steps for the MPC prediction
-     * \param[in]  X0      Initial state
-     * \param[in]  X_ref   Reference state (X_0_ref, ..., X_N_ref)
+     * \param[in]  X0      Initial offset
+     * \param[in]  X_ref   Reference state (x_0_ref, ..., x_N_ref)
+     * \param[in]  U_ref   Reference input (u_0_ref, ..., u_N_ref)
      * \param[in]  G       Used to express X with respect to U and X0
      * \param[in]  H       Used to express X with respect to U and X0
+     * \param[in]  D       Used to express X with respect to U and X0
      * \param[out] lb      Lower bound on Ab*U
      * \param[out] ub      Upper bound on Ab*U
      * \param[out] Ab      Multiplicative factor in front of U in the bound inequalities
@@ -266,8 +268,8 @@ class MPCNode {
     void fill_bounds_objs(
       const MPCBounds &bounds,
       int n, int N,
-      const VectorT &X0, const VectorT &X_ref,
-      const MatrixT &G, const MatrixT &H,
+      const VectorT &X0, const VectorT &X_ref, const VectorT &U_ref,
+      const MatrixT &G, const MatrixT &H, const VectorT &D,
       VectorT &lb, VectorT &ub, MatrixT &Ab
     );
 

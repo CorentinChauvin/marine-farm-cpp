@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
     Float32Array.msg
+    Array2D.msg
     EulerPose.msg
 )
 
@@ -48,6 +49,7 @@ include_directories(${Eigen_INCLUDE_DIRS})
 add_library(mf_common
   src/mf_common/common.cpp
   src/mf_common/spline.cpp
+  src/mf_common/perlin_noise.cpp
 )
 
 add_dependencies(mf_common

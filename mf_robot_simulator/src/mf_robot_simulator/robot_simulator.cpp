@@ -164,7 +164,7 @@ void RobotSimulator::publish_state()
   // Publish state
   mf_common::Float32Array state_msg;
   vector<float> float_state(state_.begin(), state_.end());
-  state_msg.array = float_state;
+  state_msg.data = float_state;
   state_pub_.publish(state_msg);
 
   // Publish odometry

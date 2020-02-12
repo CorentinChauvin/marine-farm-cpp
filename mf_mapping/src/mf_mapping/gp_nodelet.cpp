@@ -8,8 +8,8 @@
  */
 
 #include "gp_nodelet.hpp"
-#include "mf_mapping/Array2D.h"
-#include "mf_mapping/Float32Array.h"
+#include "mf_common/Array2D.h"
+#include "mf_common/Float32Array.h"
 #include "mf_mapping/UpdateGP.h"
 #include "mf_sensors_simulator/CameraOutput.h"
 #include <sensor_msgs/Image.h>
@@ -100,8 +100,8 @@ void GPNodelet::onInit()
   // ROS publishers
   wall_img_pub_ = nh_.advertise<sensor_msgs::Image>("gp_wall_img", 0);
   cov_img_pub_ = nh_.advertise<sensor_msgs::Image>("gp_cov_img", 0);
-  gp_mean_pub_ = nh_.advertise<mf_mapping::Float32Array>("gp_mean", 0);
-  gp_cov_pub_ = nh_.advertise<mf_mapping::Array2D>("gp_cov", 0);
+  gp_mean_pub_ = nh_.advertise<mf_common::Float32Array>("gp_mean", 0);
+  gp_cov_pub_ = nh_.advertise<mf_common::Array2D>("gp_cov", 0);
 
   // ROS services
   update_gp_serv_ = nh_.advertiseService("update_gp", &GPNodelet::update_gp_cb, this);

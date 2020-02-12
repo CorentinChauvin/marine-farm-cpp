@@ -12,8 +12,8 @@
 
 #include "mf_robot_model/robot_model.hpp"
 #include "mf_common/Float32Array.h"
-#include "mf_mapping/Float32Array.h"
-#include "mf_mapping/Array2D.h"
+#include "mf_common/Float32Array.h"
+#include "mf_common/Array2D.h"
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -98,6 +98,7 @@ class PlanningNodelet: public nodelet::Nodelet {
     float lattice_res_;    ///<  Resolution (m) of the waypoints lattice
     std::vector<float> bnd_wall_dist_;  ///<  Bounds on the distance to the wall for waypoint selection
     std::vector<float> bnd_depth_;       ///<  Bounds on the depth (in wall frame) for waypoint selection
+    float bnd_pitch_;       ///<  Bound on the pith (in radian) (provided in degree as ROS param)
     ///@}
 
     /// \name  ROS parameters for viewpoint selection
@@ -132,7 +133,7 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \param  2D vector to convert
      * \return  Converted array
      */
-    std::vector<mf_mapping::Float32Array> vector2D_to_array(
+    std::vector<mf_common::Float32Array> vector2D_to_array(
       const std::vector<std::vector<float>> &vector2D);
 
     /**
@@ -142,7 +143,7 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \return  Converted 2D vector
      */
     std::vector<std::vector<float>> array_to_vector2D(
-      const std::vector<mf_mapping::Float32Array> &array);
+      const std::vector<mf_common::Float32Array> &array);
 
     /**
      * \brief  Converts a custom ROS array to a 2D std vector
@@ -151,7 +152,7 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \return  Converted 2D vector
      */
     std::vector<std::vector<float>> array_to_vector2D(
-      const mf_mapping::Array2D &array);
+      const mf_common::Array2D &array);
 
     /**
      * \brief  Fills a cartesian lattice of possible waypoints
@@ -250,12 +251,12 @@ class PlanningNodelet: public nodelet::Nodelet {
     /**
      * \brief  Callback for Gaussian Process mean
      */
-    void gp_mean_cb(const mf_mapping::Float32ArrayConstPtr msg);
+    void gp_mean_cb(const mf_common::Float32ArrayConstPtr msg);
 
     /**
      * \brief  Callback for Gaussian Process covariance
      */
-    void gp_cov_cb(const mf_mapping::Array2DConstPtr msg);
+    void gp_cov_cb(const mf_common::Array2DConstPtr msg);
 
     /**
      * \brief  Callback for the state of the robot

@@ -326,8 +326,8 @@ template <class VectorT, class MatrixT>
 void MPCNode::fill_bounds_objs(
   const MPCBounds &bounds,
   int n, int N,
-  const VectorT &X0, const VectorT &X_ref,
-  const MatrixT &G, const MatrixT &H,
+  const VectorT &X0, const VectorT &X_ref, const VectorT &U_ref,
+  const MatrixT &G, const MatrixT &H, const VectorT &D,
   VectorT &lb, VectorT &ub, MatrixT &Ab)
 {
   // Bounds on the state
@@ -355,18 +355,18 @@ void MPCNode::fill_bounds_objs(
   Ab = MatrixT::Zero((m+1)*N, m*N);
 
   VectorXf HX0 = H*X0;
-  VectorXf delta(N);  // Kb*H*X0 - Kb*X_ref
+  VectorXf delta(N);  // Kb*H*X0 + Kb*X_ref + K_b*D
 
   for (int k = 0; k < N; k++) {
-    delta(k) = HX0((k+1)*n - 1) - X_ref((k+2)*n - 1);
+    delta(k) = HX0((k+1)*n - 1) + X_ref((k+2)*n - 1) + D((k+1)*n - 1);
   }
 
   lb.block(0, 0, N, 1) = a - delta;
   ub.block(0, 0, N, 1) = b - delta;
 
   for (int k = 0; k < N; k++) {
-    lb.block(N + k*m, 0, m, 1) = c;
-    ub.block(N + k*m, 0, m, 1) = d;
+    lb.block(N + k*m, 0, m, 1) = c - U_ref.block((k+1)*m, 0, m, 1);
+    ub.block(N + k*m, 0, m, 1) = d - U_ref.block((k+1)*m, 0, m, 1);
   }
 
   MatrixT KbG(N, m*N);
@@ -586,7 +586,7 @@ bool MPCNode::compute_control(
   VectorXf lb, ub;  // lower and upper bounds
   MatrixXf Ab;  // multiplicative factor in front of U in the bound inequalities
 
-  fill_bounds_objs(bounds_, n, N, X0, X_ref, G, H, lb, ub, Ab);
+  fill_bounds_objs(bounds_, n, N, X0, X_ref, U_ref, G, H, D, lb, ub, Ab);
 
   // Solve MPC Quadratic Program
   MatrixXf P = 2*(G.transpose()*LG + M);

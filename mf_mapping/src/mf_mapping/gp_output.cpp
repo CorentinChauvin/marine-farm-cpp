@@ -7,8 +7,8 @@
  */
 
 #include "gp_nodelet.hpp"
-#include "mf_mapping/Array2D.h"
-#include "mf_mapping/Float32Array.h"
+#include "mf_common/Array2D.h"
+#include "mf_common/Float32Array.h"
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <ros/ros.h>
@@ -26,12 +26,12 @@ namespace mfcpp {
 void GPNodelet::publish_gp_state()
 {
   // Publish GP mean
-  mf_mapping::Float32Array mean_msg;
+  mf_common::Float32Array mean_msg;
   mean_msg.data = vector<float>(gp_mean_.data(), gp_mean_.data() + gp_mean_.size());;
   gp_mean_pub_.publish(mean_msg);
 
   // Publish GP covariance
-  mf_mapping::Array2D cov_msg;
+  mf_common::Array2D cov_msg;
   cov_msg.data.resize(size_gp_);
 
   for (int i = 0; i < size_gp_; i++) {

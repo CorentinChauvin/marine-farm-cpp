@@ -8,7 +8,7 @@
 
 #include "farm_nodelet.hpp"
 #include "farm_common.hpp"
-#include "perlin_noise.hpp"
+#include "mf_common/perlin_noise.hpp"
 #include <vector>
 
 using namespace std;

@@ -11,8 +11,8 @@
 #include "mf_robot_model/robot_model.hpp"
 #include "mf_sensors_simulator/MultiPoses.h"
 #include "mf_mapping/UpdateGP.h"
-#include "mf_mapping/Float32Array.h"
-#include "mf_mapping/Array2D.h"
+#include "mf_common/Float32Array.h"
+#include "mf_common/Array2D.h"
 #include "mf_common/Float32Array.h"
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/PoseArray.h>
@@ -84,6 +84,7 @@ void PlanningNodelet::onInit()
   private_nh_.param<float>("lattice_res", lattice_res_, 0.5);
   private_nh_.param<vector<float>>("bnd_wall_dist", bnd_wall_dist_, {0.5, 1.0});
   private_nh_.param<vector<float>>("bnd_depth", bnd_depth_, {0.0, 1.0});
+  private_nh_.param<float>("bnd_pitch", bnd_pitch_, 90.0);
 
   private_nh_.param<int>("camera_width", camera_width_, -1);
   private_nh_.param<int>("camera_height", camera_height_, -1);
@@ -95,6 +96,7 @@ void PlanningNodelet::onInit()
   wall_orientation_ = abs(wall_orientation_);
   max_lat_rudder_ = bnd_input[1];
   max_elev_rudder_ = bnd_input[2];
+  bnd_pitch_ *= M_PI / 180.0;  // convert in radian
 
   if (!vert_motion_)
     lattice_size_vert_ = 0;
@@ -112,8 +114,8 @@ void PlanningNodelet::onInit()
 
 
   // ROS subscribers
-  gp_mean_sub_ = nh_.subscribe<mf_mapping::Float32ArrayConstPtr>("gp_mean", 1, &PlanningNodelet::gp_mean_cb, this);
-  gp_cov_sub_ = nh_.subscribe<mf_mapping::Array2DConstPtr>("gp_cov", 1, &PlanningNodelet::gp_cov_cb, this);
+  gp_mean_sub_ = nh_.subscribe<mf_common::Float32ArrayConstPtr>("gp_mean", 1, &PlanningNodelet::gp_mean_cb, this);
+  gp_cov_sub_ = nh_.subscribe<mf_common::Array2DConstPtr>("gp_cov", 1, &PlanningNodelet::gp_cov_cb, this);
   state_sub_ = nh_.subscribe<mf_common::Float32Array>("state", 1, &PlanningNodelet::state_cb, this);
 
   // ROS publishers
@@ -245,13 +247,13 @@ bool PlanningNodelet::get_tf()
 }
 
 
-void PlanningNodelet::gp_mean_cb(const mf_mapping::Float32ArrayConstPtr msg)
+void PlanningNodelet::gp_mean_cb(const mf_common::Float32ArrayConstPtr msg)
 {
   last_gp_mean_ = msg->data;
 }
 
 
-void PlanningNodelet::gp_cov_cb(const mf_mapping::Array2DConstPtr msg)
+void PlanningNodelet::gp_cov_cb(const mf_common::Array2DConstPtr msg)
 {
   last_gp_cov_ = array_to_vector2D(msg->data);
 }
@@ -259,7 +261,7 @@ void PlanningNodelet::gp_cov_cb(const mf_mapping::Array2DConstPtr msg)
 
 void PlanningNodelet::state_cb(const mf_common::Float32Array msg)
 {
-  state_ = RobotModel::state_type(msg.array.begin(), msg.array.end());
+  state_ = RobotModel::state_type(msg.data.begin(), msg.data.end());
   state_received_ = true;
 }
 

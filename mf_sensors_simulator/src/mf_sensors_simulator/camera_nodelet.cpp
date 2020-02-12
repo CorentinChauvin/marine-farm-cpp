@@ -183,12 +183,12 @@ void CameraNodelet::init_coll_world()
 
     // Storing disease heatmap
     unsigned int a = al->disease_heatmap.size();
-    unsigned int b = al->disease_heatmap[0].array.size();
+    unsigned int b = al->disease_heatmap[0].data.size();
     heatmaps_[k].resize(a, vector<float>(b));
 
     for (unsigned int i = 0; i < a; i++) {
       for (unsigned int j = 0; j < b; j++) {
-        heatmaps_[k][i][j] = al->disease_heatmap[i].array[j];
+        heatmaps_[k][i][j] = al->disease_heatmap[i].data[j];
       }
     }
   }

@@ -9,7 +9,7 @@
 #include "farm_nodelet.hpp"
 #include "rviz_visualisation.hpp"
 #include "farm_common.hpp"
-#include "perlin_noise.hpp"
+#include "mf_common/perlin_noise.hpp"
 #include "mf_farm_simulator/Alga.h"
 #include "mf_farm_simulator/Algae.h"
 #include <std_msgs/Float32.h>
@@ -335,11 +335,11 @@ void FarmNodelet::pub_algae()
 
       alga.disease_heatmap.resize(n_height);
       for (unsigned int i = 0; i < n_height; i++)
-        alga.disease_heatmap[i].array.resize(n_width);
+        alga.disease_heatmap[i].data.resize(n_width);
 
       for (unsigned int i = 0; i < n_height; i++) {
         for (unsigned int j = 0; j < n_width; j++) {
-          alga.disease_heatmap[i].array[j] = al->algae[l].disease_heatmap[i][j];
+          alga.disease_heatmap[i].data[j] = al->algae[l].disease_heatmap[i][j];
         }
       }
 

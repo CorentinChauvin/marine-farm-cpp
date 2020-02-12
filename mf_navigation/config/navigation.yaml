@@ -17,6 +17,7 @@ planning_nodelet:
   lattice_res: 0.4       # resolution (m) of the waypoints lattice (for cartesian lattice)
   bnd_wall_dist: [0.2, 1.5]  # bounds on the distance to the wall for waypoint selection
   bnd_depth: [-0.2, 2.2]     # bounds on the depth (in wall frame) for waypoint selection
+  bnd_pitch: 60.0            # bound on pitch angle (in degree)
 
   # Viewpoint selection
   camera_height: 5  # number of pixels of the camera along height (-1 for actual camera size)

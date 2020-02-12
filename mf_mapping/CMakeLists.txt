@@ -24,12 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   sensor_msgs
   message_generation
-)
-
-add_message_files(
-  FILES
-    Float32Array.msg
-    Array2D.msg
+  mf_common
 )
 
 add_service_files(
@@ -41,6 +36,7 @@ generate_messages(
   DEPENDENCIES
     std_msgs
     mf_sensors_simulator
+    mf_common
 )
 
 catkin_package(
@@ -71,5 +67,6 @@ add_dependencies(gp_nodelet
   ${catkin_EXPORTED_TARGETS}
   ${PROJECT_NAME}_generate_messages_cpp
   mf_sensors_simulator_generate_messages_cpp
+  mf_common_generate_messages_cpp
 )
 target_link_libraries(gp_nodelet ${catkin_LIBRARIES})

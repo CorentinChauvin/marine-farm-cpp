@@ -15,6 +15,7 @@
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Point.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Vector3.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <eigen3/Eigen/Dense>
 
@@ -36,6 +37,22 @@ inline geometry_msgs::Pose to_pose(const geometry_msgs::TransformStamped &transf
   pose.orientation.w = transform.transform.rotation.w;
 
   return pose;
+}
+
+/**
+ * \brief  Brings back an angle into [-pi, pi)
+ */
+template <class T>
+inline T modulo_2pi(T angle)
+{
+  while (angle >= M_PI && angle < -M_PI) {
+    if (angle >= M_PI)
+      angle -= 2*M_PI;
+    else
+      angle += 2*M_PI;
+  }
+
+  return angle;
 }
 
 /**
@@ -163,6 +180,27 @@ inline void to_quaternion(
   tf2::Quaternion _quat(vect, angle);
   tf2::convert(_quat, quat);
 }
+
+/**
+ * \brief  Get orientation vector (x vector of the frame) given by Roll-Pitch-Yaw
+ *
+ * VectorT can be either Eigen::Vector3f or Eigen::Vector3d
+ *
+ * \param[in]  roll          Roll angle to convert
+ * \param[in]  pitch         Pitch angle to convert
+ * \param[in]  yaw           Yaw angle to convert
+ * \param[out] orientation   Resulting orientation
+ */
+template <class VectorT>
+inline void get_orientation(float roll, float pitch, float yaw, VectorT &orientation)
+{
+  tf2::Matrix3x3 mat;
+  mat.setRPY(roll, pitch, yaw);
+  tf2::Vector3 column = mat.getColumn(0);
+
+  orientation << column.getX(), column.getY(), column.getZ();
+}
+
 
 /**
  * \brief  Computes the difference between two poses

@@ -12,7 +12,7 @@
 #include "farm_common.hpp"
 #include "rviz_visualisation.hpp"
 #include "mf_farm_simulator/FarmSimulatorConfig.h"
-#include "perlin_noise.hpp"
+#include "mf_common/perlin_noise.hpp"
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <dynamic_reconfigure/server.h>

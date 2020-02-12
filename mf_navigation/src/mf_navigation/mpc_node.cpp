@@ -144,7 +144,7 @@ void MPCNode::path_cb(const nav_msgs::Path msg)
 
 void MPCNode::state_cb(const mf_common::Float32Array msg)
 {
-  state_ = msg.array;
+  state_ = msg.data;
   state_received_ = true;
 }
 
