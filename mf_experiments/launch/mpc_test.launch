@@ -44,7 +44,7 @@
   </group>
 
   <!-- Visualisation -->
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find mf_farm_simulator)/rviz/farm_simulator.rviz" if="$(arg rviz)" />
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find mf_experiments)/rviz/mfcpp.rviz" if="$(arg rviz)" />
 
 
 </launch>

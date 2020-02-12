@@ -59,17 +59,21 @@ PerlinNoiseGenerator::PerlinNoiseGenerator()
   width_ = 1;
   n_height_ = 1;
   n_width_ = 1;
+
+  init_random(0);
 }
 
 
 PerlinNoiseGenerator::PerlinNoiseGenerator(float height, float width,
-  unsigned int n_height, unsigned int n_width)
+  unsigned int n_height, unsigned int n_width, unsigned long int seed)
 {
   height_ = height;
   width_ = width;
   n_height_ = n_height;
   n_width_ = n_width;
   gradients_.resize(n_height+1, std::vector<Vec2d>(n_width+1, Vec2d()));
+
+  init_random(seed);
 }
 
 
@@ -80,20 +84,28 @@ PerlinNoiseGenerator::~PerlinNoiseGenerator()
 
 
 void PerlinNoiseGenerator::configure(float height, float width,
-  unsigned int n_height, unsigned int n_width)
+  unsigned int n_height, unsigned int n_width, unsigned long int seed)
 {
   height_ = height;
   width_ = width;
   n_height_ = n_height;
   n_width_ = n_width;
   gradients_.resize(n_height+1, std::vector<Vec2d>(n_width+1, Vec2d()));
+
+  init_random(seed);
 }
 
 
 void PerlinNoiseGenerator::randomise_gradients()
 {
-  std::mt19937 random_generator(random_device_());
   std::uniform_real_distribution<double> distribution(-1, 1);
+  std::mt19937 random_generator;
+
+  if (randomise_seed_)
+    random_generator = std::mt19937(random_device_());
+  else
+    random_generator = std::mt19937(seed_);
+
   hash_gradients_.resize(256, Vec2d());
 
   for (int i = 0; i < 256; i++) {
@@ -113,14 +125,20 @@ void PerlinNoiseGenerator::randomise_gradients()
 }
 
 
-void PerlinNoiseGenerator::generate()
+void PerlinNoiseGenerator::generate(unsigned long int seed)
 {
   // Generate permutations
   std::vector<unsigned int> permut(256);
   for (int i = 0; i < 256; i++) {
     permut[i] = i;
   }
-  std::random_shuffle (permut.begin(), permut.end());
+
+  if (seed == 0)
+    srand(time(0));
+  else
+    srand(seed);
+
+  std::random_shuffle(permut.begin(), permut.end());
 
   // Assign gradients to each node
   for (unsigned int i = 0; i <= n_height_; i++) {
@@ -168,6 +186,18 @@ double PerlinNoiseGenerator::evaluate(float x, float y) const
   output = output/2 + 0.5;
 
   return output;
+}
+
+
+void PerlinNoiseGenerator::init_random(unsigned long int seed)
+{
+  if (seed == 0) {
+    srand(time(0));
+    randomise_seed_ = true;
+  } else {
+    seed_ = seed;
+    randomise_seed_ = false;
+  }
 }
 
 

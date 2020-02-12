@@ -96,7 +96,7 @@ void FarmNodelet::init_algae(AlgaeLine &line)
   tf2::Vector3 X2 = line.line.p2;
 
   perlin_.configure(height_disease_heatmap_, width_disease_heatmap_,
-    height_grid_heatmap_, width_grid_heatmap_);
+    height_grid_heatmap_, width_grid_heatmap_, random_seed_);
   perlin_.randomise_gradients();
 
 
@@ -123,7 +123,7 @@ void FarmNodelet::init_algae(AlgaeLine &line)
         vector<float>(width_disease_heatmap_, 0)
       );
 
-      perlin_.generate();
+      perlin_.generate(random_seed_);
 
       for (int i = 0; i < height_disease_heatmap_; i++) {
         for (int j = 0; j < width_disease_heatmap_; j++) {

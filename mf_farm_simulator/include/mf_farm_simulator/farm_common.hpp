@@ -15,6 +15,7 @@
 #include <iostream>
 #include <vector>
 
+
 namespace mfcpp {
   /**
    * \brief  Rope tensed between two 3D points
@@ -107,34 +108,6 @@ namespace mfcpp {
 
     return pt;
   }
-
-  /**
-   * \brief  Draw a random number from a Gaussian distribution
-   *
-   * \param mu     Mean of the distribution
-   * \param sigma  Standard deviation of the distribution
-   * \return  Random number following a normal law (mu, sigma)
-   */
-  double rand_gaussian(double mu, double sigma);
-
-  /**
-   * \brief  Draw a random number from a uniform distribution
-   *
-   * \param a  Lower bound
-   * \param b  Upper bound
-   * \return   Random number following a uniform law in [a, b]
-   */
-  double rand_uniform(double a, double b);
-
-  /**
-   * \brief  Draw a random number from a bernoulli distribution
-   *
-   * \param p  Probability to get true
-   * \return   Random number following a uniform law in [a, b]
-   */
-  bool rand_bernoulli(double p);
-
-
 
 } // namespace mfcpp
 

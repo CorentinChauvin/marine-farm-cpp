@@ -20,6 +20,7 @@
 #include <ros/ros.h>
 #include <string>
 #include <vector>
+#include <cstdlib>
 #include <csignal>
 
 
@@ -53,10 +54,15 @@ namespace mfcpp {
       std::vector<AlgaeLine> algae_lines_;  ///<  Vector of all the algae in the farm
       bool reconfigure_initialised_;  ///<  Whether the dynamic reconfigure callback has been called once
       bool init_done_;  ///<  Whether the farm initialisation has been done
+      std::random_device random_device_;  ///<  Seed initialiser for random number generation
+      std::mt19937 random_generator_;     ///<  Random number initialiser
+      PerlinNoiseGenerator perlin_;       ///<  For randomising the heatmaps
 
-      // ROS parameters
-      float main_loop_freq_;  ///<  Frequency of the main loop
 
+      /// \name  ROS parameters
+      ///@{
+      float main_loop_freq_;   ///<  Frequency of the main loop
+      int random_seed_;        ///<  Seed for random numbers (0 for random seed)
       int nbr_lines_;          ///<  Number of algae lines
       float offset_lines_;     ///<  Lateral distance (m) between each line
       float length_lines_;     ///<  Length (m) of each line
@@ -92,9 +98,8 @@ namespace mfcpp {
       int width_disease_heatmap_;   ///<  Width of the algae disease heatmap
       int height_grid_heatmap_;     ///<  Height of the grid for perlin noise generation
       int width_grid_heatmap_;      ///<  Width of the grid for perlin noise generation
+      ///@}
 
-      // FIXME: to remove
-      PerlinNoiseGenerator perlin_;
 
       /**
        * \brief  Main callback which is called by a timer
@@ -136,6 +141,34 @@ namespace mfcpp {
        * \brief  Initialise the algae lines
        */
       void init_algae_lines();
+
+      /**
+       * \brief  Draw a random number from a Gaussian distribution
+       *
+       * \param mu     Mean of the distribution
+       * \param sigma  Standard deviation of the distribution
+       * \return  Random number following a normal law (mu, sigma)
+       */
+      template <class T>
+      inline T rand_gaussian(T mu, T sigma);
+
+      /**
+       * \brief  Draw a random number from a uniform distribution
+       *
+       * \param a  Lower bound
+       * \param b  Upper bound
+       * \return   Random number following a uniform law in [a, b]
+       */
+      template <class T>
+      inline T rand_uniform(T a, T b);
+
+      /**
+       * \brief  Draw a random number from a bernoulli distribution
+       *
+       * \param p  Probability to get true
+       * \return   Random number following a uniform law in [a, b]
+       */
+      bool rand_bernoulli(double p);
 
       /**
        * \brief  Init anchors of a specific algae line
@@ -227,6 +260,33 @@ namespace mfcpp {
       ///@}
 
   };
+
+  /*
+   * Inline functions
+   */
+
+  template <class T>
+  inline T FarmNodelet::rand_gaussian(T mu, T sigma)
+  {
+    std::normal_distribution<T> distribution(mu, sigma);
+    return distribution(random_generator_);
+  }
+
+
+  template <class T>
+  inline T FarmNodelet::rand_uniform(T a, T b)
+  {
+    std::uniform_real_distribution<T> distribution(a, b);
+    return distribution(random_generator_);
+  }
+
+
+  inline bool FarmNodelet::rand_bernoulli(double p)
+  {
+    std::bernoulli_distribution distribution(p);
+    return distribution(random_generator_);
+  }
+
 
 
 }  // namespace mfcpp

@@ -5,10 +5,10 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /TF1/Frames1
+        - /Farm1
         - /Farm1/Namespaces1
         - /Odometry1/Shape1
         - /CameraFOV1/Namespaces1
-        - /LatticePoses1
       Splitter Ratio: 0.5
     Tree Height: 868
   - Class: rviz/Selection
@@ -40,7 +40,7 @@ Visualization Manager:
         base_link:
           Value: true
         camera:
-          Value: false
+          Value: true
         ocean:
           Value: true
         wall:

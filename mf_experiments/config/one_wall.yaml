@@ -6,6 +6,8 @@ simu:
 
   # Parameters changed from farm_simulator
   farm_nodelet:
+    random_seed: 0  # seed for random numbers (0 for random seed)
+
     # Algae lines generation
     nbr_lines: 1            # number of algae lines
     length_lines: 30        # length (m) of each line

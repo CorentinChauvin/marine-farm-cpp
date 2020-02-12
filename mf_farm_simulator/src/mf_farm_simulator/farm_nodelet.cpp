@@ -65,6 +65,7 @@ void FarmNodelet::onInit()
 
   // ROS parameters
   private_nh_.param<float>("main_loop_freq", main_loop_freq_, 1.0);
+  private_nh_.param<int>("random_seed", random_seed_, 0);
   private_nh_.param<int>("nbr_lines", nbr_lines_, 1);
   private_nh_.param<float>("offset_lines", offset_lines_, 1.0);
   private_nh_.param<float>("length_lines", length_lines_, 100.0);
@@ -103,6 +104,13 @@ void FarmNodelet::onInit()
 
   // Other variables
   init_done_ = false;
+
+  if (random_seed_ == 0)
+    random_generator_ = mt19937(random_device_());
+  else {
+    srand(random_seed_);
+    random_generator_ = mt19937(random_seed_);
+  }
 
   // ROS publishers
   algae_pub_ = private_nh_.advertise<mf_farm_simulator::Algae>("algae", 0);

@@ -32,9 +32,10 @@ namespace mfcpp {
        * \param width     Width of the 2D space in which to generate the noise
        * \param n_height  Size of the discretised grid in the first dimension
        * \param n_width   Size of the discretised grid in the second dimensio
+       * \param seed      Seed for randomisation (0 for random seeding)
        */
       PerlinNoiseGenerator(float height, float width, unsigned int n_height,
-        unsigned int n_width);
+        unsigned int n_width, unsigned long int seed=0);
 
       ~PerlinNoiseGenerator();
 
@@ -45,9 +46,10 @@ namespace mfcpp {
        * \param width     Width of the 2D space in which to generate the noise
        * \param n_height  Size of the discretised grid in the first dimension
        * \param n_width   Size of the discretised grid in the second dimension
+       * \param seed      Seed for randomisation (0 for random seeding)
        */
       void configure(float height, float width, unsigned int n_height,
-        unsigned int n_width);
+        unsigned int n_width, unsigned long int seed=0);
 
       /**
        * \brief  Fills the hash list with random gradients
@@ -56,8 +58,10 @@ namespace mfcpp {
 
       /**
        * \brief  Populates the grid with random gradients from the hash list
+       *
+       * \param seed      Seed for randomisation (0 for random seeding)
        */
-      void generate();
+      void generate(unsigned long int seed=0);
 
       /**
        * \brief  Evaluates the perlin noise at a given position
@@ -122,8 +126,21 @@ namespace mfcpp {
       /// Hash list of random gradients
       std::vector<Vec2d> hash_gradients_;
 
+      /// Whether to randomise seeding for random numbers
+      bool randomise_seed_;
+
+      /// Seed for random numbers when no random seeding
+      unsigned long int seed_;
+
       ///  Seed initialiser for generation of random numbers
       std::random_device random_device_;
+
+      /**
+       * \brief  Initialises random generation
+       *
+       * \param seed  Seed to use for initialisation. If 0, random seeding
+       */
+      void init_random(unsigned long int seed);
 
       /**
        * \brief  Computes the dot product between two vectors
