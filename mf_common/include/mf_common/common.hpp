@@ -82,30 +82,91 @@ inline float distance(const geometry_msgs::Pose &p1, const geometry_msgs::Pose &
 /**
  * \brief  Interpolates linearily two poses
  *
+ * The position is linearily interpolated, the orientation is interpolated using
+ * Spherical Linear Interpolation.
+ *
  * \param pose1  First pose
  * \param pose2  Second pose
  * \param t      Interpolation coefficient
- * \return  (1-t)*p1 + t*p2
+ * \return  Interpolated pose
  */
 inline geometry_msgs::Pose interpolate(
   const geometry_msgs::Pose &pose1,
   const geometry_msgs::Pose &pose2,
   float t)
 {
-  // Prepare interpolation
+  geometry_msgs::Pose new_pose;
+
+  // Interpolate position
   tf2::Vector3 p1, p2;
   tf2::convert(pose1.position, p1);
   tf2::convert(pose2.position, p2);
+  tf2::toMsg(p1 + (p2-p1) * t, new_pose.position);
 
+  // Interpolate orientation
   tf2::Quaternion q1, q2;
   tf2::convert(pose1.orientation, q1);
   tf2::convert(pose2.orientation, q2);
-
-  geometry_msgs::Pose new_pose;
-  tf2::toMsg(   p1 + (p2-p1) * t,              new_pose.position);
-  tf2::convert((q1 + (q2-q1) * t).normalize(), new_pose.orientation);
+  tf2::convert(slerp(q1, q2, t), new_pose.orientation);
 
   return new_pose;
+}
+
+/**
+ * \brief  Spherical Linear Interpolation of two quaternions
+ *
+ * Adapted from Wikipedia: https://en.wikipedia.org/wiki/Slerp
+ *
+ * \param q0  First quaternion
+ * \param q1  Second quaternion
+ * \param t   Interpolation coefficient
+ */
+inline tf2::Quaternion slerp(
+  const tf2::Quaternion &q0,
+  const tf2::Quaternion &q1,
+  float t)
+{
+  // Convert the quaternions into tf2 datatypes
+  tf2::Quaternion v0, v1;
+  tf2::convert(q0, v0);
+  tf2::convert(q1, v1);
+
+  // Only unit quaternions are valid rotations.
+  // Normalize to avoid undefined behavior.
+  v0.normalize();
+  v1.normalize();
+
+  // Compute the cosine of the angle between the two vectors.
+  double dot = v0.dot(v1);
+
+  // If the dot product is negative, slerp won't take
+  // the shorter path. Note that v1 and -v1 are equivalent when
+  // the negation is applied to all four components. Fix by
+  // reversing one quaternion.
+  if (dot < 0.0f) {
+    v1 *= -1.0;
+    dot = -dot;
+  }
+
+  const double DOT_THRESHOLD = 0.9995;
+  if (dot > DOT_THRESHOLD) {
+    // If the inputs are too close for comfort, linearly interpolate
+    // and normalize the result.
+    tf2::Quaternion result = v0 + (v1 - v0) * t;
+    result.normalize();
+    return result;
+  }
+
+  // Since dot is in range [0, DOT_THRESHOLD], acos is safe
+  double theta_0 = acos(dot);        // theta_0 = angle between input vectors
+  double theta = theta_0*t;          // theta = angle between v0 and result
+  double sin_theta = sin(theta);     // compute this value only once
+  double sin_theta_0 = sin(theta_0); // compute this value only once
+
+  double s0 = cos(theta) - dot * sin_theta / sin_theta_0;  // == sin(theta_0 - theta) / sin(theta_0)
+  double s1 = sin_theta / sin_theta_0;
+
+  return (v0 * s0) + (v1 * s1);
 }
 
 /**

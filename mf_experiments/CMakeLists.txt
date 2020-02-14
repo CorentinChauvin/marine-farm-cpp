@@ -38,12 +38,31 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-# Control tester
-add_executable(control_tester
-  src/mf_experiments/control_tester.cpp
+# Trajectory publisher
+add_executable(traj_publisher
+  src/mf_experiments/traj_publisher.cpp
 )
-add_dependencies(control_tester
+add_dependencies(traj_publisher
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(traj_publisher ${catkin_LIBRARIES})
+
+# Experiment statistics
+add_executable(experiment_stats
+  src/mf_experiments/experiment_stats.cpp
+)
+add_dependencies(experiment_stats
   ${catkin_EXPORTED_TARGETS}
     mf_common_generate_messages_cpp
 )
-target_link_libraries(control_tester ${catkin_LIBRARIES})
+target_link_libraries(experiment_stats ${catkin_LIBRARIES})
+
+# Clock publisher
+add_executable(clock_publisher
+  src/mf_experiments/clock_publisher.cpp
+)
+add_dependencies(clock_publisher
+  ${catkin_EXPORTED_TARGETS}
+    mf_common_generate_messages_cpp
+)
+target_link_libraries(clock_publisher ${catkin_LIBRARIES})

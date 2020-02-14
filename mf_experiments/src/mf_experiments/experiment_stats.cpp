@@ -7,7 +7,7 @@
  * \date   2020
  */
 
-#include "control_tester.hpp"
+#include "experiment_stats.hpp"
 #include "mf_common/common.hpp"
 #include "mf_common/spline.hpp"
 #include "mf_common/EulerPose.h"
@@ -33,40 +33,30 @@ using std::vector;
 namespace mfcpp {
 
 
-ControlTesterNode::ControlTesterNode():
+ExperimentStatsNode::ExperimentStatsNode():
   nh_("~")
 {
-
+ init_node();
 }
 
 
-ControlTesterNode::~ControlTesterNode()
+ExperimentStatsNode::~ExperimentStatsNode()
 {
 
 }
 
 
-void ControlTesterNode::init_node()
+void ExperimentStatsNode::init_node()
 {
   // ROS parameters
-  string path_frame;    //  frame in which the path is expressed
-  string wp_file_name;  // relative path of the file containing the waypoints
   string out_file_name;  // path of the output file for the results of the test
-  float plan_speed;    // planned speed (m/s) of the robot
-  float plan_res;      // spatial resolution (m) of the planned trajectory
 
   nh_.param<float>("main_freq", main_freq_, 1.0);
-  nh_.param<float>("path_freq", path_freq_, 1.0);
-  nh_.param<string>("path_frame", path_frame, "ocean");
-  nh_.param<string>("wp_file_name", wp_file_name, "resources/path.txt");
   nh_.param<string>("out_file_name", out_file_name, "/tmp/control_out.txt");
-  nh_.param<float>("plan_res", plan_res, 1.0);
 
   // Other variables
   odom_received_ = false;
-  path_loaded_ = false;
-  path_.header.frame_id = path_frame;
-  load_path(wp_file_name, plan_res, path_);
+  path_received_ = false;
   start_time_ = ros::Time::now().toSec();
 
   out_file_.open(out_file_name);
@@ -76,30 +66,23 @@ void ControlTesterNode::init_node()
     ROS_WARN("[control_tester] Couldn't open file '%s' in write mode", out_file_name.c_str());
 
   // ROS subscribers
-  odom_sub_ = nh_.subscribe<nav_msgs::Odometry>("odom", 1, &ControlTesterNode::odom_cb, this);
+  odom_sub_ = nh_.subscribe<nav_msgs::Odometry>("odom", 1, &ExperimentStatsNode::odom_cb, this);
+  path_sub_ = nh_.subscribe<nav_msgs::Path>("path", 1, &ExperimentStatsNode::path_cb, this);
 
   // ROS publishers
-  path_pub_ = nh_.advertise<nav_msgs::Path>("path", 0);
   ref_pub_ = nh_.advertise<geometry_msgs::Pose>("reference", 0);
   error_pub_ = nh_.advertise<mf_common::EulerPose>("error", 0);
 }
 
 
-void ControlTesterNode::run_node()
+void ExperimentStatsNode::run_node()
 {
-  init_node();
   ros::Rate loop_rate(main_freq_);
   ros::Time t_path = ros::Time::now();  // last time path has been published
 
   while (ros::ok()) {
     ros::spinOnce();
-
-    if (path_loaded_ && (ros::Time::now() - t_path >= ros::Duration(1/path_freq_))) {
-      path_pub_.publish(path_);
-      t_path = ros::Time::now();
-    }
-
-    if (path_loaded_ && odom_received_) {
+    if (path_received_ && odom_received_) {
       geometry_msgs::Pose reference_pose = find_closest(path_.poses, odom_.pose.pose);
       mf_common::EulerPose error;
       diff_pose(reference_pose, odom_.pose.pose, error);
@@ -119,68 +102,7 @@ void ControlTesterNode::run_node()
 }
 
 
-void ControlTesterNode::load_path(string file_name, float resolution, nav_msgs::Path &path)
-{
-  path_loaded_ = false;
-
-  // Open path file
-  string package_path = ros::package::getPath("mf_experiments");
-  string file_path = package_path + '/' + file_name;
-
-  std::ifstream file(file_path.c_str());
-
-  if (!file.is_open()) {
-    ROS_WARN("[control_tester] Path file couldn't be opened at: %s", file_path.c_str());
-    return;
-  }
-
-  // Read the waypoints
-  vector<Eigen::Vector3f> p(0);  // waypoints positions
-  vector<Eigen::Vector3f> o(0);  // waypoints orientations
-  int k = 0;
-
-  for (string line; std::getline(file, line); ) {
-    if (!line.empty()) {
-      p.emplace_back(Eigen::Vector3f());
-      o.emplace_back(Eigen::Vector3f());
-      std::istringstream in(line);
-      in >> p[k](0) >> p[k](1) >> p[k](2) >> o[k](0) >> o[k](1) >> o[k](2);
-
-      k++;
-    }
-  }
-
-  // Interpolate the path
-  Spline spline(p, o, 1.0);
-
-  path_.poses.resize(0);
-  bool last_reached = false;
-  float t = 0;
-
-  while (!last_reached) {
-    Eigen::Vector3f p;
-    Eigen::Vector3f o;
-
-    spline.evaluate(t, p, o, last_reached);
-    o = o / o.norm();
-
-    geometry_msgs::PoseStamped pose;
-    pose.pose.position.x = p(0);
-    pose.pose.position.y = p(1);
-    pose.pose.position.z = p(2);
-    to_quaternion(0.0, -asin(o(2)), atan2(o(1), o(0)), pose.pose.orientation);
-
-    path_.poses.emplace_back(pose);
-    t += resolution;
-  }
-
-  // Cleaning
-  file.close();
-  path_loaded_ = true;
-}
-
-
-geometry_msgs::Pose ControlTesterNode::find_closest(
+geometry_msgs::Pose ExperimentStatsNode::find_closest(
   const std::vector<geometry_msgs::PoseStamped> &path,
   const geometry_msgs::Pose &pose)
 {
@@ -203,7 +125,7 @@ geometry_msgs::Pose ControlTesterNode::find_closest(
 }
 
 
-void ControlTesterNode::write_output(
+void ExperimentStatsNode::write_output(
   const geometry_msgs::Pose &pose,
   const geometry_msgs::Pose &reference,
   const mf_common::EulerPose &error)
@@ -227,10 +149,17 @@ void ControlTesterNode::write_output(
 }
 
 
-void ControlTesterNode::odom_cb(const nav_msgs::Odometry msg)
+void ExperimentStatsNode::odom_cb(const nav_msgs::Odometry msg)
 {
   odom_ = msg;
   odom_received_ = true;
+}
+
+
+void ExperimentStatsNode::path_cb(const nav_msgs::Path msg)
+{
+  path_ = msg;
+  path_received_ = true;
 }
 
 
@@ -243,9 +172,9 @@ void ControlTesterNode::odom_cb(const nav_msgs::Odometry msg)
  */
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "control_tester");
-  mfcpp::ControlTesterNode control_tester_node;
-  control_tester_node.run_node();
+  ros::init(argc, argv, "experiment_stats");
+  mfcpp::ExperimentStatsNode experiment_stats_node;
+  experiment_stats_node.run_node();
 
   return 0;
 }

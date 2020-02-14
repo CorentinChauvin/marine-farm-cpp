@@ -51,7 +51,7 @@ void RobotSimulator::init_node()
   nh_.param<float>("robot_length", robot_length_, 1.0);
   nh_.param<float>("robot_radius", robot_radius_, 0.3);
   nh_.param<int>("nbr_int_steps", nbr_int_steps_, 10);
-  nh_.param<vector<double>>("model_constants", model_csts, vector<double>(11, 0.0));
+  nh_.param<vector<double>>("model_constants", model_csts, vector<double>(15, 0.0));
   nh_.param<vector<double>>("init_state", state_, vector<double>(13, 0.0));
   nh_.param<float>("bnd_delta_m", bnd_delta_m_, 0.02);
   nh_.param<vector<double>>("bnd_input", bnd_input_, vector<double>(4, 0.0));

@@ -153,6 +153,19 @@ class MPCNode {
     );
 
     /**
+     * \brief  Changes reference state orientation to prevent modulo discontinuity
+     *
+     * Adds multiple of 2pi to each orientation so that error in orientation is
+     * continuous over the reference points.
+     *
+     * \param[in,out] X_ref  Reference state
+     * \param[in]     x0     Current robot state
+     * \param[in]     n      Dimension of the state
+     */
+    template <class VectorT>
+    void modulo_ref_state(VectorT &X_ref, const VectorT &x0, int n);
+
+    /**
      * \brief  Fills the G and H matrices used to express X with respect to U and X0
      *
      * Linear Time Varying MPC version.

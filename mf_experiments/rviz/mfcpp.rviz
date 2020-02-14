@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /TF1/Frames1
-        - /Farm1
         - /Farm1/Namespaces1
         - /Odometry1/Shape1
         - /CameraFOV1/Namespaces1
@@ -190,8 +189,8 @@ Visualization Manager:
       Class: rviz/Path
       Color: 25; 255; 0
       Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
+      Head Diameter: 0.0500000007
+      Head Length: 0.0500000007
       Length: 0.300000012
       Line Style: Lines
       Line Width: 0.0299999993
@@ -203,7 +202,7 @@ Visualization Manager:
       Pose Color: 255; 85; 255
       Pose Style: None
       Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
+      Shaft Diameter: 0.0199999996
       Shaft Length: 0.100000001
       Topic: /nav/path
       Unreliable: false
@@ -221,7 +220,7 @@ Visualization Manager:
       Shaft Length: 0.230000004
       Shaft Radius: 0.00999999978
       Shape: Axes
-      Topic: /nav/mpc_node/expected_traj
+      Topic: /nav/expected_traj
       Unreliable: false
       Value: true
   Enabled: true
@@ -241,25 +240,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 5.18725491
+      Distance: 4.45056677
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0
-        Y: 0
+        X: -0.13872242
+        Y: 0.0312137604
         Z: 0
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.265398771
+      Pitch: 0.1897984
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 4.36358833
+      Yaw: 4.00858831
     Saved: ~
 Window Geometry:
   Displays:

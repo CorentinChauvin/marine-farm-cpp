@@ -1,14 +1,13 @@
 /**
  * @file
  *
- * \brief  Declaration of a node to generate a fake trajectory and evaluate the
- *         performance of the control.
+ * \brief  Declaration of a node to measure statistics about experiments.
  * \author Corentin Chauvin-Hameau
  * \date   2020
  */
 
-#ifndef CONTROL_TESTER_HPP
-#define CONTROL_TESTER_HPP
+#ifndef EXPERIMENT_STATS_HPP
+#define EXPERIMENT_STATS_HPP
 
 #include "mf_common/EulerPose.h"
 #include <nav_msgs/Odometry.h>
@@ -23,15 +22,15 @@
 namespace mfcpp {
 
 /**
- * \brief  Class to test performance of control
+ * \brief  Class to measure statistics about experiments
  *
- * Generates a trajectory to follow, and measure how well the robot is following
- * it.
+ * Writes reference tracking error in a file, and publish diverse errors as ROS
+ * topics.
  */
-class ControlTesterNode {
+class ExperimentStatsNode {
   public:
-    ControlTesterNode();
-    ~ControlTesterNode();
+    ExperimentStatsNode();
+    ~ExperimentStatsNode();
 
     /**
      * \brief  Runs the node
@@ -42,14 +41,14 @@ class ControlTesterNode {
     // Private members
     ros::NodeHandle nh_;  ///<  Node handler
     ros::Subscriber odom_sub_;  ///<  Subscriber for robot odometry
-    ros::Publisher path_pub_;   ///<  Publisher for a path
+    ros::Subscriber path_sub_;  ///<  Subscriber for the reference path
     ros::Publisher ref_pub_;    ///<  Publisher for the reference pose
     ros::Publisher error_pub_;  ///<  Publisher for the tracking error
 
     nav_msgs::Odometry odom_;  ///<  Last odometry message received
     bool odom_received_;       ///<  Whether odometry has been received
-    nav_msgs::Path path_;      ///<  Path to publish
-    bool path_loaded_;         ///<  Whether the path was loaded with success
+    nav_msgs::Path path_;      ///<  Reference path to follow
+    bool path_received_;       ///<  Whether the reference path has been received
     std::ofstream out_file_;   ///<  Output CSV file containg data of the experiment
     double start_time_;        ///<  Start time of the test
 
@@ -57,7 +56,6 @@ class ControlTesterNode {
     /// \name  ROS parameters
     ///@{
     float main_freq_;   ///<  Frequency of the main loop
-    float path_freq_;   ///<  Publish frequency of the path
     ///@}
 
 
@@ -65,17 +63,6 @@ class ControlTesterNode {
      * \brief  Initialises the node and its parameters
      */
     void init_node();
-
-    /**
-     * \brief  Loads a path from a text file
-     *
-     * The text file contains waypoints that are then interpolated by a spline.
-     *
-     * \param[in]  file_name    Relative path of the file containing the waypoints
-     * \param[in]  resolution   Spatial resolution of the path
-     * \param[out] path         Loaded path
-     */
-    void load_path(std::string file_name, float resolution, nav_msgs::Path &path);
 
     /**
      * \brief  Finds the closest pose in a path
@@ -106,6 +93,11 @@ class ControlTesterNode {
      * \brief  Callback for odometry
      */
     void odom_cb(const nav_msgs::Odometry msg);
+
+    /**
+     * \brief  Callback for the reference path
+     */
+    void path_cb(const nav_msgs::Path msg);
 
 };
 

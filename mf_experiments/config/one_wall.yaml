@@ -2,11 +2,17 @@
 # Configuration for the one wall experiment
 #
 
-simu:
 
+simu:
+  clock_publisher:
+    publish_rate: 1000  # frequency (Hz) of publish on the /clock topic (ROS frequency)
+    time_factor: 2.0    # time factor of the simulation (1.0 for same as wall time)
+
+  #
   # Parameters changed from farm_simulator
+  #
   farm_nodelet:
-    random_seed: 0  # seed for random numbers (0 for random seed)
+    random_seed: 1  # seed for random numbers (0 for random seed)
 
     # Algae lines generation
     nbr_lines: 1            # number of algae lines
@@ -18,10 +24,10 @@ simu:
     theta_lines: 0.0        # mean of the 2nd angle for the 1st point of each line
 
     # Algae generation
-    randomise_algae: false   # whether to randomise the size and orientation of algae
-    alga_miss_rate: 0.0      # probability to have a missing alga
-    nbr_algae: 1          # max nbr of algae per line
-    width_algae: 30        # mean of the width of an alga
+    randomise_algae: false  # whether to randomise the size and orientation of algae
+    alga_miss_rate: 0.0     # probability to have a missing alga
+    nbr_algae: 1            # max nbr of algae per line
+    width_algae: 30         # mean of the width of an alga
     length_algae: 2.0       # mean of the length of an alga
     thickness_algae: 0.01   # thickness of an alga (for collision detection)
     psi_algae: 0.0          # mean of the algae orientation
@@ -34,21 +40,24 @@ simu:
     height_grid_heatmap: 2  # height of the grid for perlin noise generation
     width_grid_heatmap: 30  # width of the grid for perlin noise generation
 
-
+  #
   # Parameters changed from robot_simulator
+  #
   robot_simulator:
     # Model parameters
-    init_state: [1.0, -3, 3,  # x, y, z (position)
+    init_state: [1.0, -0.0, 2.8,  # x, y, z (position)
                  0, 0, -1.5707963,  # phi, theta, psi (orientation)
                  0, 0, 0,  # u, v, w (linear speed)
                  0, 0, 0,  # p, q, r (angular speed)
                  0.0]      # delta_m (ballast)
 
 experiments:
-  control_tester:
-    main_freq: 10.0  # frequency of the main loop
-    path_freq: 1.0   # publish frequency of the path
+  traj_publisher:
+    path_freq: 1.0  # publish frequency of the path
     path_frame: 'ocean'  # frame in which the path is expressed
     plan_res: 0.1        # spatial resolution (m) of the planned trajectory
-    wp_file_name: 'resources/waypoints.txt'  # relative path of the text file containing the waypoints
-    out_file_name: '/tmp/mpc_out.csv'  # output file for the results of the test
+    wp_file_name: 'resources/back_forth_wp.txt'  # relative path of the text file containing the waypoints
+
+  experiment_stats:
+    main_freq: 10.0  # frequency of the main loop
+    out_file_name: '/tmp/one_wall_out.csv'  # path of the output file for the results of the test

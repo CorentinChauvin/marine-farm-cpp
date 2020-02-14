@@ -123,6 +123,10 @@ void RobotModel::get_lin_matrices(const state_type &x_0, const input_type &u_0,
   A(8, 8) = c_[11];
   A(8, 12) = g_*c4*c3;
 
+  A(9, 3) = -c_[14]*c4*c3;
+  A(9, 4) = c_[14]*s4*s3;
+  A(9, 9) = -c_[13];
+
   A(10, 4) = c_[6]*c4;
   A(10, 6) = 2*c_[7]*x[6]*u[2];
   A(10, 10) = c_[4] + 2*c_[5]*abs(x[10]);
@@ -190,7 +194,7 @@ void RobotModel::ode(const state_type &x, state_type &dxdt, const double t)
   dxdt[6] = c_[1]*x[6] + c_[2]*abs(x[6])*x[6] + c_[3]*abs(u_[0])*u_[0] - x[12]*g_*sin(theta);
   dxdt[7] = x[12]*g_*cos(theta)*sin(phi) + c_[11]*x[7];
   dxdt[8] = x[12]*g_*cos(theta)*cos(phi) + c_[11]*x[8];
-  dxdt[9] = 0;
+  dxdt[9] = -c_[13]*x[9] - c_[14]*cos(theta)*sin(phi);
   dxdt[10] = c_[4]*x[10] + c_[5]*abs(x[10])*x[10] + c_[6]*sin(theta) + c_[7]*x[6]*x[6]*u_[2];
   dxdt[11] = c_[8]*x[11] + c_[9]*abs(x[11])*x[11] + c_[10]*x[6]*x[6]*u_[1];
   dxdt[12] = -1/c_[12]*x[12] + u_[3];
@@ -215,7 +219,7 @@ void RobotModel::eval_ode(const state_type &x, const input_type &u, state_type &
   dxdt[6] = c_[1]*x[6] + c_[2]*abs(x[6])*x[6] + c_[3]*abs(u[0])*u[0] - x[12]*g_*sin(theta);
   dxdt[7] = x[12]*g_*cos(theta)*sin(phi) + c_[11]*x[7];
   dxdt[8] = x[12]*g_*cos(theta)*cos(phi) + c_[11]*x[8];
-  dxdt[9] = 0;
+  dxdt[9] = -c_[13]*x[9] - c_[14]*cos(theta)*sin(phi);
   dxdt[10] = c_[4]*x[10] + c_[5]*abs(x[10])*x[10] + c_[6]*sin(theta) + c_[7]*x[6]*x[6]*u[2];
   dxdt[11] = c_[8]*x[11] + c_[9]*abs(x[11])*x[11] + c_[10]*x[6]*x[6]*u[1];
   dxdt[12] = -1/c_[12]*x[12] + u[3];

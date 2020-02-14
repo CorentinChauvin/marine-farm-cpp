@@ -144,6 +144,34 @@ bool MPCNode::fill_ref_pts(
 }
 
 
+template <class VectorT>
+void MPCNode::modulo_ref_state(VectorT &X_ref, const VectorT &x0, int n)
+{
+  int N = X_ref.rows() / n;
+
+  // For each three angles
+  for (int k = 0; k < 3; k++) {
+    // Handle initial error
+    while (abs(X_ref(3 + k) - x0(3 + k)) >= M_PI) {
+      if (X_ref(3 + k) - x0(3 + k) >= M_PI)
+        X_ref(3 + k) -= 2*M_PI;
+      else
+        X_ref(3 + k) += 2*M_PI;
+    }
+
+    // Next reference points
+    for (int l = 1; l < N; l++) {
+      while (abs(X_ref(l*n + 3 + k) - X_ref((l-1)*n + 3 + k)) >= M_PI) {
+        if (X_ref(l*n + 3 + k) - X_ref((l-1)*n + 3 + k) >= M_PI)
+          X_ref(l*n + 3 + k) -= 2*M_PI;
+        else
+          X_ref(l*n + 3 + k) += 2*M_PI;
+      }
+    }
+  }
+}
+
+
 template <class VectorT, class MatrixT>
 void MPCNode::fill_ltv_G_H_D(const VectorT &X_ref, const VectorT &U_ref,
   int N, float dt, float ds,
@@ -534,6 +562,13 @@ bool MPCNode::compute_control(
   vector<geometry_msgs::Pose> new_path = adapt_path(orig_path, current_position,
     nbr_steps_, spatial_resolution, time_resolution, desired_speed);
 
+  // Fill intial points
+  VectorXf x0(n), X0(n);  // initial state, and initial offset to the reference
+  VectorXf u_m1(m);       // last control applied to the robot
+
+  for (int k = 0; k < n; k++) x0(k) = state_[k];
+  for (int k = 0; k < m; k++) u_m1(k) = last_control_[k];
+
   // Fill reference points for MPC optimisation
   int N = nbr_steps_;
   VectorXf X_ref, U_ref;
@@ -545,12 +580,7 @@ bool MPCNode::compute_control(
     return false;
   }
 
-  // Fill intial points
-  VectorXf x0(n), X0(n);  // initial state, and initial offset to the reference
-  VectorXf u_m1(m);       // last control applied to the robot
-
-  for (int k = 0; k < n; k++) x0(k) = state_[k];
-  for (int k = 0; k < m; k++) u_m1(k) = last_control_[k];
+  modulo_ref_state(X_ref, x0, n);  // change reference orientation to prevent modulo discontinuity
 
   X0 = x0 - X_ref.block(0, 0, n, 1);
   VectorXf x0_ref = X_ref.block(0, 0, n, 1);  // first state reference

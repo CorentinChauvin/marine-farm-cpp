@@ -1,11 +1,13 @@
 <launch>
   <!-- Launchfile arguments -->
   <arg name="rviz" value="true" />
+  <arg name="accelerate_time" value="false" />
 
   <!-- ROS parameters -->
   <rosparam file="$(find mf_robot_simulator)/config/robot_simulator.yaml" command="load" ns="simu" />
   <rosparam file="$(find mf_navigation)/config/navigation.yaml" command="load" ns="nav" />
   <rosparam file="$(find mf_experiments)/config/mpc_test.yaml" command="load" />
+  <param name="/use_sim_time" value="$(arg accelerate_time)" />
 
   <!-- Static transforms -->
   <node pkg="tf2_ros" type="static_transform_publisher" name="tf_world_ocean" args="0 0 0 0 0 3.14159265359 world ocean" />
@@ -14,6 +16,8 @@
 
   <!-- Simulation -->
   <group ns="simu">
+    <node name="clock_publisher" type="clock_publisher" pkg="mf_experiments" if="$(arg accelerate_time)" output="screen" />
+
     <node pkg="nodelet" type="nodelet" args="manager" name="simu_nodelet_manager" output="screen" />
 
     <!-- Robot simulator -->
@@ -31,15 +35,19 @@
       <remap from="~state" to="/simu/robot_simulator/state" />
       <remap from="~path" to="/nav/path" />
       <remap from="~command" to="/simu/robot_simulator/control_input" />
+      <remap from="~expected_traj" to="/nav/expected_traj" />
     </node>
   </group>
 
   <!-- Experimentation tools -->
   <group ns="experiments">
-    <node name="control_tester" type="control_tester" pkg="mf_experiments" output="screen">
+    <node name="traj_publisher" type="traj_publisher" pkg="mf_experiments" output="screen">
+      <remap from="~path" to="/nav/path" />
+    </node>
+
+    <node name="experiment_stats" type="experiment_stats" pkg="mf_experiments" output="screen">
       <remap from="~odom" to="/simu/robot_simulator/odom" />
       <remap from="~path" to="/nav/path" />
-      <remap from="~expected_traj" to="/nav/expected_traj" />
     </node>
   </group>
 
