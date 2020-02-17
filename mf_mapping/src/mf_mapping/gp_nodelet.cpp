@@ -102,6 +102,7 @@ void GPNodelet::onInit()
   cov_img_pub_ = nh_.advertise<sensor_msgs::Image>("gp_cov_img", 0);
   gp_mean_pub_ = nh_.advertise<mf_common::Float32Array>("gp_mean", 0);
   gp_cov_pub_ = nh_.advertise<mf_common::Array2D>("gp_cov", 0);
+  gp_eval_pub_ = nh_.advertise<mf_common::Array2D>("gp_eval", 0);
 
   // ROS services
   update_gp_serv_ = nh_.advertiseService("update_gp", &GPNodelet::update_gp_cb, this);
@@ -150,7 +151,7 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
 
     // Publish output
     publish_gp_state();  // publish mean and covariance of the GP
-    publish_wall_img();  // publish evaluated GP and covariance
+    publish_gp_eval();   // publish evaluated GP and covariance
 
     camera_msg_available_ = false;
   }

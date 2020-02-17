@@ -114,7 +114,7 @@ void FarmNodelet::onInit()
 
   // ROS publishers
   algae_pub_ = private_nh_.advertise<mf_farm_simulator::Algae>("algae", 0);
-  rviz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("farm_makers", 0);
+  rviz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("farm_markers", 0);
 
   // Create algae lines
   init_timer_ = private_nh_.createTimer(

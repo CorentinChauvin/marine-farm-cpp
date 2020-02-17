@@ -70,6 +70,7 @@ class GPNodelet: public nodelet::Nodelet {
     ros::Publisher cov_img_pub_;    ///<  Publisher for an image of the GP covariance
     ros::Publisher gp_mean_pub_;    ///<  Publisher for the GP mean
     ros::Publisher gp_cov_pub_;     ///<  Publisher for the GP covariance
+    ros::Publisher gp_eval_pub_;    ///<  Publisher for the evaluated GP over the wall
     ros::ServiceServer update_gp_serv_;  ///<  Service server for updating the GP
     tf2_ros::Buffer tf_buffer_;     ///<  Tf2 buffer for getting tf transforms
     tf2_ros::TransformListener tf_listener_;  ///<  Tf2 listener for getting tf transforms
@@ -346,9 +347,9 @@ class GPNodelet: public nodelet::Nodelet {
     void publish_gp_state();
 
     /**
-     * \brief  Publishes an image of the evaluated GP and its covariance
+     * \brief  Publishes the evaluated GP and its covariance
      */
-    void publish_wall_img();
+    void publish_gp_eval();
 
     /**
      * \brief  Evaluates the Lambert W (0 branch) function

@@ -11,6 +11,10 @@
 #include "mf_common/common.hpp"
 #include "mf_common/spline.hpp"
 #include "mf_common/EulerPose.h"
+#include "mf_common/Array2D.h"
+#include "mf_common/Float32Array.h"
+#include "mf_farm_simulator/Algae.h"
+#include "mf_farm_simulator/Alga.h"
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -23,6 +27,11 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/image_encodings.h>
+
 
 using std::cout;
 using std::endl;
@@ -53,25 +62,35 @@ void ExperimentStatsNode::init_node()
 
   nh_.param<float>("main_freq", main_freq_, 1.0);
   nh_.param<string>("out_file_name", out_file_name, "/tmp/control_out.txt");
+  nh_.param<float>("gp_weight", gp_weight_, 1.0);
 
   // Other variables
   odom_received_ = false;
   path_received_ = false;
+  gp_cov_received_ = false;
+  gp_eval_received_ = false;
+  algae_received_ = false;
   start_time_ = ros::Time::now().toSec();
 
   out_file_.open(out_file_name);
   if (out_file_.is_open())
-    out_file_ << "t, x, y, z, x_ref, y_ref, z_ref, pos_err, orient_err" << endl;
+    out_file_ << "t, x, y, z, x_ref, y_ref, z_ref, pos_err, orient_err, gp_cov_trace, gp_diff_norm" << endl;
   else
     ROS_WARN("[control_tester] Couldn't open file '%s' in write mode", out_file_name.c_str());
 
   // ROS subscribers
   odom_sub_ = nh_.subscribe<nav_msgs::Odometry>("odom", 1, &ExperimentStatsNode::odom_cb, this);
   path_sub_ = nh_.subscribe<nav_msgs::Path>("path", 1, &ExperimentStatsNode::path_cb, this);
+  gp_mean_sub_ = nh_.subscribe<mf_common::Float32Array>("gp_mean", 1, &ExperimentStatsNode::gp_mean_cb, this);
+  gp_cov_sub_ = nh_.subscribe<mf_common::Array2D>("gp_cov", 1, &ExperimentStatsNode::gp_cov_cb, this);
+  gp_eval_sub_ = nh_.subscribe<mf_common::Array2D>("gp_eval", 1, &ExperimentStatsNode::gp_eval_cb, this);
+  algae_sub_ = nh_.subscribe<mf_farm_simulator::Algae>("algae", 1, &ExperimentStatsNode::algae_cb, this);
 
   // ROS publishers
   ref_pub_ = nh_.advertise<geometry_msgs::Pose>("reference", 0);
   error_pub_ = nh_.advertise<mf_common::EulerPose>("error", 0);
+  diff_img_pub_ = nh_.advertise<sensor_msgs::Image>("diff_gp_img", 0);
+
 }
 
 
@@ -82,13 +101,32 @@ void ExperimentStatsNode::run_node()
 
   while (ros::ok()) {
     ros::spinOnce();
-    if (path_received_ && odom_received_) {
+    if (path_received_ && odom_received_ && gp_cov_received_ && gp_mean_received_
+      && gp_eval_received_ && algae_received_) {
+      // Compute tracking error
       geometry_msgs::Pose reference_pose = find_closest(path_.poses, odom_.pose.pose);
       mf_common::EulerPose error;
       diff_pose(reference_pose, odom_.pose.pose, error);
 
-      write_output(odom_.pose.pose, reference_pose, error);
+      // Compute trace of GP covariance and information
+      float gp_cov_trace = 0.0;
+      float information = 0.0;
+      int size_gp = gp_cov_.size();
 
+      for (int k = 0; k < size_gp; k++) {
+        gp_cov_trace += gp_cov_[k];
+
+        float weight = 1/(1 + exp(-gp_weight_ * (gp_mean_[k] - 0.5)));
+        information += weight * (init_gp_cov_[k] - gp_cov_[k]);
+      }
+
+      // Compare evaluated GP and algae disease heatmaps
+      float gp_diff_norm = compute_diff(gp_eval_, algae_heatmaps_[0]);
+
+      // Write statistics in the output file
+      write_output(odom_.pose.pose, reference_pose, error, gp_cov_trace, information, gp_diff_norm);
+
+      // Publish statistics
       ref_pub_.publish(reference_pose);
       error_pub_.publish(error);
     }
@@ -125,10 +163,77 @@ geometry_msgs::Pose ExperimentStatsNode::find_closest(
 }
 
 
+float ExperimentStatsNode::compute_diff(
+  const std::vector<std::vector<float>> &array1,
+  const std::vector<std::vector<float>> &array2)
+{
+  const vector<vector<float>> *small_array;
+  const vector<vector<float>> *big_array;
+
+  // Find the smallest array
+  if (array1.size() < array2.size()) {
+    small_array = &array1;
+    big_array = &array2;
+  } else {
+    small_array = &array2;
+    big_array = &array1;
+  }
+
+  float size_x[2] = {(float)(*small_array).size(), (float)(*big_array).size()};
+  float size_y[2] = {(float)(*small_array)[0].size(), (float)(*big_array)[0].size()};
+
+  // Find the maximum of the two arrays for scaling
+  typedef const vector<vector<float>>* Array2DPtr;
+  Array2DPtr arrays[2] = {small_array, big_array};
+  float maximums[2] = {0, 0};
+
+  for (int k = 0; k < 2; k++) {
+    for (int x = 0; x < size_x[k]; x++) {
+      for (int y = 0; y < size_y[k]; y++) {
+        if ((*(arrays[k]))[x][y] > maximums[k])
+          maximums[k] = (*(arrays[k]))[x][y];
+      }
+    }
+  }
+
+  // Prepare the difference image
+  sensor_msgs::Image diff_img;
+  diff_img.header.stamp = ros::Time::now();
+  diff_img.height = size_x[0];
+  diff_img.width = size_y[0];
+  diff_img.encoding = sensor_msgs::image_encodings::MONO8;
+  diff_img.is_bigendian = false;
+  diff_img.step = size_y[0];
+  diff_img.data.resize(size_x[0]*size_y[0]);
+
+  // Compute the 2-norm of the two arrays
+  float norm = 0.0;
+
+  for (int k = 0; k < size_x[0]; k++) {
+    int x = k * float(size_x[1] / size_x[0]);
+
+    for (int l = 0; l < size_y[0]; l++) {
+      int y = l * float(size_y[1] / size_y[0]);
+      float small_val = (*small_array)[k][l];
+      float big_val = (*big_array)[x][y];
+
+      norm += pow(small_val/maximums[0] - big_val/maximums[1], 2);
+      diff_img.data[k*size_y[0] + l] = fabs(small_val/maximums[0] - big_val/maximums[1])*255;
+    }
+  }
+
+  diff_img_pub_.publish(diff_img);
+  return sqrt(norm) / (size_x[0]*size_y[0]);
+}
+
+
 void ExperimentStatsNode::write_output(
   const geometry_msgs::Pose &pose,
   const geometry_msgs::Pose &reference,
-  const mf_common::EulerPose &error)
+  const mf_common::EulerPose &error,
+  float gp_cov_trace,
+  float information,
+  float gp_diff_norm)
 {
   if (!out_file_.is_open())
     return;
@@ -145,7 +250,10 @@ void ExperimentStatsNode::write_output(
             << reference.position.y << ", "
             << reference.position.z << ", "
             << error_pos << ", "
-            << error_orient << endl;
+            << error_orient << ", "
+            << gp_cov_trace << ", "
+            << information << ", "
+            << gp_diff_norm << endl;
 }
 
 
@@ -160,6 +268,65 @@ void ExperimentStatsNode::path_cb(const nav_msgs::Path msg)
 {
   path_ = msg;
   path_received_ = true;
+}
+
+
+void ExperimentStatsNode::gp_mean_cb(const mf_common::Float32Array msg)
+{
+  gp_mean_ = msg.data;
+  gp_mean_received_ = true;
+}
+
+
+void ExperimentStatsNode::gp_cov_cb(const mf_common::Array2D msg)
+{
+  int n = msg.data.size();
+  gp_cov_.resize(n);
+
+  for (int k = 0; k < n; k++)
+    gp_cov_[k] = msg.data[k].data[k];
+
+  if (!gp_cov_received_) {
+    init_gp_cov_ = gp_cov_;
+    gp_cov_received_ = true;
+  }
+}
+
+
+void ExperimentStatsNode::gp_eval_cb(const mf_common::Array2D msg)
+{
+  gp_eval_.resize(msg.data.size());
+
+  for (int k = 0; k < msg.data.size(); k++) {
+    gp_eval_[k].resize(msg.data[k].data.size());
+
+    for (int l = 0; l < msg.data[k].data.size(); l++) {
+      gp_eval_[k][l] = msg.data[k].data[l];
+    }
+  }
+
+  gp_eval_received_ = true;
+}
+
+
+void ExperimentStatsNode::algae_cb(const mf_farm_simulator::Algae msg)
+{
+  algae_heatmaps_.resize(msg.algae.size());
+
+  for (int k = 0; k < msg.algae.size(); k++) {
+    const mf_farm_simulator::Alga *alga = &msg.algae[k];
+    algae_heatmaps_[k].resize(alga->disease_heatmap.size());
+
+    for (int l = 0; l < alga->disease_heatmap.size(); l++) {
+      algae_heatmaps_[k][l].resize(alga->disease_heatmap[l].data.size());
+
+      for (int m = 0; m < alga->disease_heatmap[l].data.size(); m++) {
+        algae_heatmaps_[k][l][m] = alga->disease_heatmap[l].data[m];
+      }
+    }
+  }
+
+  algae_received_ = true;
 }
 
 

@@ -15,8 +15,10 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>mf_common</build_depend>
+  <build_depend>mf_farm_simulator</build_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>mf_common</exec_depend>
+  <exec_depend>mf_farm_simulator</exec_depend>
 
   <export>
   </export>

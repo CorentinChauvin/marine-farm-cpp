@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   mf_common
+  mf_farm_simulator
 )
 
 catkin_package(
@@ -23,6 +24,7 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     mf_common
+    mf_farm_simulator
 )
 
 

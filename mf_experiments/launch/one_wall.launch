@@ -7,10 +7,12 @@
   <arg name="path_planning" value="true" />
   <arg name="mpc_control" value="true" />
 
-  <arg name="accelerate_time" value="false" />
+  <arg name="accelerate_time" value="true" />
   <arg name="cart_control" value="false" />
   <arg name="back_forth_traj" value="false" />
-  <arg name="experiment_stats" value="false" />
+
+  <arg name="experiment_stats" value="true" />
+  <arg name="display_diff_gp" value="true" />
 
   <!-- ROS parameters -->
   <rosparam file="$(find mf_farm_simulator)/config/farm_simulator.yaml" command="load" ns="simu" />
@@ -100,8 +102,14 @@
     </node>
 
     <node name="experiment_stats" type="experiment_stats" pkg="mf_experiments" output="screen" if="$(arg experiment_stats)">
+      <remap from="~gp_weight" to="/nav/planning_nodelet/gp_weight" />
+
       <remap from="~odom" to="/simu/robot_simulator/odom" />
       <remap from="~path" to="/nav/path" />
+      <remap from="~gp_cov" to="/nav/gp_cov" />
+      <remap from="~gp_mean" to="/nav/gp_mean" />
+      <remap from="~gp_eval" to="/nav/gp_eval" />
+      <remap from="~algae" to="/simu/farm_nodelet/algae" />
     </node>
 
   </group>
@@ -114,6 +122,9 @@
   </node>
   <node type="image_view" name="display_cov_gp" pkg="image_view" if="$(arg display_cov_gp)">
     <remap from="image" to="/nav/gp_cov_img" />
+  </node>
+  <node type="image_view" name="display_diff_gp" pkg="image_view" if="$(eval experiment_stats and display_diff_gp)" >
+    <remap from="image" to="/experiments/experiment_stats/diff_gp_img" />
   </node>
 
 </launch>

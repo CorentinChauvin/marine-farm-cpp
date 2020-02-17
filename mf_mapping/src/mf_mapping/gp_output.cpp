@@ -27,7 +27,7 @@ void GPNodelet::publish_gp_state()
 {
   // Publish GP mean
   mf_common::Float32Array mean_msg;
-  mean_msg.data = vector<float>(gp_mean_.data(), gp_mean_.data() + gp_mean_.size());;
+  mean_msg.data = vector<float>(gp_mean_.data(), gp_mean_.data() + gp_mean_.size());
   gp_mean_pub_.publish(mean_msg);
 
   // Publish GP covariance
@@ -47,7 +47,7 @@ void GPNodelet::publish_gp_state()
 }
 
 
-void GPNodelet::publish_wall_img()
+void GPNodelet::publish_gp_eval()
 {
   // Preparing evaluation of the Gaussian Process
   int size_obs = idx_obs_.size();
@@ -77,6 +77,20 @@ void GPNodelet::publish_wall_img()
     x += delta_x;
     y = 0;
   }
+
+  // Fill evaluated raw output message
+  mf_common::Array2D out_msg;
+  out_msg.data.resize(size_img_x_);
+
+  for (int k = 0; k < size_img_x_; k++) {
+    out_msg.data[k].data.resize(size_img_y_);
+
+    for (int l = 0; l < size_img_y_; l++) {
+      out_msg.data[k].data[l] = out_values_[k*size_img_y_ + l];
+    }
+  }
+
+  gp_eval_pub_.publish(out_msg);
 
   // Fill output image
   sensor_msgs::Image img;
