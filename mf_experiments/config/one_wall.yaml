@@ -59,5 +59,8 @@ experiments:
     wp_file_name: 'resources/back_forth_wp.txt'  # relative path of the text file containing the waypoints
 
   experiment_stats:
-    main_freq: 10.0  # frequency of the main loop
+    main_freq: 10.0                         # frequency of the main loop
     out_file_name: '/tmp/one_wall_out.csv'  # path of the output file for the results of the test
+    save_gp: false                           # whether to save the GP mean at the end
+    load_gp: false                           # whether to load the GP mean at the beginning
+    gp_file_name: '/tmp/gp_mean.txt'        # path of the saved GP mean

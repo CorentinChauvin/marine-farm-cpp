@@ -11,6 +11,7 @@
 #include "mf_common/Array2D.h"
 #include "mf_common/Float32Array.h"
 #include "mf_mapping/UpdateGP.h"
+#include "mf_mapping/LoadGP.h"
 #include "mf_sensors_simulator/CameraOutput.h"
 #include <sensor_msgs/Image.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -19,6 +20,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
+#include <eigen3/Eigen/Dense>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -84,6 +86,7 @@ void GPNodelet::onInit()
   camera_msg_available_ = false;
   tf_got_ = false;
   gp_initialised_ = false;
+  gp_loaded_ = false;
   delta_x_ = size_wall_x_ / (size_gp_x_-1);
   delta_y_ = size_wall_y_ / (size_gp_y_-1);
   size_gp_ = size_gp_x_ * size_gp_y_;
@@ -106,6 +109,7 @@ void GPNodelet::onInit()
 
   // ROS services
   update_gp_serv_ = nh_.advertiseService("update_gp", &GPNodelet::update_gp_cb, this);
+  load_gp_serv_ = nh_.advertiseService("load_gp", &GPNodelet::load_gp_cb, this);
 
 
   // Main loop
@@ -130,24 +134,29 @@ void GPNodelet::main_cb(const ros::TimerEvent &timer_event)
     NODELET_INFO("[gp_nodelet] Gaussian Process initialised.");
   }
   else if (camera_msg_available_) {
-    // Prepare input data
-    vector<float> x, y, z;
-    transform_points(camera_msg_->x, camera_msg_->y, camera_msg_->z,
-      x, y, z, camera_msg_->header.frame_id, wall_frame_);
+    if (gp_loaded_) {
+      // Don't update using measurement, the GP has been manually loaded
+      gp_loaded_ = false;
+    } else {
+      // Prepare input data
+      vector<float> x, y, z;
+      transform_points(camera_msg_->x, camera_msg_->y, camera_msg_->z,
+        x, y, z, camera_msg_->header.frame_id, wall_frame_);
 
-    vector<float> distances(x.size());
-    for (unsigned int k = 0; k < x.size(); k++) {
-      distances[k] = Eigen::Vector3f(camera_msg_->x[k],
-                                     camera_msg_->y[k],
-                                     camera_msg_->z[k]).norm();
+      vector<float> distances(x.size());
+      for (unsigned int k = 0; k < x.size(); k++) {
+        distances[k] = Eigen::Vector3f(camera_msg_->x[k],
+                                       camera_msg_->y[k],
+                                       camera_msg_->z[k]).norm();
+      }
+
+      // Update the Gaussian Process
+      RectArea obs_coord;  // coordinates of the rectangular area of the observed state
+      update_gp(x, y, z, distances, camera_msg_->value, gp_mean_, gp_cov_, idx_obs_,
+        obs_coord);
+
+      notif_changing_pxls(obs_coord);  // notified changed pixels
     }
-
-    // Update the Gaussian Process
-    RectArea obs_coord;  // coordinates of the rectangular area of the observed state
-    update_gp(x, y, z, distances, camera_msg_->value, gp_mean_, gp_cov_, idx_obs_,
-      obs_coord);
-
-    notif_changing_pxls(obs_coord);  // notified changed pixels
 
     // Publish output
     publish_gp_state();  // publish mean and covariance of the GP
@@ -300,6 +309,57 @@ bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
       }
     }
   }
+}
+
+
+bool GPNodelet::load_gp_cb(mf_mapping::LoadGP::Request &req,
+  mf_mapping::LoadGP::Response &res)
+{
+  // Check GP has been initialised
+  if (!gp_initialised_) {
+    res.gp_not_yet_init = true;
+    res.gp_loaded = false;
+    return true;
+  } else {
+    res.gp_not_yet_init = false;
+  }
+
+  // Check input validity
+  if (req.mean.size() != size_gp_) {
+    ROS_WARN("[gp_nodelet] Trying to load the GP with the wrong size (given: %d, expected: %d)",
+      (int)req.mean.size(), size_gp_);
+
+    res.gp_loaded = false;
+    return true;
+  }
+
+  // Set GP mean and covariance
+  for (int k = 0; k < size_gp_; k++) {
+    gp_mean_[k] = req.mean[k];
+  }
+
+  if (req.init_cov) {
+    gp_cov_ = Eigen::MatrixXf::Zero(size_gp_, size_gp_);
+
+    for (unsigned int k = 0; k < size_gp_; k++) {
+      gp_cov_(k, k) = 1/gp_noise_var_;
+    }
+  }
+
+  // Notify changed pixels (all pixels)
+  for (int k = 0; k < changed_pxl_.size(); k++) {
+    changed_pxl_[k] = true;
+  }
+
+  idx_obs_.resize(size_gp_);
+  for (int k = 0; k < size_gp_; k++) {
+    idx_obs_[k] = k;
+  }
+
+  // Return values
+  gp_loaded_ = true;
+  res.gp_loaded = true;
+  return true;
 }
 
 

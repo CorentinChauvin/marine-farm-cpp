@@ -11,6 +11,7 @@
 #define GP_NODELET_HPP
 
 #include "mf_mapping/UpdateGP.h"
+#include "mf_mapping/LoadGP.h"
 #include "mf_sensors_simulator/CameraOutput.h"
 #include <tf2_ros/transform_listener.h>
 #include <nodelet/nodelet.h>
@@ -72,10 +73,12 @@ class GPNodelet: public nodelet::Nodelet {
     ros::Publisher gp_cov_pub_;     ///<  Publisher for the GP covariance
     ros::Publisher gp_eval_pub_;    ///<  Publisher for the evaluated GP over the wall
     ros::ServiceServer update_gp_serv_;  ///<  Service server for updating the GP
+    ros::ServiceServer load_gp_serv_;    ///<  Service server for loading the GP
     tf2_ros::Buffer tf_buffer_;     ///<  Tf2 buffer for getting tf transforms
     tf2_ros::TransformListener tf_listener_;  ///<  Tf2 listener for getting tf transforms
 
     bool gp_initialised_;  ///<  Whether the Gaussian Process is initialised
+    bool gp_loaded_;       ///<  Whether the GP has been loaded from an external source
     bool camera_msg_available_;  ///<  Whether a new camera message is available
     bool tf_got_;   ///<  Whether transforms have been retrieved
     mf_sensors_simulator::CameraOutput::ConstPtr camera_msg_;  ///<  Last camera message
@@ -153,6 +156,12 @@ class GPNodelet: public nodelet::Nodelet {
      */
     bool update_gp_cb(mf_mapping::UpdateGP::Request &req,
       mf_mapping::UpdateGP::Response &res);
+
+    /**
+     * \brief  Service to load the Gaussian Process mean
+     */
+     bool load_gp_cb(mf_mapping::LoadGP::Request &req,
+       mf_mapping::LoadGP::Response &res);
 
     /**
      * \brief  Transforms points from one frame to another

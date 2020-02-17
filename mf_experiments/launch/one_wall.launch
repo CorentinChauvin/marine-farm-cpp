@@ -1,7 +1,7 @@
 <launch>
   <!-- Launchfile arguments -->
   <arg name="rviz" value="true" />
-  <arg name="display_img_gp" value="false" />
+  <arg name="display_img_gp" value="true" />
   <arg name="display_cov_gp" value="false" />
 
   <arg name="path_planning" value="true" />
@@ -10,9 +10,11 @@
   <arg name="accelerate_time" value="true" />
   <arg name="cart_control" value="false" />
   <arg name="back_forth_traj" value="false" />
+  <arg name="save_gp_mean" value="false" />
+  <arg name="load_gp_mean" value="false" />
 
   <arg name="experiment_stats" value="true" />
-  <arg name="display_diff_gp" value="true" />
+  <arg name="display_diff_gp" value="false" />
 
   <!-- ROS parameters -->
   <rosparam file="$(find mf_farm_simulator)/config/farm_simulator.yaml" command="load" ns="simu" />
@@ -103,6 +105,8 @@
 
     <node name="experiment_stats" type="experiment_stats" pkg="mf_experiments" output="screen" if="$(arg experiment_stats)">
       <remap from="~gp_weight" to="/nav/planning_nodelet/gp_weight" />
+      <param name="save_gp" value="$(arg save_gp_mean)" />
+      <param name="load_gp" value="$(arg load_gp_mean)" />
 
       <remap from="~odom" to="/simu/robot_simulator/odom" />
       <remap from="~path" to="/nav/path" />
@@ -110,6 +114,7 @@
       <remap from="~gp_mean" to="/nav/gp_mean" />
       <remap from="~gp_eval" to="/nav/gp_eval" />
       <remap from="~algae" to="/simu/farm_nodelet/algae" />
+      <remap from="~load_gp_srv" to="/nav/load_gp" />
     </node>
 
   </group>

@@ -56,6 +56,7 @@ class ExperimentStatsNode {
     ros::Publisher ref_pub_;       ///<  Publisher for the reference pose
     ros::Publisher error_pub_;     ///<  Publisher for the tracking error
     ros::Publisher diff_img_pub_;  ///<  Publisher for the image of the difference between the mapped GP and the algae heatmap
+    ros::ServiceClient load_gp_client_;  ///<  Service client for loading the GP
 
     nav_msgs::Odometry odom_;     ///<  Last odometry message received
     nav_msgs::Path path_;         ///<  Reference path to follow
@@ -78,6 +79,9 @@ class ExperimentStatsNode {
     ///@{
     float main_freq_;   ///<  Frequency of the main loop
     float gp_weight_;   ///<  Weight attributed to the Gaussian Process values in viewpoint selection
+    bool save_gp_;      ///<  Whether to save the Gaussian Process at the end
+    bool load_gp_;      ///<  Whether to load the Gaussian Process at the beginning
+    std::string gp_file_name_;  ///<  Name/path of the file where to save the GP
     ///@}
 
 
@@ -134,6 +138,23 @@ class ExperimentStatsNode {
       float information,
       float gp_diff_norm
     );
+
+    /**
+     * \brief  Loads the GP mean from a file
+     *
+     * \param[in]  file_name  Path of the file where to load the GP
+     * \param[out] gp_mean    Loaded gp_mean
+     * \return  Whether the file could be read
+     */
+    bool load_gp(
+      std::string file_name,
+      std::vector<float> &gp_mean
+    );
+
+    /**
+     * \brief  Saves the mean of the Gaussian Process in a file
+     */
+    void save_gp();
 
     /**
      * \brief  Callback for odometry

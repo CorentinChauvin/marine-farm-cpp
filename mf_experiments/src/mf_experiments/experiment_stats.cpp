@@ -15,6 +15,7 @@
 #include "mf_common/Float32Array.h"
 #include "mf_farm_simulator/Algae.h"
 #include "mf_farm_simulator/Alga.h"
+#include "mf_mapping/LoadGP.h"
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -63,6 +64,9 @@ void ExperimentStatsNode::init_node()
   nh_.param<float>("main_freq", main_freq_, 1.0);
   nh_.param<string>("out_file_name", out_file_name, "/tmp/control_out.txt");
   nh_.param<float>("gp_weight", gp_weight_, 1.0);
+  nh_.param<bool>("save_gp", save_gp_, false);
+  nh_.param<bool>("load_gp", load_gp_, false);
+  nh_.param<string>("gp_file_name", gp_file_name_, "/tmp/gp_mean.txt");
 
   // Other variables
   odom_received_ = false;
@@ -76,7 +80,7 @@ void ExperimentStatsNode::init_node()
   if (out_file_.is_open())
     out_file_ << "t, x, y, z, x_ref, y_ref, z_ref, pos_err, orient_err, gp_cov_trace, gp_diff_norm" << endl;
   else
-    ROS_WARN("[control_tester] Couldn't open file '%s' in write mode", out_file_name.c_str());
+    ROS_WARN("[experiment_stats] Couldn't open file '%s' in write mode", out_file_name.c_str());
 
   // ROS subscribers
   odom_sub_ = nh_.subscribe<nav_msgs::Odometry>("odom", 1, &ExperimentStatsNode::odom_cb, this);
@@ -91,6 +95,9 @@ void ExperimentStatsNode::init_node()
   error_pub_ = nh_.advertise<mf_common::EulerPose>("error", 0);
   diff_img_pub_ = nh_.advertise<sensor_msgs::Image>("diff_gp_img", 0);
 
+  // ROS services
+  load_gp_client_ = nh_.serviceClient<mf_mapping::LoadGP>("load_gp_srv");
+
 }
 
 
@@ -101,6 +108,28 @@ void ExperimentStatsNode::run_node()
 
   while (ros::ok()) {
     ros::spinOnce();
+
+    // Attempt to load the GP if requested
+    if (load_gp_ && load_gp_client_.exists()) {
+      vector<float> gp_mean;
+      bool gp_loaded = load_gp(gp_file_name_, gp_mean);
+
+      if (gp_loaded) {
+        mf_mapping::LoadGP srv;
+        srv.request.mean = gp_mean;
+
+        bool srv_called = load_gp_client_.call(srv);
+
+        if (srv_called && srv.response.gp_loaded) {
+          load_gp_ = false;
+          ROS_INFO("[experiment_stats] GP loaded");
+        } else if (!srv_called || (srv_called && !srv.response.gp_not_yet_init)){
+          ROS_WARN("[experiment_stats] Could not load GP");
+        }
+      }
+    }
+
+    // Compute statistics
     if (path_received_ && odom_received_ && gp_cov_received_ && gp_mean_received_
       && gp_eval_received_ && algae_received_) {
       // Compute tracking error
@@ -133,6 +162,10 @@ void ExperimentStatsNode::run_node()
 
     loop_rate.sleep();
   }
+
+  // Save the GP if requested
+  if (save_gp_ && gp_mean_received_)
+    save_gp();
 
   // Close the output CSV file
   if (out_file_.is_open())
@@ -254,6 +287,54 @@ void ExperimentStatsNode::write_output(
             << gp_cov_trace << ", "
             << information << ", "
             << gp_diff_norm << endl;
+}
+
+
+bool ExperimentStatsNode::load_gp(
+  std::string file_name,
+  std::vector<float> &gp_mean)
+{
+  // Open file to write to
+  std::ifstream file(gp_file_name_);
+
+  if (!file.is_open()) {
+    ROS_WARN("[experiment_stats] Couldn't open file '%s' in write mode", gp_file_name_.c_str());
+    return false;
+  }
+
+  // Read the file
+  ROS_INFO("[experiment_stats] Loading GP mean from '%s'\n", gp_file_name_.c_str());
+  gp_mean.resize(0);
+
+  for (string line; std::getline(file, line); ) {
+    if (!line.empty()) {
+      gp_mean.emplace_back(stof(line));
+    }
+  }
+
+  return true;
+}
+
+
+void ExperimentStatsNode::save_gp()
+{
+  // Open file to write to
+  std::ofstream file(gp_file_name_);
+
+  if (!file.is_open()) {
+    ROS_WARN("[experiment_stats] Couldn't open file '%s' in write mode", gp_file_name_.c_str());
+    return;
+  }
+
+  // Write the GP mean in the file
+  printf("[experiment_stats] Saving GP to '%s'\n", gp_file_name_.c_str());
+
+  for (int k = 0; k < gp_mean_.size(); k++) {
+    file << gp_mean_[k] << endl;
+  }
+
+  // Close the file
+  file.close();
 }
 
 

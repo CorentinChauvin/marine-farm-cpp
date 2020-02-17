@@ -1,0 +1,17 @@
+#
+# Service to load the Gaussian Process mean
+#
+
+# Mean of the Gaussian Process
+float32[] mean
+
+# Whether to reinitialise the covariance of the Gaussian Process
+bool init_cov
+
+---
+
+# Whether the GP has not been intialised before (it needs to be before loading)
+bool gp_not_yet_init
+
+# Whether the GP could be loaded
+bool gp_loaded

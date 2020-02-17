@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   mf_common
   mf_farm_simulator
+  mf_mapping
 )
 
 catkin_package(
@@ -25,6 +26,7 @@ catkin_package(
     roscpp
     mf_common
     mf_farm_simulator
+    mf_mapping
 )
 
 
@@ -56,6 +58,7 @@ add_executable(experiment_stats
 add_dependencies(experiment_stats
   ${catkin_EXPORTED_TARGETS}
     mf_common_generate_messages_cpp
+    mf_mapping_generate_messages_cpp
 )
 target_link_libraries(experiment_stats ${catkin_LIBRARIES})
 
