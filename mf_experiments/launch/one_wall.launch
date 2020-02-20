@@ -1,20 +1,20 @@
 <launch>
   <!-- Launchfile arguments -->
   <arg name="rviz" value="true" />
-  <arg name="display_img_gp" value="true" />
+  <arg name="display_img_gp" value="false" />
   <arg name="display_cov_gp" value="false" />
+  <arg name="display_diff_gp" value="false" />
 
   <arg name="path_planning" value="true" />
+  <arg name="back_forth_traj" value="false" />
   <arg name="mpc_control" value="true" />
+  <arg name="cart_control" value="false" />
 
   <arg name="accelerate_time" value="true" />
-  <arg name="cart_control" value="false" />
-  <arg name="back_forth_traj" value="false" />
+  <arg name="experiment_stats" value="true" />
   <arg name="save_gp_mean" value="false" />
   <arg name="load_gp_mean" value="false" />
 
-  <arg name="experiment_stats" value="true" />
-  <arg name="display_diff_gp" value="false" />
 
   <!-- ROS parameters -->
   <rosparam file="$(find mf_farm_simulator)/config/farm_simulator.yaml" command="load" ns="simu" />
@@ -72,6 +72,14 @@
 
       <remap from="state" to="/simu/robot_simulator/state" />
       <remap from="raycast_multi" to="/simu/raycast_multi" />
+    </node>
+
+    <node name="planning_logic" type="planning_logic" pkg="mf_navigation" output="screen">
+      <remap from="~enable_planner" to="/nav/enable_planner" />
+      <remap from="~disable_planner" to="/nav/disable_planner" />
+      <remap from="~odom" to="/simu/robot_simulator/odom" />
+      <remap from="~path" to="/nav/path" />
+
     </node>
 
     <!-- Control -->

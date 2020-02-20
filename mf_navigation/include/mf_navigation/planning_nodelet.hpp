@@ -17,6 +17,7 @@
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <std_srvs/Empty.h>
 #include <tf2_ros/transform_listener.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
@@ -50,6 +51,8 @@ class PlanningNodelet: public nodelet::Nodelet {
     ros::NodeHandle private_nh_;  ///<  Private node handler (for parameters)
     ros::ServiceClient ray_multi_client_;  ///<  Service client for raycasting at several camera poses
     ros::ServiceClient update_gp_client_;  ///<  Service client for updating the Gaussian Process
+    ros::ServiceServer disable_serv_;  ///<  Service server to disable planning
+    ros::ServiceServer enable_serv_;   ///<  Service server to enable planning
     ros::Publisher lattice_pub_;       ///<  Publisher for the waypoints lattice
     ros::Publisher lattice_pose_pub_;  ///<  Publisher for the waypoints lattice poses
     ros::Publisher path_pub_;          ///<  Publisher for the path
@@ -59,6 +62,7 @@ class PlanningNodelet: public nodelet::Nodelet {
     tf2_ros::Buffer tf_buffer_;        ///<  Buffer for tf2
     tf2_ros::TransformListener tf_listener_;  ///<  Transform listener for tf2
 
+    bool planner_enabled_;          ///<  Whether the planner should run
     RobotModel robot_model_;        ///<  Robot model
     RobotModel::state_type state_;  ///<  State of the robot (in ocean frame)
     bool state_received_;           ///<  Whether the state of the robot has been received
@@ -185,10 +189,10 @@ class PlanningNodelet: public nodelet::Nodelet {
     /**
      * \brief  Filters out waypoints that are not in given bounds
      *
-     * All the waypoints will be within the bounds `bnd_wall_dist_` and `bnd_depth_`
-     * with respect to the wall.
+     * Bounds are on the position with respect to the wall and the pitch angle.
+     * Waypoints going backwards are also discarded.
      *
-     * \param lattice_in  Lattice to filter
+     * \param lattice_in  Lattice to filter (
      * \return  Filtered lattice
      */
     std::vector<geometry_msgs::Pose> filter_lattice(const std::vector<geometry_msgs::Pose> &lattice_in);
@@ -262,6 +266,16 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \brief  Callback for the state of the robot
      */
      void state_cb(const mf_common::Float32Array msg);
+
+    /**
+     * \brief  Service server callback to disable planning
+     */
+    bool disable_cb(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
+
+    /**
+     * \brief  Service server callback to enable planning
+     */
+    bool enable_cb(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
 
     /**
      * \brief  Converts a tf transform to a pose, assuming the frames correspond

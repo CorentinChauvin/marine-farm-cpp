@@ -64,6 +64,17 @@ add_dependencies(planning_nodelet
 )
 target_link_libraries(planning_nodelet ${catkin_LIBRARIES})
 
+# Planning logic node
+add_executable(planning_logic
+  src/mf_navigation/planning_logic.cpp
+)
+add_dependencies(planning_logic
+  ${catkin_EXPORTED_TARGETS}
+  mf_sensors_simulator_generate_messages_cpp
+  mf_mapping_generate_messages_cpp
+)
+target_link_libraries(planning_logic ${catkin_LIBRARIES})
+
 # Cheated cartesian control nodelet
 add_library(cart_control_nodelet
   src/mf_navigation/cart_control_nodelet.cpp

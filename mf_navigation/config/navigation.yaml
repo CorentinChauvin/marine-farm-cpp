@@ -29,6 +29,14 @@ planning_nodelet:
   plan_res: 0.1          # spatial resolution (m) of the planned trajectory
 
 
+planning_logic:
+  main_freq: 5.0
+  path_frame: 'ocean'               # frame in which the transition path is expressed
+  wp_file_name: 'resources/wp.txt'  # path to the file containing the transition waypoints
+  transition_file_name: 'resources/transition.txt'  # path to the file containing the points delimiting the transitions
+  plan_res: 0.1                     # spatial resolution (m) of the transition path
+
+
 cart_control_nodelet:
   main_freq: 10
   speed: 0.2  # desired robot speed

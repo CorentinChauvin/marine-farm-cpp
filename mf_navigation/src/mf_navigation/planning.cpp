@@ -153,8 +153,7 @@ void PlanningNodelet::generate_lattice(std::vector<geometry_msgs::Pose> &lattice
       pose.position.x = state[0];
       pose.position.y = state[1];
       pose.position.z = state[2];
-
-      to_quaternion(state[3], state[4], copysign(wall_orientation_, modulo_2pi(state[5])), pose.orientation);
+      to_quaternion(state[3], state[4], state[5], pose.orientation);
 
       tf2::doTransform(pose, lattice[counter], robot_ocean_tf_);
       counter++;
@@ -175,19 +174,20 @@ std::vector<geometry_msgs::Pose> PlanningNodelet::filter_lattice(
     bool orientation_ok = false;
 
     // Transform point in wall and ocean frames
-    geometry_msgs::Pose p1, p2;
-    tf2::doTransform(lattice_in[k], p1, wall_robot_tf_);
-    tf2::doTransform(lattice_in[k], p2, ocean_robot_tf_);
+    geometry_msgs::Pose vp1;  // viewpoint expressed in wall frame
+    geometry_msgs::Pose vp2;  // viewpoint expressed in ocean frame
+    tf2::doTransform(lattice_in[k], vp1, wall_robot_tf_);
+    tf2::doTransform(lattice_in[k], vp2, ocean_robot_tf_);
 
     // Check position bounds
-    if (p1.position.z >= bnd_wall_dist_[0] && p1.position.z <= bnd_wall_dist_[1]
-      && p1.position.x >= bnd_depth_[0] && p1.position.x <= bnd_depth_[1]) {
+    if (fabs(vp1.position.z) >= bnd_wall_dist_[0] && fabs(vp1.position.z) <= bnd_wall_dist_[1]
+      && vp1.position.x >= bnd_depth_[0] && vp1.position.x <= bnd_depth_[1]) {
       position_ok = true;
     }
 
     // Check pitch angle of the viewpoint (not being to vertically inclined)
     double roll, pitch, yaw;
-    to_euler(p2.orientation, roll, pitch, yaw);
+    to_euler(vp2.orientation, roll, pitch, yaw);
 
     if (abs(pitch) <= bnd_pitch_)
       pitch_ok = true;
@@ -197,7 +197,15 @@ std::vector<geometry_msgs::Pose> PlanningNodelet::filter_lattice(
     get_orientation(roll, pitch, yaw, orientation_vp); // orientation of the viewpoint
 
     to_euler(ocean_robot_tf_.transform.rotation, roll, pitch, yaw);
-    float wall_orientation = copysign(wall_orientation_, modulo_2pi(yaw));
+    float wall_orientation = wall_orientation_;
+
+    while (fabs(wall_orientation - yaw) > M_PI_2) {
+      if (wall_orientation - yaw > M_PI_2)
+        wall_orientation -= M_PI;
+      else
+        wall_orientation += M_PI;
+    }
+
     Eigen::Vector3f orientation_wall(cos(wall_orientation), sin(wall_orientation), 0.0);  // orientation of the wall
 
     if (orientation_vp.dot(orientation_wall) >= 0.0)

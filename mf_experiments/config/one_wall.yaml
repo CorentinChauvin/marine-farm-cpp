@@ -51,6 +51,11 @@ simu:
                  0, 0, 0,  # p, q, r (angular speed)
                  0.0]      # delta_m (ballast)
 
+nav:
+  planning_logic:
+    wp_file_name: 'resources/one_wall_wp.txt'  # path to the file containing the transition waypoints
+    transition_file_name: 'resources/one_wall_transitions.txt'  # path to the file containing the points delimiting the transitions
+
 experiments:
   traj_publisher:
     path_freq: 1.0  # publish frequency of the path

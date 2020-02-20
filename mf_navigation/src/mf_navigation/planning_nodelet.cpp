@@ -17,6 +17,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/PoseArray.h>
 #include <visualization_msgs/Marker.h>
+#include <std_srvs/Empty.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 #include <vector>
@@ -93,7 +94,7 @@ void PlanningNodelet::onInit()
   private_nh_.param<bool>("linear_path", linear_path_, false);
   private_nh_.param<float>("path_res", path_res_, 0.1);
 
-  wall_orientation_ = abs(wall_orientation_);
+  wall_orientation_ = fabs(wall_orientation_);
   max_lat_rudder_ = bnd_input[1];
   max_elev_rudder_ = bnd_input[2];
   bnd_pitch_ *= M_PI / 180.0;  // convert in radian
@@ -111,6 +112,7 @@ void PlanningNodelet::onInit()
   y_hit_pt_sel_.resize(0);
   z_hit_pt_sel_.resize(0);
   state_received_ = false;
+  planner_enabled_ = true;
 
 
   // ROS subscribers
@@ -126,6 +128,8 @@ void PlanningNodelet::onInit()
   // ROS services
   ray_multi_client_ = nh_.serviceClient<mf_sensors_simulator::MultiPoses>("raycast_multi");
   update_gp_client_ = nh_.serviceClient<mf_mapping::UpdateGP>("update_gp");
+  disable_serv_ = nh_.advertiseService("disable_planner", &PlanningNodelet::disable_cb, this);
+  enable_serv_ = nh_.advertiseService("enable_planner", &PlanningNodelet::enable_cb, this);
 
 
   // Main loop
@@ -140,7 +144,7 @@ void PlanningNodelet::main_cb(const ros::TimerEvent &timer_event)
   if (!ros::ok() || ros::isShuttingDown() || b_sigint_)
     return;
 
-  if (state_received_ && get_tf()) {
+  if (planner_enabled_ && state_received_ && get_tf()) {
     plan_trajectory();
 
     // Debugging display
@@ -149,7 +153,8 @@ void PlanningNodelet::main_cb(const ros::TimerEvent &timer_event)
 }
 
 
-void PlanningNodelet::sigint_handler(int s) {
+void PlanningNodelet::sigint_handler(int s)
+{
   b_sigint_ = 1;
   main_timer_.stop();
 
@@ -263,6 +268,26 @@ void PlanningNodelet::state_cb(const mf_common::Float32Array msg)
 {
   state_ = RobotModel::state_type(msg.data.begin(), msg.data.end());
   state_received_ = true;
+}
+
+
+bool PlanningNodelet::disable_cb(
+  std_srvs::Empty::Request &req,
+  std_srvs::Empty::Response &res)
+{
+  ROS_INFO("[planning_nodelet] Planner disabled");
+  planner_enabled_ = false;
+  return true;
+}
+
+
+bool PlanningNodelet::enable_cb(
+  std_srvs::Empty::Request &req,
+  std_srvs::Empty::Response &res)
+{
+  ROS_INFO("[planning_nodelet] Planner enabled");
+  planner_enabled_ = true;
+  return true;
 }
 
 
