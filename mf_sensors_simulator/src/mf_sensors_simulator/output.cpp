@@ -10,11 +10,11 @@
 #include "mf_sensors_simulator/CameraOutput.h"
 #include "mf_farm_simulator/farm_common.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <geometry_msgs/Point.h>
 #include <visualization_msgs/Marker.h>
 #include <std_msgs/ColorRGBA.h>
+#include <random>
 #include <vector>
-
-#include <ctime>
 
 using namespace std;
 
@@ -189,6 +189,10 @@ void CameraNodelet::publish_output()
   int n_heat_height = heatmaps_[0].size();    // height of the heatmap
   int n_heat_width = heatmaps_[0][0].size();  // width of the heatmap
 
+  // Initialise randomisation of heatmap values
+  std::random_device seed_initialiser;
+  std::mt19937 random_generator(seed_initialiser());
+
   // For each pixel
   for (unsigned int i = 0; i < n_pxl_height_; i++) {
     for (unsigned int j = 0; j < n_pxl_width_; j++) {
@@ -220,6 +224,22 @@ void CameraNodelet::publish_output()
         // Transform hit point in camera frame
         geometry_msgs::Pose out_pose;
         tf2::doTransform(hit_pose, out_pose, camera_fixed_tf_);
+
+        // Noise disease value
+        if (noise_meas_) {
+          geometry_msgs::Point p = out_pose.position;
+          float distance = sqrt(pow(p.x, 2) + pow(p.y, 2) + pow(p.z, 2));
+          float sigma = noise_std_ * (1 - exp(-distance/noise_decay_));
+          std::normal_distribution<float> distribution(0, sigma);
+
+          float noise = distribution(random_generator);
+          value += noise;
+
+          if (value > 1.0)
+            value = 1.0;
+          else if (value < 0.0)
+            value = 0.0;
+        }
 
         // Fill output message
         out_msg.x.emplace_back(out_pose.position.x);

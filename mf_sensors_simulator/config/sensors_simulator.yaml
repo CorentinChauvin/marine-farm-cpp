@@ -11,3 +11,7 @@ camera_nodelet:
   fov_distance: 2.0  # maximum distance detected by the camera
   n_pxl_height: 10  # nbr of pixels along sensor height
   n_pxl_width: 20   # nbr of pixels along sensor width
+
+  noise_meas: true    # whether to noise measurements on disease heatmap
+  noise_std: 1.0      # maximum standard deviation of the measurement noise
+  noise_decay: 0.5    # spatial decay rate for measurement noise standard deviation

@@ -415,7 +415,7 @@ class GPNodelet: public nodelet::Nodelet {
 
 inline float GPNodelet::camera_noise(float distance) const
 {
-  return camera_var_ * (1 - exp(-camera_decay_ * distance));
+  return camera_var_ * (1 - exp(-distance / camera_decay_));
 }
 
 

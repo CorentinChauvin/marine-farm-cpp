@@ -153,7 +153,17 @@ void PlanningNodelet::generate_lattice(std::vector<geometry_msgs::Pose> &lattice
       pose.position.x = state[0];
       pose.position.y = state[1];
       pose.position.z = state[2];
-      to_quaternion(state[3], state[4], state[5], pose.orientation);
+
+      float wall_orientation = wall_orientation_;
+
+      while (fabs(wall_orientation - state[5]) > M_PI_2) {
+        if (wall_orientation - state[5] > M_PI_2)
+          wall_orientation -= M_PI;
+        else
+          wall_orientation += M_PI;
+      }
+
+      to_quaternion(state[3], state[4], wall_orientation, pose.orientation);
 
       tf2::doTransform(pose, lattice[counter], robot_ocean_tf_);
       counter++;
@@ -184,6 +194,9 @@ std::vector<geometry_msgs::Pose> PlanningNodelet::filter_lattice(
       && vp1.position.x >= bnd_depth_[0] && vp1.position.x <= bnd_depth_[1]) {
       position_ok = true;
     }
+
+    if (vp1.position.z * wall_robot_tf_.transform.translation.z < 0.0)
+      position_ok = false;  // the vp is on the wrong side of the wall
 
     // Check pitch angle of the viewpoint (not being to vertically inclined)
     double roll, pitch, yaw;

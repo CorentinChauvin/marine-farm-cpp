@@ -139,12 +139,17 @@ class CameraNodelet: public nodelet::Nodelet {
     std::string robot_frame_;  ///<  Frame of the robot
     std::string camera_frame_;  ///<  Frame of the camera
     std::vector<float> fov_color_;  ///<  Color of the camera field of view Rviz marker
+
     float focal_length_;    ///<  Focal length of the camera
     float sensor_width_;    ///<  Width of the camera sensor
     float sensor_height_;   ///<  Height of the camera sensor
     float fov_distance_;    ///<  Maximum distance detected by the camera
     int n_pxl_height_;      ///<  Nbr of pixels along sensor height
     int n_pxl_width_;       ///<  Nbr of pixels along sensor width
+
+    bool noise_meas_;       ///<  Whether to noise measurements on disease heatmap
+    float noise_std_;       ///<  Maximum standard deviation of the measurement noise
+    float noise_decay_;     ///<  Spatial decay rate for measurement noise standard deviation
     ///@}
 
 

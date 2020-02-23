@@ -71,12 +71,17 @@ void CameraNodelet::onInit()
   private_nh_.param<string>("robot_frame", robot_frame_, "base_link");
   private_nh_.param<string>("camera_frame", camera_frame_, "camera");
   private_nh_.param<vector<float>>("fov_color", fov_color_, vector<float>(4, 1.0));
+
   private_nh_.param<float>("focal_length", focal_length_, 0.0028);
   private_nh_.param<float>("sensor_width", sensor_width_, 0.0064);
   private_nh_.param<float>("sensor_height", sensor_height_, 0.00384);
   private_nh_.param<float>("fov_distance", fov_distance_, 2.0);
   private_nh_.param<int>("n_pxl_height", n_pxl_height_, 480);
   private_nh_.param<int>("n_pxl_width", n_pxl_width_, 800);
+
+  private_nh_.param<bool>("noise_meas", noise_meas_, true);
+  private_nh_.param<float>("noise_std", noise_std_, 1.0);
+  private_nh_.param<float>("noise_decay", noise_decay_, 1.0);
 
   // ROS subscribers
   algae_sub_ = private_nh_.subscribe<mf_farm_simulator::Algae>("algae", 1,

@@ -11,11 +11,11 @@ planning_nodelet:
   cart_lattice: false    # whether to create a cartesian lattice, or use motion model instead
   plan_speed: 0.5        # planned speed (m/s) of the robot
   plan_horizon: 1.5      # horizon (m) of the planning
-  lattice_size_horiz: 4  # half size of the lattice in the horizontal direction
-  lattice_size_vert: 4   # half size of the lattice in the vertical direction
+  lattice_size_horiz: 3  # half size of the lattice in the horizontal direction
+  lattice_size_vert: 3   # half size of the lattice in the vertical direction
   wall_orientation: 1.5707963  # orientation of the algae wall (absolute value)
   lattice_res: 0.4       # resolution (m) of the waypoints lattice (for cartesian lattice)
-  bnd_wall_dist: [0.8, 1.2]  # bounds on the distance to the wall for waypoint selection
+  bnd_wall_dist: [0.5, 1.5]  # bounds on the distance to the wall for waypoint selection
   bnd_depth: [0.2, 1.8]      # bounds on the depth (in wall frame) for waypoint selection
   bnd_pitch: 60.0            # bound on pitch angle (in degree)
 

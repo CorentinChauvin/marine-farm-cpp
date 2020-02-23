@@ -192,7 +192,7 @@ class PlanningNodelet: public nodelet::Nodelet {
      * Bounds are on the position with respect to the wall and the pitch angle.
      * Waypoints going backwards are also discarded.
      *
-     * \param lattice_in  Lattice to filter (
+     * \param lattice_in  Lattice to filter
      * \return  Filtered lattice
      */
     std::vector<geometry_msgs::Pose> filter_lattice(const std::vector<geometry_msgs::Pose> &lattice_in);
