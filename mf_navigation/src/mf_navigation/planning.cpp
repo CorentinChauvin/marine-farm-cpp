@@ -7,6 +7,7 @@
  */
 
 #include "planning_nodelet.hpp"
+#include "lattice.hpp"
 #include "mf_common/common.hpp"
 #include "mf_common/spline.hpp"
 #include "mf_sensors_simulator/MultiPoses.h"
@@ -72,18 +73,19 @@ vector<vector<float>> PlanningNodelet::array_to_vector2D(
 
 
 void PlanningNodelet::generate_cart_lattice(float max_lat_angle, float max_elev_angle,
-  float horizon, float resolution, std::vector<geometry_msgs::Pose> &lattice)
+  float horizon, float resolution, Lattice &lattice)
 {
-  int n_x = horizon / resolution + 1;  // size of the lattice in x direction
+  int n_x = horizon / resolution;  // size of the lattice in x direction
   int n_y = horizon * sin(max_lat_angle) / resolution;   // half size in y direction
   int n_z = horizon * sin(max_elev_angle) / resolution;  // half size in z direction
   unsigned int n_lattice = n_x * (2*n_y + 1) * (2*n_z + 1);      // total size of the lattice
 
-  lattice.resize(0);
-  lattice.reserve(n_lattice);
+  lattice.nodes.clear();
+  lattice.nodes.reserve(n_lattice);
   float x = 0;
 
   for (int i = 0; i < n_x; i++) {
+    x += resolution;
     float y = -n_y * resolution;
 
     for (int j = -n_y; j <= n_y; j++) {
@@ -109,7 +111,8 @@ void PlanningNodelet::generate_cart_lattice(float max_lat_angle, float max_elev_
           q_new.normalize();
           tf2::convert(q_new, pose.orientation);
 
-          lattice.emplace_back(pose);
+          lattice.nodes.emplace_back(new LatticeNode());
+          lattice.nodes.back()->pose = pose;
         }
 
         z += resolution;
@@ -117,18 +120,17 @@ void PlanningNodelet::generate_cart_lattice(float max_lat_angle, float max_elev_
 
       y += resolution;
     }
-
-    x += resolution;
   }
 }
 
 
-void PlanningNodelet::generate_lattice(std::vector<geometry_msgs::Pose> &lattice)
+void PlanningNodelet::generate_lattice(Lattice &lattice)
 {
   float duration = plan_horizon_/plan_speed_;
   int n_horiz = 2*lattice_size_horiz_ + 1;
   int n_vert = 2*lattice_size_vert_ + 1;
-  lattice.resize(n_horiz*n_vert);
+  lattice.nodes.clear();
+  lattice.nodes.resize(n_horiz*n_vert);
   int counter = 0;
 
   for (int k = -lattice_size_horiz_; k <= lattice_size_horiz_; k++) {
@@ -149,7 +151,7 @@ void PlanningNodelet::generate_lattice(std::vector<geometry_msgs::Pose> &lattice
       }
 
       // Transform the predicted pose from ocean frame to robot frame
-      geometry_msgs::Pose pose;
+      geometry_msgs::Pose pose, lattice_pose;
       pose.position.x = state[0];
       pose.position.y = state[1];
       pose.position.z = state[2];
@@ -165,20 +167,21 @@ void PlanningNodelet::generate_lattice(std::vector<geometry_msgs::Pose> &lattice
 
       to_quaternion(state[3], state[4], wall_orientation, pose.orientation);
 
-      tf2::doTransform(pose, lattice[counter], robot_ocean_tf_);
+      tf2::doTransform(pose, lattice_pose, robot_ocean_tf_);
+
+      lattice.nodes[counter] = std::unique_ptr<LatticeNode>(new LatticeNode());
+      lattice.nodes[counter]->pose = lattice_pose;
       counter++;
     }
   }
 }
 
 
-std::vector<geometry_msgs::Pose> PlanningNodelet::filter_lattice(
-  const std::vector<geometry_msgs::Pose> &lattice_in)
+void PlanningNodelet::filter_lattice(Lattice &lattice_in, Lattice &lattice_out)
 {
-  vector<geometry_msgs::Pose> lattice(0);
-  lattice.reserve(lattice_in.size());
+  lattice_out.nodes.reserve(lattice_in.nodes.size());
 
-  for (int k = 0; k < lattice_in.size(); k++) {
+  for (int k = 0; k < lattice_in.nodes.size(); k++) {
     bool position_ok = false;
     bool pitch_ok = false;
     bool orientation_ok = false;
@@ -186,8 +189,8 @@ std::vector<geometry_msgs::Pose> PlanningNodelet::filter_lattice(
     // Transform point in wall and ocean frames
     geometry_msgs::Pose vp1;  // viewpoint expressed in wall frame
     geometry_msgs::Pose vp2;  // viewpoint expressed in ocean frame
-    tf2::doTransform(lattice_in[k], vp1, wall_robot_tf_);
-    tf2::doTransform(lattice_in[k], vp2, ocean_robot_tf_);
+    tf2::doTransform(lattice_in.nodes[k]->pose, vp1, wall_robot_tf_);
+    tf2::doTransform(lattice_in.nodes[k]->pose, vp2, ocean_robot_tf_);
 
     // Check position bounds
     if (fabs(vp1.position.z) >= bnd_wall_dist_[0] && fabs(vp1.position.z) <= bnd_wall_dist_[1]
@@ -225,32 +228,27 @@ std::vector<geometry_msgs::Pose> PlanningNodelet::filter_lattice(
       orientation_ok = true;
 
     // Add the viewpoints if it passed all the checks
-    if (position_ok && pitch_ok && orientation_ok)
-      lattice.emplace_back(lattice_in[k]);
+    if (position_ok && pitch_ok && orientation_ok) {
+      lattice_out.nodes.emplace_back(std::move(lattice_in.nodes[k]));
+    }
   }
-
-  return lattice;
 }
 
 
-bool PlanningNodelet::compute_lattice_gp(
-  vector<vector<float>> &cov_diag,
-  vector<vector<float>> &camera_pts_x,
-  vector<vector<float>> &camera_pts_y,
-  vector<vector<float>> &camera_pts_z)
+bool PlanningNodelet::compute_lattice_gp(Lattice &lattice)
 {
   // Compute the corresponding camera orientation for each viewpoint
-  int size_lattice = lattice_.size();
-  std::vector<geometry_msgs::Pose> lattice(size_lattice);  // lattice of camera orientations
+  int size_lattice = lattice.nodes.size();
+  vector<geometry_msgs::Pose> poses(size_lattice);  // camera orientations
 
   for (int k = 0; k < size_lattice; k++) {
     tf2::Quaternion q_orig, q_rot, q_new;
-    tf2::convert(lattice_[k].orientation, q_orig);
+    tf2::convert(lattice.nodes[k]->pose.orientation, q_orig);
     q_rot.setRPY(M_PI_2, 0.0, 0.0);
 
     q_new = q_orig * q_rot;
     q_new.normalize();
-    tf2::convert(q_new, lattice[k].orientation);
+    tf2::convert(q_new, poses[k].orientation);
   }
 
   // Transform the orientation in camera frame
@@ -266,15 +264,15 @@ bool PlanningNodelet::compute_lattice_gp(
 
   for (int k = 0; k < size_lattice; k++) {
     geometry_msgs::Pose transf_pose;
-    tf2::doTransform(lattice[k], transf_pose, camera_robot_tf);
+    tf2::doTransform(poses[k], transf_pose, camera_robot_tf);
 
-    lattice[k] = transf_pose;
+    poses[k] = transf_pose;
   }
 
   // Get camera measurement for each viewpoint of the lattice
   mf_sensors_simulator::MultiPoses camera_srv;
   camera_srv.request.pose_array.header.frame_id = robot_frame_;
-  camera_srv.request.pose_array.poses = lattice;
+  camera_srv.request.pose_array.poses = poses;
   camera_srv.request.n_pxl_height = camera_height_;
   camera_srv.request.n_pxl_width = camera_width_;
 
@@ -289,14 +287,10 @@ bool PlanningNodelet::compute_lattice_gp(
   }
 
   // Store camera hit points
-  camera_pts_x.resize(size_lattice);
-  camera_pts_y.resize(size_lattice);
-  camera_pts_z.resize(size_lattice);
-
   for (int k = 0; k < size_lattice; k++) {
-    camera_pts_x[k] = camera_srv.response.results[k].x;
-    camera_pts_y[k] = camera_srv.response.results[k].y;
-    camera_pts_z[k] = camera_srv.response.results[k].z;
+    lattice.nodes[k]->camera_pts_x = camera_srv.response.results[k].x;
+    lattice.nodes[k]->camera_pts_y = camera_srv.response.results[k].y;
+    lattice.nodes[k]->camera_pts_z = camera_srv.response.results[k].z;
   }
 
   // Update the GP covariance for each viewpoint
@@ -314,7 +308,7 @@ bool PlanningNodelet::compute_lattice_gp(
 
   if (update_gp_client_.call(gp_srv)) {
     for (int k = 0; k < size_lattice; k++) {
-      cov_diag[k] = gp_srv.response.new_cov_diag[k].data;
+      lattice.nodes[k]->gp_cov = gp_srv.response.new_cov_diag[k].data;
     }
   } else {
     NODELET_WARN("[planning_nodelet] Failed to call update_gp service");
@@ -322,6 +316,78 @@ bool PlanningNodelet::compute_lattice_gp(
   }
 
   return true;
+}
+
+
+void PlanningNodelet::compute_info_gain(Lattice &lattice)
+{
+  int size_gp = last_gp_mean_.size();
+
+  for (int k = 0; k < lattice.nodes.size(); k++) {
+    lattice.nodes[k]->info_gain = 0.0;
+
+    for (int l = 0; l < size_gp; l++) {
+      float cov_diff = last_gp_cov_[l][l] - lattice.nodes[k]->gp_cov[l];
+      float weight = 100 * (1/(1 + exp(-gp_weight_*(last_gp_mean_[l] - 0.5))));
+      lattice.nodes[k]->info_gain += weight * cov_diff;
+    }
+  }
+}
+
+
+std::vector<LatticeNode*> PlanningNodelet::select_viewpoints(const std::vector<Lattice> &lattices)
+{
+  float best_info_gain = 0.0;
+  vector<LatticeNode*> selected_vp;
+
+  for (int k = 0; k < lattices[0].nodes.size(); k++) {
+    float info_gain;
+    vector<LatticeNode*> vp;
+
+    select_viewpoints(lattices[0].nodes[k].get(), info_gain, vp);
+
+    if (info_gain > best_info_gain) {
+      selected_vp = vp;
+      best_info_gain = info_gain;
+    }
+  }
+
+  return selected_vp;
+}
+
+
+void PlanningNodelet::select_viewpoints(
+  LatticeNode* node,
+  float &info_gain,
+  std::vector<LatticeNode*> &selected_vp)
+{
+  // Terminating condition
+  if (node->next.size() == 0) {
+    info_gain = node->info_gain;
+    selected_vp.resize(1);
+    selected_vp[0] = node;
+
+    return;
+  }
+
+  // Select best next node
+  float best_info_gain = 0.0;
+
+  for (int k = 0; k < node->next.size(); k++) {
+    float info_gain;
+    vector<LatticeNode*> vp;
+
+    select_viewpoints(node->next[k].get(), info_gain, vp);
+
+    if (info_gain > best_info_gain) {
+      selected_vp = vp;
+      best_info_gain = info_gain;
+    }
+  }
+
+  // Prepare output
+  info_gain = best_info_gain + node->info_gain;
+  selected_vp.insert(selected_vp.begin(), node);
 }
 
 
@@ -359,19 +425,22 @@ nav_msgs::Path PlanningNodelet::straight_line_path(const geometry_msgs::Pose &st
 }
 
 
-nav_msgs::Path PlanningNodelet::spline_path(const geometry_msgs::Pose &start,
-  const geometry_msgs::Pose &end, float resolution, float speed)
+nav_msgs::Path PlanningNodelet::spline_path(
+  const std::vector<geometry_msgs::Pose> &waypoints,
+  float resolution,
+  float speed)
 {
-  vector<Eigen::Vector3f> p(2);  // positions of the start and end poses
-  vector<Eigen::Vector3f> o(2);  // orientations of the start and end poses
+  int n = waypoints.size();
+  vector<Eigen::Vector3f> p(n);  // waypoints positions
+  vector<Eigen::Vector3f> o(n);  // waypoints orientations
 
-  p[0] << start.position.x, start.position.y, start.position.z;
-  p[1] << end.position.x, end.position.y, end.position.z;
-  double roll1, roll2, pitch1, pitch2, yaw1, yaw2;
-  to_euler(start.orientation, roll1, pitch1, yaw1);
-  to_euler(end.orientation, roll2, pitch2, yaw2);
-  o[0] << cos(yaw1), sin(yaw1), sin(pitch1);
-  o[1] << cos(yaw2), sin(yaw2), sin(pitch2);
+  for (int k = 0; k < n; k++) {
+    p[k] << waypoints[k].position.x, waypoints[k].position.y, waypoints[k].position.z;
+
+    double roll, pitch, yaw;
+    to_euler(waypoints[k].orientation, roll, pitch, yaw);
+    o[k] << cos(yaw), sin(yaw), sin(pitch);
+  }
 
   Spline spline(p, o, speed);
 
@@ -411,9 +480,15 @@ bool PlanningNodelet::plan_trajectory()
     return false;
 
   // Generate a lattice of possible waypoints (in robot frame)
-  vector<geometry_msgs::Pose> lattice_tmp;
+  vector<Lattice> lattices_tmp(nbr_lattices_);
 
-  if (cart_lattice_) {
+  if (mult_lattices_)
+  {
+    // RobotModel::state_type init_state = state_;
+    // generate_lattices(init_state, lattice_tmp);
+  }
+  else if (cart_lattice_)
+  {
     float lat_turn_radius  = robot_model_.lat_turn_radius(plan_speed_, max_lat_rudder_);
     float elev_turn_radius = robot_model_.elev_turn_radius(plan_speed_, max_lat_rudder_);
 
@@ -423,57 +498,103 @@ bool PlanningNodelet::plan_trajectory()
     if (!horiz_motion_) max_lat_angle = 0;
     if (!vert_motion_)  max_elev_angle = 0;
 
-    generate_cart_lattice(max_lat_angle, max_elev_angle, plan_horizon_, lattice_res_, lattice_tmp);
-  } else {
-    generate_lattice(lattice_tmp);
+    generate_cart_lattice(max_lat_angle, max_elev_angle, plan_horizon_, lattice_res_, lattices_tmp[0]);
+  }
+  else
+  {
+    generate_lattice(lattices_tmp[0]);
   }
 
-  lattice_ = filter_lattice(lattice_tmp);
+  // Filter the lattices (remove viewpoints that are not acceptable)
+  vector<Lattice> lattices(nbr_lattices_);
 
-  if (lattice_.size() == 0) {
-    NODELET_WARN("[planning_nodelet] No valid waypoint found");
-    return false;
+  for (int k = 0; k < nbr_lattices_; k++) {
+    filter_lattice(lattices_tmp[k], lattices[k]);
   }
+
+  // Prune the nodes tree (ie ... TODO)
+  // TODO
+
+
+  // TODO: redesign this test
+  // if (lattice_.size() == 0) {
+  //   NODELET_WARN("[planning_nodelet] No valid waypoint found");
+  //
+  //   return false;
+  // }
 
   // Update the GP covariance for each viewpoint
-  int size_lattice = lattice_.size();
-  vector<vector<float>> cov_diag(size_lattice);  // diagonal of the updated GP cov for each view point
-  vector<vector<float>> camera_pts_x, camera_pts_y, camera_pts_z;  // camera hit points
+  for (int k = 0; k < nbr_lattices_; k++) {
+    bool ret = compute_lattice_gp(lattices[k]);
 
-  bool ret = compute_lattice_gp(cov_diag, camera_pts_x, camera_pts_y, camera_pts_z);
-
-  if (!ret)
-    return false;
-
-  // Compute information gain and select best viewpoint
-  vector<float> info_gain(size_lattice, 0.0);
-
-  for (int k = 1; k < size_lattice; k++) {
-    for (int l = 0; l < size_gp; l++) {
-      float cov_diff = last_gp_cov_[l][l] - cov_diag[k][l];
-      float weight = 100 * (1/(1 + exp(-gp_weight_*(last_gp_mean_[l] - 0.5))));
-      info_gain[k] += weight * cov_diff;
+    if (!ret) {
+      NODELET_WARN("[planning_nodelet] Error when computing GP covariance ");
+      return false;
     }
   }
 
-  selected_vp_ = std::max_element(info_gain.begin(), info_gain.end()) - info_gain.begin();
+  // Compute information gains and select bestviewpoints
+  for (int k = 0; k < nbr_lattices_; k++) {
+    compute_info_gain(lattices[k]);
+  }
 
-  x_hit_pt_sel_ = camera_pts_x[selected_vp_];
-  y_hit_pt_sel_ = camera_pts_y[selected_vp_];
-  z_hit_pt_sel_ = camera_pts_z[selected_vp_];
+  vector<LatticeNode*> selected_vp = select_viewpoints(lattices);
 
-  // Generate a spline trajectory (in ocean frame) to go to the selected point
-  nav_msgs::Path path;
-  geometry_msgs::Pose current_pose, selected_pose;
-  current_pose = tf_to_pose(ocean_robot_tf_);
-  tf2::doTransform(lattice_[selected_vp_], selected_pose, ocean_robot_tf_);
+  if (selected_vp.size() != nbr_lattices_) {
+    NODELET_WARN("[planning_nodelet] Not the right number of selected viewpoints (%d against %d)",
+      (int)selected_vp.size(), (int)nbr_lattices_
+    );
+    return false;
+  }
 
-  if (linear_path_)
-    path = straight_line_path(current_pose, selected_pose, path_res_);
-  else
-    path = spline_path(current_pose, selected_pose, path_res_, plan_speed_);
+  // Fill helper objects
+  selected_vp_.resize(nbr_lattices_);
+  x_hit_pt_sel_.resize(0);
+  y_hit_pt_sel_.resize(0);
+  z_hit_pt_sel_.resize(0);
 
-  path_pub_.publish(path);
+  for (int k = 0; k < nbr_lattices_; k++) {
+    selected_vp_[k] = selected_vp[k]->pose;
+
+    x_hit_pt_sel_.insert(x_hit_pt_sel_.end(), selected_vp[k]->camera_pts_x.begin(), selected_vp[k]->camera_pts_x.end());
+    y_hit_pt_sel_.insert(y_hit_pt_sel_.end(), selected_vp[k]->camera_pts_y.begin(), selected_vp[k]->camera_pts_y.end());
+    z_hit_pt_sel_.insert(z_hit_pt_sel_.end(), selected_vp[k]->camera_pts_z.begin(), selected_vp[k]->camera_pts_z.end());
+  }
+
+  // Build lattice of non-selected viewpoints (for display purposes)
+  lattice_.resize(0);
+
+  for (int k = 0; k < nbr_lattices_; k++) {
+    for (int l = 0; l < lattices[k].nodes.size(); l++) {
+      if (lattices[k].nodes[l].get() != selected_vp[k])
+        lattice_.emplace_back(lattices[k].nodes[l]->pose);
+    }
+  }
+
+  // Generate a spline trajectory (in ocean frame) to go to the selected points
+  vector<geometry_msgs::Pose> waypoints(nbr_lattices_+1);  // viewpoints in ocean frame
+  waypoints[0] = tf_to_pose(ocean_robot_tf_);
+
+  for (int k = 0; k < nbr_lattices_; k++) {
+    tf2::doTransform(selected_vp_[k], waypoints[k+1], ocean_robot_tf_);
+  }
+
+  if (linear_path_) {
+    path_.poses.resize(0);
+    path_.header.frame_id = ocean_frame_;
+    path_.header.stamp = ros::Time::now();
+
+    for (int k = 0; k < nbr_lattices_; k++) {
+      nav_msgs::Path intermed_path = straight_line_path(waypoints[k], waypoints[k+1], path_res_);
+
+      if (k == 0)
+        path_.poses = intermed_path.poses;
+      else
+        path_.poses.insert(path_.poses.end(), intermed_path.poses.begin()+1, intermed_path.poses.end());
+    }
+  } else {
+    path_ = spline_path(waypoints, path_res_, plan_speed_);
+  }
 }
 
 

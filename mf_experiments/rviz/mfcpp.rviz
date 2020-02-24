@@ -99,13 +99,13 @@ Visualization Manager:
       Reference Frame: <Fixed Frame>
       Value: true
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /simu/robot_simulator/rviz_markers
       Name: Robot
       Namespaces:
-        robot: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /simu/farm_markers
@@ -167,6 +167,7 @@ Visualization Manager:
       Namespaces:
         hitpoints: true
         lattice: true
+        selected_vp: true
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -256,10 +257,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.1897984
+      Pitch: 0.599798381
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 4.00858831
+      Yaw: 3.70359445
     Saved: ~
 Window Geometry:
   Displays:

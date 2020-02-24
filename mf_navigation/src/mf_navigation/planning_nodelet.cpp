@@ -76,6 +76,8 @@ void PlanningNodelet::onInit()
 
   private_nh_.param<bool>("horiz_motion", horiz_motion_, true);
   private_nh_.param<bool>("vert_motion", vert_motion_, true);
+  private_nh_.param<bool>("mult_lattices", mult_lattices_, true);
+  private_nh_.param<int>("nbr_lattices", nbr_lattices_, 1);
   private_nh_.param<bool>("cart_lattice", cart_lattice_, false);
   private_nh_.param<float>("plan_speed", plan_speed_, 1.0);
   private_nh_.param<float>("plan_horizon", plan_horizon_, 1.0);
@@ -103,6 +105,8 @@ void PlanningNodelet::onInit()
     lattice_size_vert_ = 0;
   if (!horiz_motion_)
     lattice_size_horiz_ = 0;
+  if (!mult_lattices_)
+    nbr_lattices_ = 1;
 
   // Other variables
   robot_model_ = RobotModel(model_csts);
@@ -145,10 +149,12 @@ void PlanningNodelet::main_cb(const ros::TimerEvent &timer_event)
     return;
 
   if (planner_enabled_ && state_received_ && get_tf()) {
-    plan_trajectory();
+    bool success = plan_trajectory();
 
-    // Debugging display
-    pub_lattice_markers();
+    if (success) {
+      path_pub_.publish(path_);
+      pub_lattice_markers();
+    }
   }
 }
 
@@ -164,7 +170,7 @@ void PlanningNodelet::sigint_handler(int s)
 
 void PlanningNodelet::pub_lattice_markers()
 {
-  // Prepare the Rviz message
+  // Prepare lattice Rviz message
   unsigned int n = lattice_.size();
 
   visualization_msgs::Marker marker;
@@ -184,23 +190,16 @@ void PlanningNodelet::pub_lattice_markers()
   marker.points.resize(n);
   marker.colors.resize(n);
 
-  // Fill the message
+  // Publish the non-selected viewpoints
   for (unsigned int k = 0; k < n; k++) {
     marker.points[k].x = lattice_[k].position.x;
     marker.points[k].y = lattice_[k].position.y;
     marker.points[k].z = lattice_[k].position.z;
 
-    if (k == selected_vp_) {
-      marker.colors[k].r = 0.0;
-      marker.colors[k].g = 1.0;
-      marker.colors[k].b = 0.0;
-      marker.colors[k].a = 1.0;
-    } else {
-      marker.colors[k].r = 0.0;
-      marker.colors[k].g = 0.0;
-      marker.colors[k].b = 1.0;
-      marker.colors[k].a = 1.0;
-    }
+    marker.colors[k].r = 0.0;
+    marker.colors[k].g = 0.0;
+    marker.colors[k].b = 1.0;
+    marker.colors[k].a = 1.0;
   }
 
   lattice_pub_.publish(marker);
@@ -210,6 +209,24 @@ void PlanningNodelet::pub_lattice_markers()
   msg.header.frame_id = robot_frame_;
   msg.poses = lattice_;
   lattice_pose_pub_.publish(msg);
+
+  // Publish the selected viewpoints
+  marker.ns = "selected_vp";
+  marker.points.resize(nbr_lattices_);
+  marker.colors.resize(nbr_lattices_);
+
+  for (int k = 0; k < nbr_lattices_; k++) {
+    marker.points[k].x = selected_vp_[k].position.x;
+    marker.points[k].y = selected_vp_[k].position.y;
+    marker.points[k].z = selected_vp_[k].position.z;
+
+    marker.colors[k].r = 0.0;
+    marker.colors[k].g = 1.0;
+    marker.colors[k].b = 0.0;
+    marker.colors[k].a = 1.0;
+  }
+
+  lattice_pub_.publish(marker);
 
   // Publish the hitpoints of the selected viewpoint
   marker.ns = "hitpoints";

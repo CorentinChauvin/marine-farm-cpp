@@ -1,19 +1,19 @@
 <launch>
   <!-- Launchfile arguments -->
   <arg name="rviz" value="true" />
-  <arg name="display_img_gp" value="true" />
+  <arg name="display_img_gp" value="false" />
   <arg name="display_cov_gp" value="false" />
   <arg name="display_diff_gp" value="false" />
 
-  <arg name="path_planning"   value="false" />
-  <arg name="back_forth_traj" value="true" />
+  <arg name="path_planning"   value="true" />
+  <arg name="back_forth_traj" value="false" />
   <arg name="mpc_control" value="true" />
   <arg name="cart_control" value="false" />
 
   <arg name="accelerate_time" value="true" />
   <arg name="experiment_stats" value="true" />
   <arg name="save_gp_mean" value="false" />
-  <arg name="load_gp_mean" value="true" />
+  <arg name="load_gp_mean" value="false" />
 
 
   <!-- ROS parameters -->
@@ -66,7 +66,7 @@
 
     <!-- Planning -->
     <node pkg="nodelet" type="nodelet" args="load mf_navigation/PlanningNodelet nav_nodelet_manager"
-      name="planning_nodelet" output="screen" if="$(arg path_planning)">
+      name="planning_nodelet" output="screen" if="$(arg path_planning)" >
       <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
       <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />
 

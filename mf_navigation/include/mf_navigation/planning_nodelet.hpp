@@ -10,6 +10,7 @@
 #ifndef PLANNING_NODELET_HPP
 #define PLANNING_NODELET_HPP
 
+#include "lattice.hpp"
 #include "mf_robot_model/robot_model.hpp"
 #include "mf_common/Float32Array.h"
 #include "mf_common/Float32Array.h"
@@ -70,12 +71,13 @@ class PlanningNodelet: public nodelet::Nodelet {
     geometry_msgs::TransformStamped ocean_robot_tf_;  ///<  Transform from ocean to robot frames
     geometry_msgs::TransformStamped robot_ocean_tf_;  ///<  Transform from robot to ocean frames
     std::vector<geometry_msgs::Pose> lattice_;  ///<  Lattice of possible waypoints in robot frame
-    int selected_vp_;  ///<  Index of selected view point in the lattice
+    std::vector<geometry_msgs::Pose> selected_vp_;  ///<  Selected view points in the lattice
     std::vector<float> x_hit_pt_sel_;  ///<  X coordinates of the hit points for the selected viewpoint
     std::vector<float> y_hit_pt_sel_;  ///<  Y coordinates of the hit points for the selected viewpoint
     std::vector<float> z_hit_pt_sel_;  ///<  Z coordinates of the hit points for the selected viewpoint
     std::vector<float> last_gp_mean_;              ///<  Last mean of the Gaussian Process
     std::vector<std::vector<float>> last_gp_cov_;  ///<  Last covariance of the Gaussian Process
+    nav_msgs::Path path_;   ///<  Path to follow
 
     /// \name  General ROS parameters
     ///@{
@@ -93,6 +95,8 @@ class PlanningNodelet: public nodelet::Nodelet {
 
     bool horiz_motion_;    ///<  Whether to allow motion in the horizontal plane
     bool vert_motion_;     ///<  Whether to allow motion in the vertical plane
+    bool mult_lattices_;   ///<  Whether to use multi-lattices planning
+    int nbr_lattices_;     ///<  Number of lattices for multi-lattices planning
     bool cart_lattice_;    ///<  Whether to create a cartesian lattice, or use motion model instead
     float plan_speed_;     ///<  Planned speed (m/s) of the robot
     float plan_horizon_;   ///<  Horizon (m) of the planning
@@ -159,6 +163,21 @@ class PlanningNodelet: public nodelet::Nodelet {
       const mf_common::Array2D &array);
 
     /**
+     * \brief  TODO
+     *
+     * \todo TODO
+     *
+     * \param[in]  init_state
+     * \param[out] lattice
+     * \param[out]
+     */
+    void generate_lattices(
+      const RobotModel::state_type &init_state,
+      std::vector<std::vector<geometry_msgs::Pose>> &lattices
+    );
+
+
+    /**
      * \brief  Fills a cartesian lattice of possible waypoints
      *
      * Generates a lattice of possible waypoints in robot frame. These waypoints
@@ -171,8 +190,13 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \param [in]  resolution      Spatial resolution of the lattice
      * \param [out] lattice         Lattice to fill
      */
-    void generate_cart_lattice(float max_lat_angle, float max_elev_angle,
-      float horizon, float resolution, std::vector<geometry_msgs::Pose> &lattice);
+    void generate_cart_lattice(
+      float max_lat_angle,
+      float max_elev_angle,
+      float horizon,
+      float resolution,
+      Lattice &lattice
+    );
 
     /**
      * \brief  Fills a lattice of possible waypoints based on motion model
@@ -184,7 +208,7 @@ class PlanningNodelet: public nodelet::Nodelet {
      *
      * \param[out] lattice  Lattice to fill
      */
-    void generate_lattice(std::vector<geometry_msgs::Pose> &lattice);
+    void generate_lattice(Lattice &lattice);
 
     /**
      * \brief  Filters out waypoints that are not in given bounds
@@ -192,25 +216,53 @@ class PlanningNodelet: public nodelet::Nodelet {
      * Bounds are on the position with respect to the wall and the pitch angle.
      * Waypoints going backwards are also discarded.
      *
-     * \param lattice_in  Lattice to filter
-     * \return  Filtered lattice
+     * \warning  The input lattice won't be usable anymore (unique pointers losing
+     *           ownership)
+     *
+     * \param[int] lattice_in   Lattice to filter
+     * \param[out] lattice_out  Filtered lattice
      */
-    std::vector<geometry_msgs::Pose> filter_lattice(const std::vector<geometry_msgs::Pose> &lattice_in);
+    void filter_lattice(Lattice &lattice_in, Lattice &lattice_out);
 
     /**
      * \brief  Computes the diagonal of the covariance for each viewpoint of the lattice
      *
-     * \param[out] cov_diag  Diagonal of the GP cov for each viewpoint
-     * \param[out] camera_pts_x  X coord of camera hit pts for each viewpoint
-     * \param[out] camera_pts_x  Y coord of camera hit pts for each viewpoint
-     * \param[out] camera_pts_x  Z coord of camera hit pts for each viewpoint
+     * Will also store the camera hit points for each viewpoint
+     *
+     * \param[in,out] lattice  Lattice of viewpoints
      */
-    bool compute_lattice_gp(
-      std::vector<std::vector<float>> &cov_diag,
-      std::vector<std::vector<float>> &camera_pts_x,
-      std::vector<std::vector<float>> &camera_pts_y,
-      std::vector<std::vector<float>> &camera_pts_z
+    bool compute_lattice_gp(Lattice &lattice);
+
+    /**
+     * \brief  Computes information gain over a lattice of viewpoint
+     *
+     * \param[in,out] lattice  Lattice of viewpoint
+     */
+    void compute_info_gain(Lattice &lattice);
+
+    /**
+     * \brief  Selects a sequence of viewpoints maximising information gain over a list of lattices
+     *
+     * \param[in] lattices  List of lattices of viewpoints
+     * \return  Sequence of viewpoints
+     */
+    std::vector<LatticeNode*> select_viewpoints(
+      const std::vector<Lattice> &lattices
     );
+
+    /**
+     * \brief  Selects recursively a list of nodes viewpoints maximising information gain
+     *
+     * \param[in]  node         Current viewpoint node
+     * \param[out] info_gain    Cumulated information gain of this node and the best next ones
+     * \param[out] selected_vp  List of this viewpoint, and the next best ones
+     */
+    void select_viewpoints(
+      LatticeNode *node,
+      float &info_gain,
+      std::vector<LatticeNode*> &selected_vp
+    );
+
 
     /**
      * \brief  Interpolates a straight line path between two poses
@@ -224,16 +276,18 @@ class PlanningNodelet: public nodelet::Nodelet {
       const geometry_msgs::Pose &end, float resolution);
 
     /**
-     * \brief  Interpolates a spline path between two poses
+     * \brief  Interpolates a spline path between a list of poses
      *
-     * \param p1          Start of the path
-     * \param p2          End of the path
+     * \param waypoints   List of pose
      * \param resolution  Spatial resolution of the path
      * \param speed       Desired speed along the path
      * \return  Generated path
      */
-    nav_msgs::Path spline_path(const geometry_msgs::Pose &start,
-      const geometry_msgs::Pose &end, float resolution, float speed);
+    nav_msgs::Path spline_path(
+      const std::vector<geometry_msgs::Pose> &waypoints,
+      float resolution,
+      float speed
+    );
 
     /**
      * \brief  Main function to compute a trajectory plan

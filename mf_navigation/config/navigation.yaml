@@ -8,6 +8,8 @@ planning_nodelet:
   # Lattice of viewpoint generation
   horiz_motion: true     # whether to allow motion in the horizontal plane
   vert_motion: true      # whether to allow motion in the vertical plane
+  mult_lattices: false    # whether to use multi-lattices planning
+  nbr_lattices: 3        # number of lattices for multi-lattices planning
   cart_lattice: false    # whether to create a cartesian lattice, or use motion model instead
   plan_speed: 0.5        # planned speed (m/s) of the robot
   plan_horizon: 1.5      # horizon (m) of the planning
