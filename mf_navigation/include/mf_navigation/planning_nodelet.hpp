@@ -67,14 +67,17 @@ class PlanningNodelet: public nodelet::Nodelet {
     RobotModel robot_model_;        ///<  Robot model
     RobotModel::state_type state_;  ///<  State of the robot (in ocean frame)
     bool state_received_;           ///<  Whether the state of the robot has been received
-    geometry_msgs::TransformStamped wall_robot_tf_;   ///<  Transform from wall to robot frames
-    geometry_msgs::TransformStamped ocean_robot_tf_;  ///<  Transform from ocean to robot frames
-    geometry_msgs::TransformStamped robot_ocean_tf_;  ///<  Transform from robot to ocean frames
-    std::vector<geometry_msgs::Pose> lattice_;  ///<  Lattice of possible waypoints in robot frame
-    std::vector<geometry_msgs::Pose> selected_vp_;  ///<  Selected view points in the lattice
-    std::vector<float> x_hit_pt_sel_;  ///<  X coordinates of the hit points for the selected viewpoint
-    std::vector<float> y_hit_pt_sel_;  ///<  Y coordinates of the hit points for the selected viewpoint
-    std::vector<float> z_hit_pt_sel_;  ///<  Z coordinates of the hit points for the selected viewpoint
+    geometry_msgs::TransformStamped wall_robot_tf_;    ///<  Transform from wall to robot frames
+    geometry_msgs::TransformStamped ocean_robot_tf_;   ///<  Transform from ocean to robot frames
+    geometry_msgs::TransformStamped robot_ocean_tf_;   ///<  Transform from robot to ocean frames
+    geometry_msgs::TransformStamped ocean_wall_tf_;    ///<  Transform from ocean to wall frames
+    geometry_msgs::TransformStamped wall_ocean_tf_;    ///<  Transform from wall to ocean frames
+    geometry_msgs::TransformStamped ocean_camera_tf_;  ///<  Transform from ocean to camera frames
+    std::vector<geometry_msgs::Pose> lattice_;  ///<  Lattice of possible waypoints in ocean frame
+    std::vector<geometry_msgs::Pose> selected_vp_;  ///<  Selected view points in the lattice (in ocean frame)
+    std::vector<float> x_hit_pt_sel_;  ///<  X coordinates of the hit points for the selected viewpoint (in ocean frame)
+    std::vector<float> y_hit_pt_sel_;  ///<  Y coordinates of the hit points for the selected viewpoint (in ocean frame)
+    std::vector<float> z_hit_pt_sel_;  ///<  Z coordinates of the hit points for the selected viewpoint (in ocean frame)
     std::vector<float> last_gp_mean_;              ///<  Last mean of the Gaussian Process
     std::vector<std::vector<float>> last_gp_cov_;  ///<  Last covariance of the Gaussian Process
     nav_msgs::Path path_;   ///<  Path to follow
@@ -99,10 +102,10 @@ class PlanningNodelet: public nodelet::Nodelet {
     int nbr_lattices_;     ///<  Number of lattices for multi-lattices planning
     bool cart_lattice_;    ///<  Whether to create a cartesian lattice, or use motion model instead
     float plan_speed_;     ///<  Planned speed (m/s) of the robot
-    float plan_horizon_;   ///<  Horizon (m) of the planning
-    int lattice_size_horiz_;  ///<  Half size of the lattice in the horizontal direction
-    int lattice_size_vert_;   ///<  Half size of the lattice in the vertical direction
-    float wall_orientation_;   ///<  Orientation of the wall (absolute value)
+    float plan_horizon_;   ///<  Horizon (m) of the planning (for each lattice)
+    int lattice_size_horiz_;  ///<  Size of the lattice in the horizontal direction (half size when single-lattice planning)
+    int lattice_size_vert_;   ///<  Size of the lattice in the vertical direction (half size when single-lattice planning)
+    float wall_orientation_;  ///<  Orientation of the wall (absolute value)
     float lattice_res_;    ///<  Resolution (m) of the waypoints lattice
     std::vector<float> bnd_wall_dist_;  ///<  Bounds on the distance to the wall for waypoint selection
     std::vector<float> bnd_depth_;       ///<  Bounds on the depth (in wall frame) for waypoint selection
@@ -163,19 +166,20 @@ class PlanningNodelet: public nodelet::Nodelet {
       const mf_common::Array2D &array);
 
     /**
-     * \brief  TODO
+     * \brief  Gets horizontal unit vector along the wall with same orientation as the robot
      *
-     * \todo TODO
-     *
-     * \param[in]  init_state
-     * \param[out] lattice
-     * \param[out]
+     * \param[out]  Yaw of the wall
+     * \return  Wall orientation vector in ocean frame
      */
-    void generate_lattices(
-      const RobotModel::state_type &init_state,
-      std::vector<std::vector<geometry_msgs::Pose>> &lattices
-    );
+    Eigen::Vector3f get_wall_orientation(float &yaw_wall);
 
+
+    /**
+     * \brief  Gets horizontal unit vector along the wall with same orientation as the robot
+     *
+     * \return  Wall orientation in ocean frame
+     */
+    Eigen::Vector3f get_wall_orientation();
 
     /**
      * \brief  Fills a cartesian lattice of possible waypoints
@@ -209,6 +213,20 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \param[out] lattice  Lattice to fill
      */
     void generate_lattice(Lattice &lattice);
+
+    /**
+     * \brief  Generates several lattices along the wall
+     *
+     * \todo TODO
+     *
+     * \param[in]  init_state
+     * \param[out] lattices  Lattices of viewpoints (assumed to be already sized)
+     * \param[out]
+     */
+    void generate_lattices(
+      const RobotModel::state_type &init_state,
+      std::vector<Lattice> &lattices
+    );
 
     /**
      * \brief  Filters out waypoints that are not in given bounds

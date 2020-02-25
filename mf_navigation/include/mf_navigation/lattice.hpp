@@ -26,7 +26,7 @@ class LatticeNode
   public:
     geometry_msgs::Pose pose;   ///<  Pose of the node
     float speed;                ///<  Longitudinal speed of the robot at this node
-    std::vector<std::unique_ptr<LatticeNode>> next;  ///<  Nodes in the next lattice that can be reached from this node
+    std::vector<std::shared_ptr<LatticeNode>> next;  ///<  Nodes in the next lattice that can be reached from this node
 
     float info_gain;            ///<  Information gain fo this viewpoint
     std::vector<float> gp_cov;  ///<  Diagonal of the covariance of the Gaussian Process
@@ -36,6 +36,11 @@ class LatticeNode
 
     LatticeNode() {
       next.resize(0);
+      info_gain = 0;
+      gp_cov.resize(0);
+      camera_pts_x.resize(0);
+      camera_pts_y.resize(0);
+      camera_pts_z.resize(0);
     }
 
     ~LatticeNode() {
@@ -49,7 +54,7 @@ class LatticeNode
 class Lattice
 {
   public:
-    std::vector<std::unique_ptr<LatticeNode>> nodes;  ///<  Nodes of the lattice
+    std::vector<std::shared_ptr<LatticeNode>> nodes;  ///<  Nodes of the lattice
 
     Lattice() {
       nodes.resize(0);

@@ -261,6 +261,12 @@ bool CameraNodelet::ray_multi_cb(mf_sensors_simulator::MultiPoses::Request &req,
   int nbr_poses = req.pose_array.poses.size();
   res.results.resize(nbr_poses);
 
+  if (nbr_poses == 0) {
+    NODELET_WARN("[camera_nodelet] Called ray_multi_cb with 0 pose");
+    res.is_success = false;
+    return true;
+  }
+
   // Creating a collision body for field of view at all poses
   rp3d::CollisionBody* body = coll_world_.createCollisionBody(rp3d::Transform::identity());
   unique_ptr<rp3d::BoxShape> shape;

@@ -263,7 +263,7 @@ bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
   res.eval_values.resize(n_meas);
 
   vector<unsigned int> idx_obs;  // array of corresponding indices for obs states
-  RectArea obs_coord;            // won't be used
+  RectArea obs_coord;  // (won't be used)
 
   for (int k = 0; k < n_meas; k++) {
     // Update and evaluate the GP

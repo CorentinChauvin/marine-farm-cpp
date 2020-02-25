@@ -149,7 +149,12 @@ void PlanningNodelet::main_cb(const ros::TimerEvent &timer_event)
     return;
 
   if (planner_enabled_ && state_received_ && get_tf()) {
+    clock_t start = clock();
+    cout << "Starting plannning..." << endl;
+
     bool success = plan_trajectory();
+
+    cout << "Ellapsed time: " << (clock() - start) / (double)CLOCKS_PER_SEC << endl;
 
     if (success) {
       path_pub_.publish(path_);
@@ -175,7 +180,7 @@ void PlanningNodelet::pub_lattice_markers()
 
   visualization_msgs::Marker marker;
   marker.header.stamp = ros::Time::now();
-  marker.header.frame_id = robot_frame_;
+  marker.header.frame_id = ocean_frame_;
   marker.ns = "lattice";
   marker.lifetime = ros::Duration(1/main_freq_);
   marker.pose.orientation.w = 1.0;
@@ -206,7 +211,7 @@ void PlanningNodelet::pub_lattice_markers()
 
   // Publish the corresponding poses
   geometry_msgs::PoseArray msg;
-  msg.header.frame_id = robot_frame_;
+  msg.header.frame_id = ocean_frame_;
   msg.poses = lattice_;
   lattice_pose_pub_.publish(msg);
 
@@ -230,7 +235,7 @@ void PlanningNodelet::pub_lattice_markers()
 
   // Publish the hitpoints of the selected viewpoint
   marker.ns = "hitpoints";
-  marker.header.frame_id = camera_frame_;
+  marker.header.frame_id = ocean_frame_;
   marker.color.r = 0.0;
   marker.color.g = 1.0;
   marker.color.b = 1.0;
@@ -250,21 +255,27 @@ void PlanningNodelet::pub_lattice_markers()
 
 bool PlanningNodelet::get_tf()
 {
-  geometry_msgs::TransformStamped t1, t2, t3;
+  geometry_msgs::TransformStamped t1, t2, t3, t4, t5, t6;
 
   try {
     t1 = tf_buffer_.lookupTransform(wall_frame_,  robot_frame_, ros::Time(0));
     t2 = tf_buffer_.lookupTransform(ocean_frame_, robot_frame_, ros::Time(0));
     t3 = tf_buffer_.lookupTransform(robot_frame_, ocean_frame_, ros::Time(0));
+    t4 = tf_buffer_.lookupTransform(ocean_frame_, wall_frame_,  ros::Time(0));
+    t5 = tf_buffer_.lookupTransform(wall_frame_, ocean_frame_,  ros::Time(0));
+    t6 = tf_buffer_.lookupTransform(ocean_frame_, camera_frame_,  ros::Time(0));
   }
   catch (tf2::TransformException &ex) {
     NODELET_WARN("[planning_nodelet] %s", ex.what());
     return false;
   }
 
-  wall_robot_tf_  = t1;
-  ocean_robot_tf_ = t2;
-  robot_ocean_tf_ = t3;
+  wall_robot_tf_   = t1;
+  ocean_robot_tf_  = t2;
+  robot_ocean_tf_  = t3;
+  ocean_wall_tf_   = t4;
+  wall_ocean_tf_   = t5;
+  ocean_camera_tf_ = t6;
   return true;
 }
 

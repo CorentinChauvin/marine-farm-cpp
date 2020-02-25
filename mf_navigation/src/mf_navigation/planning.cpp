@@ -72,6 +72,31 @@ vector<vector<float>> PlanningNodelet::array_to_vector2D(
 }
 
 
+Eigen::Vector3f PlanningNodelet::get_wall_orientation(float &yaw_wall)
+{
+  double roll, pitch, yaw;
+  to_euler(ocean_robot_tf_.transform.rotation, roll, pitch, yaw);
+
+  yaw_wall = wall_orientation_;
+
+  while (fabs(yaw_wall - yaw) > M_PI_2) {
+    if (yaw_wall - yaw > M_PI_2)
+      yaw_wall -= M_PI;
+    else
+      yaw_wall += M_PI;
+  }
+
+  return Eigen::Vector3f(cos(yaw_wall), sin(yaw_wall), 0.0);
+}
+
+
+Eigen::Vector3f PlanningNodelet::get_wall_orientation()
+{
+  float foo;
+  return get_wall_orientation(foo);
+}
+
+
 void PlanningNodelet::generate_cart_lattice(float max_lat_angle, float max_elev_angle,
   float horizon, float resolution, Lattice &lattice)
 {
@@ -169,11 +194,94 @@ void PlanningNodelet::generate_lattice(Lattice &lattice)
 
       tf2::doTransform(pose, lattice_pose, robot_ocean_tf_);
 
-      lattice.nodes[counter] = std::unique_ptr<LatticeNode>(new LatticeNode());
+      lattice.nodes[counter] = std::shared_ptr<LatticeNode>(new LatticeNode());
       lattice.nodes[counter]->pose = lattice_pose;
       counter++;
     }
   }
+}
+
+
+void PlanningNodelet::generate_lattices(
+  const RobotModel::state_type &init_state,
+  std::vector<Lattice> &lattices)
+{
+  // Get robot orientation in wall frame
+  float yaw_wall;
+  Eigen::Vector3f orientation_wall = get_wall_orientation(yaw_wall);
+  geometry_msgs::Quaternion quati;  // orientation in ocean frame
+  to_quaternion(0, 0, yaw_wall, quati);
+
+  geometry_msgs::Quaternion orientation_vp;  // orientation of viewpoints in wall frame
+  tf2::doTransform(quati, orientation_vp, wall_ocean_tf_);
+
+  // Generate lattices in wall frame
+  // TODO: handle case where robot goes other direction (z and dy should be negative)
+  int nbr_lattices = lattices.size();
+  int nbr_nodes = lattice_size_vert_*lattice_size_horiz_;  // number of nodes per lattice
+
+  float y = wall_robot_tf_.transform.translation.y;  // abscissa of the robot along the wall
+  float dy = plan_horizon_;
+
+  float margin = 0.01;  // margin to prevent the points to be filtered out
+  float dx = fabs(bnd_depth_[1] - bnd_depth_[0] - 2*margin) / (lattice_size_vert_-1);  // vertical increment
+  float dz = fabs(bnd_wall_dist_[1] - bnd_wall_dist_[0] - 2*margin) / (lattice_size_horiz_-1);  // horizontal increment
+
+  for (int k = 0; k < nbr_lattices; k++) {
+    lattices[k].nodes.clear();
+    lattices[k].nodes.reserve(nbr_nodes);
+    y += dy;
+    float x = bnd_depth_[0] + margin/(lattice_size_vert_-1);
+
+    for (int l = 0; l < lattice_size_vert_; l++) {
+      float z = bnd_wall_dist_[0] + margin/(lattice_size_horiz_-1);
+
+      for (int m = 0; m < lattice_size_horiz_; m++) {
+        // Create a new node to add to the lattice
+        shared_ptr<LatticeNode> new_node (new LatticeNode());
+        new_node->pose.position.x = x;
+        new_node->pose.position.y = y;
+        new_node->pose.position.z = z;
+        new_node->pose.orientation = orientation_vp;
+        // new_node->speed = TODO
+
+        lattices[k].nodes.emplace_back(std::move(new_node));
+
+        z += dz;
+      }
+
+      x += dx;
+    }
+
+  }
+
+  // Transform lattice from wall to ocean frame
+  for (int k = 0; k < nbr_lattices; k++) {
+    for (int l = 0; l < nbr_nodes; l++) {
+      geometry_msgs::Pose pose_tmp;
+      tf2::doTransform(lattices[k].nodes[l]->pose, pose_tmp, ocean_wall_tf_);
+      lattices[k].nodes[l]->pose = pose_tmp;
+    }
+  }
+
+  // Check connections and remove viewpoints that can't be reached
+  // TODO
+
+  for (int k = 0; k < nbr_lattices-1; k++) {
+    for (int l = 0; l < nbr_nodes; l++) {
+      lattices[k].nodes[l]->next = lattices[k+1].nodes;
+    }
+  }
+
+  // Transform lattice in robot frame
+  for (int k = 0; k < nbr_lattices; k++) {
+    for (int l = 0; l < lattices[k].nodes.size(); l++) {
+      geometry_msgs::Pose pose_tmp;
+      tf2::doTransform(lattices[k].nodes[l]->pose, pose_tmp, robot_ocean_tf_);
+      lattices[k].nodes[l]->pose = pose_tmp;
+    }
+  }
+
 }
 
 
@@ -211,18 +319,7 @@ void PlanningNodelet::filter_lattice(Lattice &lattice_in, Lattice &lattice_out)
     // Check orientation of the viewpoint (not going backwards)
     Eigen::Vector3f orientation_vp;
     get_orientation(roll, pitch, yaw, orientation_vp); // orientation of the viewpoint
-
-    to_euler(ocean_robot_tf_.transform.rotation, roll, pitch, yaw);
-    float wall_orientation = wall_orientation_;
-
-    while (fabs(wall_orientation - yaw) > M_PI_2) {
-      if (wall_orientation - yaw > M_PI_2)
-        wall_orientation -= M_PI;
-      else
-        wall_orientation += M_PI;
-    }
-
-    Eigen::Vector3f orientation_wall(cos(wall_orientation), sin(wall_orientation), 0.0);  // orientation of the wall
+    Eigen::Vector3f orientation_wall = get_wall_orientation();  // orientation of the wall
 
     if (orientation_vp.dot(orientation_wall) >= 0.0)
       orientation_ok = true;
@@ -249,6 +346,8 @@ bool PlanningNodelet::compute_lattice_gp(Lattice &lattice)
     q_new = q_orig * q_rot;
     q_new.normalize();
     tf2::convert(q_new, poses[k].orientation);
+
+    poses[k].position = lattice.nodes[k]->pose.position;
   }
 
   // Transform the orientation in camera frame
@@ -278,7 +377,7 @@ bool PlanningNodelet::compute_lattice_gp(Lattice &lattice)
 
   if (ray_multi_client_.call(camera_srv)) {
     if (!camera_srv.response.is_success) {
-      NODELET_WARN("[planning_nodelet] Call to raycast_multi service resulted didn't give output ");
+      NODELET_WARN("[planning_nodelet] Call to raycast_multi service didn't give output ");
       return false;
     }
   } else {
@@ -484,8 +583,8 @@ bool PlanningNodelet::plan_trajectory()
 
   if (mult_lattices_)
   {
-    // RobotModel::state_type init_state = state_;
-    // generate_lattices(init_state, lattice_tmp);
+    RobotModel::state_type init_state = state_;
+    generate_lattices(init_state, lattices_tmp);
   }
   else if (cart_lattice_)
   {
@@ -512,10 +611,6 @@ bool PlanningNodelet::plan_trajectory()
     filter_lattice(lattices_tmp[k], lattices[k]);
   }
 
-  // Prune the nodes tree (ie ... TODO)
-  // TODO
-
-
   // TODO: redesign this test
   // if (lattice_.size() == 0) {
   //   NODELET_WARN("[planning_nodelet] No valid waypoint found");
@@ -533,7 +628,7 @@ bool PlanningNodelet::plan_trajectory()
     }
   }
 
-  // Compute information gains and select bestviewpoints
+  // Compute information gains and select best viewpoints
   for (int k = 0; k < nbr_lattices_; k++) {
     compute_info_gain(lattices[k]);
   }
@@ -554,30 +649,49 @@ bool PlanningNodelet::plan_trajectory()
   z_hit_pt_sel_.resize(0);
 
   for (int k = 0; k < nbr_lattices_; k++) {
-    selected_vp_[k] = selected_vp[k]->pose;
+    // Fill selected pose
+    geometry_msgs::Pose pose;
+    tf2::doTransform(selected_vp[k]->pose, pose, ocean_robot_tf_);
+    selected_vp_[k] = pose;
 
+    // Fill camera hit points
     x_hit_pt_sel_.insert(x_hit_pt_sel_.end(), selected_vp[k]->camera_pts_x.begin(), selected_vp[k]->camera_pts_x.end());
     y_hit_pt_sel_.insert(y_hit_pt_sel_.end(), selected_vp[k]->camera_pts_y.begin(), selected_vp[k]->camera_pts_y.end());
     z_hit_pt_sel_.insert(z_hit_pt_sel_.end(), selected_vp[k]->camera_pts_z.begin(), selected_vp[k]->camera_pts_z.end());
   }
 
-  // Build lattice of non-selected viewpoints (for display purposes)
+  for (int k = 0; k < x_hit_pt_sel_.size(); k++) {
+    // Transform the hit points in ocean frame
+    geometry_msgs::Point pose, tmp;
+    pose.x = x_hit_pt_sel_[k];
+    pose.y = y_hit_pt_sel_[k];
+    pose.z = z_hit_pt_sel_[k];
+
+    tf2::doTransform(pose, tmp, ocean_camera_tf_);
+
+    x_hit_pt_sel_[k] = tmp.x;
+    y_hit_pt_sel_[k] = tmp.y;
+    z_hit_pt_sel_[k] = tmp.z;
+
+  }
+
+  // Build lattice of non-selected viewpoints (in ocean frame) (for display purposes)
   lattice_.resize(0);
 
   for (int k = 0; k < nbr_lattices_; k++) {
     for (int l = 0; l < lattices[k].nodes.size(); l++) {
-      if (lattices[k].nodes[l].get() != selected_vp[k])
-        lattice_.emplace_back(lattices[k].nodes[l]->pose);
+      if (lattices[k].nodes[l].get() != selected_vp[k])  {
+        geometry_msgs::Pose pose;
+        tf2::doTransform(lattices[k].nodes[l]->pose, pose, ocean_robot_tf_);
+        lattice_.emplace_back(pose);
+      }
     }
   }
 
   // Generate a spline trajectory (in ocean frame) to go to the selected points
-  vector<geometry_msgs::Pose> waypoints(nbr_lattices_+1);  // viewpoints in ocean frame
+  vector<geometry_msgs::Pose> waypoints(1);  // viewpoints in ocean frame
   waypoints[0] = tf_to_pose(ocean_robot_tf_);
-
-  for (int k = 0; k < nbr_lattices_; k++) {
-    tf2::doTransform(selected_vp_[k], waypoints[k+1], ocean_robot_tf_);
-  }
+  waypoints.insert(waypoints.end(), selected_vp_.begin(), selected_vp_.end());
 
   if (linear_path_) {
     path_.poses.resize(0);
