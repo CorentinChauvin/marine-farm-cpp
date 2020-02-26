@@ -2,6 +2,9 @@
 # Service to perform raycasting for several virtual viewpoint poses
 #
 
+# Time at which to fetch the ROS transforms
+time stamp
+
 # Array of viewpoint poses in camera frame
 geometry_msgs/PoseArray pose_array
 

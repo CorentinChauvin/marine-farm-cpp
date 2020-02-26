@@ -73,9 +73,24 @@ rp3d::decimal CameraNodelet::RaycastCallback::notifyRaycastHit(
 }
 
 
-void CameraNodelet::multi_fov_body(const vector<geometry_msgs::Pose> &poses,
-  rp3d::CollisionBody* body, std::unique_ptr<rp3d::BoxShape> &shape)
+bool CameraNodelet::multi_fov_body(const vector<geometry_msgs::Pose> &poses,
+  rp3d::CollisionBody* body, std::unique_ptr<rp3d::BoxShape> &shape, ros::Time stamp)
 {
+  // Get ROS transforms if needed
+  geometry_msgs::TransformStamped fixed_camera_tf;
+
+  if (stamp != ros::Time(0)) {
+    try {
+      fixed_camera_tf = tf_buffer_.lookupTransform(fixed_frame_, camera_frame_, ros::Time(0));
+    }
+    catch (tf2::TransformException &ex) {
+      NODELET_WARN("[camera_nodelet] %s", ex.what());
+      return false;
+    }
+  } else {
+    fixed_camera_tf = fixed_camera_tf_;
+  }
+
   // Create the collision body
   rp3d::Vector3 pos(fixed_camera_tf_.transform.translation.x,
     fixed_camera_tf_.transform.translation.y,
@@ -122,6 +137,8 @@ void CameraNodelet::multi_fov_body(const vector<geometry_msgs::Pose> &poses,
   half_extents = merged_shape.getExtent();
   shape = unique_ptr<rp3d::BoxShape>(new rp3d::BoxShape(half_extents));
   body->addCollisionShape(shape.get(), rp3d::Transform::identity());
+
+  return true;
 }
 
 
@@ -251,12 +268,16 @@ tf2::Vector3 CameraNodelet::apply_transform(const tf2::Vector3 &in_vector,
 }
 
 
-bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, tf2::Vector3 &hit_pt,
-  int &alga_idx, const tf2::Vector3 &origin)
+bool CameraNodelet::raycast_alga(
+  const tf2::Vector3 &aim_pt,
+  tf2::Vector3 &hit_pt,
+  int &alga_idx,
+  const geometry_msgs::TransformStamped &fixed_camera_tf,
+  const tf2::Vector3 &origin)
 {
   // Transform the ray into fixed frame
-  tf2::Vector3 tf_origin = apply_transform(origin, fixed_camera_tf_);
-  tf2::Vector3 tf_aim_pt = apply_transform(aim_pt, fixed_camera_tf_);
+  tf2::Vector3 tf_origin = apply_transform(origin, fixed_camera_tf);
+  tf2::Vector3 tf_aim_pt = apply_transform(aim_pt, fixed_camera_tf);
 
   // Raycast
   raycast_cb_.alga_hit_ = false;
@@ -276,17 +297,20 @@ bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, tf2::Vector3 &hit_p
 }
 
 
-bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, float &distance,
+bool CameraNodelet::raycast_alga(
+  const tf2::Vector3 &aim_pt,
+  float &distance,
+  const geometry_msgs::TransformStamped &fixed_camera_tf,
   const tf2::Vector3 &origin)
 {
   // Perform raycast
   int alga_idx;
   tf2::Vector3 hit_pt;
-  bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, origin);
+  bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, fixed_camera_tf, origin);
 
   // Get distance to the hit alga
   if (alga_hit) {
-    distance = tf2::tf2Distance(hit_pt, apply_transform(origin, fixed_camera_tf_));
+    distance = tf2::tf2Distance(hit_pt, apply_transform(origin, fixed_camera_tf));
     return true;
   } else {
     return false;
@@ -294,16 +318,34 @@ bool CameraNodelet::raycast_alga(const tf2::Vector3 &aim_pt, float &distance,
 }
 
 
-void CameraNodelet::raycast_wall(
+bool CameraNodelet::raycast_wall(
   const geometry_msgs::Pose &vp_pose,
   int n_pxl_h, int n_pxl_w,
-  mf_sensors_simulator::CameraOutput &pxl_output)
+  mf_sensors_simulator::CameraOutput &pxl_output,
+  ros::Time stamp)
 {
   // Prepare the output
   int n_pixels = n_pxl_h * n_pxl_w;
   pxl_output.x.reserve(n_pixels);
   pxl_output.y.reserve(n_pixels);
   pxl_output.z.reserve(n_pixels);
+
+  // Fetch ROS transforms
+  geometry_msgs::TransformStamped camera_fixed_tf, fixed_camera_tf;
+
+  if (stamp != ros::Time(0)) {
+    try {
+      camera_fixed_tf = tf_buffer_.lookupTransform(camera_frame_, fixed_frame_, stamp);
+      fixed_camera_tf = tf_buffer_.lookupTransform(fixed_frame_,  camera_frame_, stamp);
+    }
+    catch (tf2::TransformException &ex) {
+      NODELET_WARN("[camera_nodelet] Bonjour %s", ex.what());
+      return false;
+    }
+  } else {
+    camera_fixed_tf = camera_fixed_tf_;
+    fixed_camera_tf = fixed_camera_tf_;
+  }
 
   // Check the four corners
   int x_corner[4] = {0, n_pxl_h-1, n_pxl_h-1, 0};  // position of the 4 corners in height direction
@@ -319,11 +361,11 @@ void CameraNodelet::raycast_wall(
 
     // Perform raycast
     int alga_idx;
-    tf2::Vector3 hit_pt;
-    bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, origin);
+    tf2::Vector3 hit_pt;  // hit point in fixed frame
+    bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, fixed_camera_tf, origin);
 
     if (alga_hit) {
-      tf2::Vector3 out_pt = apply_transform(hit_pt, camera_fixed_tf_);  // transform in camera frame
+      tf2::Vector3 out_pt = apply_transform(hit_pt, camera_fixed_tf);  // transform in camera frame
 
       pxl_output.x.emplace_back(out_pt.getX());
       pxl_output.y.emplace_back(out_pt.getY());
@@ -358,10 +400,10 @@ void CameraNodelet::raycast_wall(
           // Perform raycast
           int alga_idx;
           tf2::Vector3 hit_pt;
-          bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, origin);
+          bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, fixed_camera_tf, origin);
 
           if (alga_hit) {
-            tf2::Vector3 out_pt = apply_transform(hit_pt, camera_fixed_tf_);  // transform in camera frame
+            tf2::Vector3 out_pt = apply_transform(hit_pt, camera_fixed_tf);  // transform in camera frame
 
             pxl_output.x.emplace_back(out_pt.getX());
             pxl_output.y.emplace_back(out_pt.getY());
@@ -384,7 +426,7 @@ void CameraNodelet::raycast_wall(
     pxl_output.value[k] = 0;
   }
 
-
+  return true;
 }
 
 

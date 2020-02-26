@@ -328,11 +328,13 @@ void PlanningNodelet::filter_lattice(Lattice &lattice_in, Lattice &lattice_out)
     if (position_ok && pitch_ok && orientation_ok) {
       lattice_out.nodes.emplace_back(std::move(lattice_in.nodes[k]));
     }
+
+    // TODO: fix the "next" arrays
   }
 }
 
 
-bool PlanningNodelet::compute_lattice_gp(Lattice &lattice)
+bool PlanningNodelet::compute_lattice_gp(Lattice &lattice, ros::Time stamp)
 {
   // Compute the corresponding camera orientation for each viewpoint
   int size_lattice = lattice.nodes.size();
@@ -354,7 +356,7 @@ bool PlanningNodelet::compute_lattice_gp(Lattice &lattice)
   geometry_msgs::TransformStamped camera_robot_tf;
 
   try {
-    camera_robot_tf = tf_buffer_.lookupTransform(camera_frame_, robot_frame_, ros::Time(0));
+    camera_robot_tf = tf_buffer_.lookupTransform(camera_frame_, robot_frame_, stamp);
   }
   catch (tf2::TransformException &ex) {
     NODELET_WARN("[planning_nodelet] %s", ex.what());
@@ -370,6 +372,7 @@ bool PlanningNodelet::compute_lattice_gp(Lattice &lattice)
 
   // Get camera measurement for each viewpoint of the lattice
   mf_sensors_simulator::MultiPoses camera_srv;
+  camera_srv.request.stamp = stamp;
   camera_srv.request.pose_array.header.frame_id = robot_frame_;
   camera_srv.request.pose_array.poses = poses;
   camera_srv.request.n_pxl_height = camera_height_;
@@ -394,6 +397,7 @@ bool PlanningNodelet::compute_lattice_gp(Lattice &lattice)
 
   // Update the GP covariance for each viewpoint
   mf_mapping::UpdateGP gp_srv;
+  gp_srv.request.stamp = stamp;
   gp_srv.request.use_internal_mean = true;
   gp_srv.request.use_internal_cov = true;
   gp_srv.request.update_mean = false;
@@ -619,8 +623,10 @@ bool PlanningNodelet::plan_trajectory()
   // }
 
   // Update the GP covariance for each viewpoint
+  ros::Time stamp = ocean_robot_tf_.header.stamp;  // time at which to fetch the ROS transforms
+
   for (int k = 0; k < nbr_lattices_; k++) {
-    bool ret = compute_lattice_gp(lattices[k]);
+    bool ret = compute_lattice_gp(lattices[k], stamp);
 
     if (!ret) {
       NODELET_WARN("[planning_nodelet] Error when computing GP covariance ");
@@ -672,7 +678,6 @@ bool PlanningNodelet::plan_trajectory()
     x_hit_pt_sel_[k] = tmp.x;
     y_hit_pt_sel_[k] = tmp.y;
     z_hit_pt_sel_[k] = tmp.z;
-
   }
 
   // Build lattice of non-selected viewpoints (in ocean frame) (for display purposes)
@@ -709,6 +714,8 @@ bool PlanningNodelet::plan_trajectory()
   } else {
     path_ = spline_path(waypoints, path_res_, plan_speed_);
   }
+
+  return true;
 }
 
 

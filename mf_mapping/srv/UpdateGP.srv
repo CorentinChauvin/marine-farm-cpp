@@ -2,6 +2,9 @@
 # Service to update a Gaussian Process for several sets of camera measurements
 #
 
+# Time at which to retrieve ROS transforms
+time stamp
+
 # Whether to update the mean
 bool update_mean
 

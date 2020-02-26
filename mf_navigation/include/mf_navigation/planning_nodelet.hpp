@@ -248,8 +248,9 @@ class PlanningNodelet: public nodelet::Nodelet {
      * Will also store the camera hit points for each viewpoint
      *
      * \param[in,out] lattice  Lattice of viewpoints
+     * \param[in]     stamp    Time at which to fetch the ROS transforms
      */
-    bool compute_lattice_gp(Lattice &lattice);
+    bool compute_lattice_gp(Lattice &lattice, ros::Time stamp);
 
     /**
      * \brief  Computes information gain over a lattice of viewpoint

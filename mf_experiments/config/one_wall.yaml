@@ -5,8 +5,8 @@
 
 simu:
   clock_publisher:
-    publish_rate: 1000  # frequency (Hz) of publish on the /clock topic (ROS frequency)
-    time_factor: 2.0    # time factor of the simulation (1.0 for same as wall time)
+    publish_rate: 200  # frequency (Hz) of publish on the /clock topic (ROS frequency)
+    time_factor: 2.0   # time factor of the simulation (1.0 for same as wall time)
 
   #
   # Parameters changed from farm_simulator

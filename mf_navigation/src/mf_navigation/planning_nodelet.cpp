@@ -150,7 +150,7 @@ void PlanningNodelet::main_cb(const ros::TimerEvent &timer_event)
 
   if (planner_enabled_ && state_received_ && get_tf()) {
     clock_t start = clock();
-    cout << "Starting plannning..." << endl;
+    cout << "=== Starting plannning... ===" << endl;
 
     bool success = plan_trajectory();
 
@@ -182,7 +182,6 @@ void PlanningNodelet::pub_lattice_markers()
   marker.header.stamp = ros::Time::now();
   marker.header.frame_id = ocean_frame_;
   marker.ns = "lattice";
-  marker.lifetime = ros::Duration(1/main_freq_);
   marker.pose.orientation.w = 1.0;
   marker.color.r = 0.0;
   marker.color.g = 1.0;

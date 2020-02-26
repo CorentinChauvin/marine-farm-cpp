@@ -268,9 +268,16 @@ bool CameraNodelet::ray_multi_cb(mf_sensors_simulator::MultiPoses::Request &req,
   }
 
   // Creating a collision body for field of view at all poses
+  bool success = true;
   rp3d::CollisionBody* body = coll_world_.createCollisionBody(rp3d::Transform::identity());
   unique_ptr<rp3d::BoxShape> shape;
-  multi_fov_body(req.pose_array.poses, body, shape);
+  success = multi_fov_body(req.pose_array.poses, body, shape, req.stamp);
+
+  if (!success) {
+    coll_world_.destroyCollisionBody(body);
+    res.is_success = success;
+    return true;
+  }
 
   // Selects algae that are in field of view of the camera
   coll_mutex_.lock();
@@ -278,13 +285,18 @@ bool CameraNodelet::ray_multi_cb(mf_sensors_simulator::MultiPoses::Request &req,
 
   // Raycast all pixels for each pose
   for (int k = 0; k < nbr_poses; k++) {
-    raycast_wall(req.pose_array.poses[k], n_pxl_h, n_pxl_w, res.results[k]);
+    bool ret = raycast_wall(req.pose_array.poses[k], n_pxl_h, n_pxl_w, res.results[k], req.stamp);
+
+    if (!ret) {
+      success = false;
+      break;
+    }
   }
 
   // Conclude
   coll_world_.destroyCollisionBody(body);
   coll_mutex_.unlock();
-  res.is_success = true;
+  res.is_success = success;
 
   return true;
 }

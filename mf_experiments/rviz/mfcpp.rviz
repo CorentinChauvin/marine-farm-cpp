@@ -8,7 +8,6 @@ Panels:
         - /Farm1/Namespaces1
         - /Odometry1/Shape1
         - /CameraFOV1/Namespaces1
-        - /LatticePoses1
       Splitter Ratio: 0.5
     Tree Height: 437
   - Class: rviz/Selection
@@ -249,18 +248,18 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.13872242
-        Y: 0.0312137604
-        Z: 0
+        X: 0.0886950493
+        Y: -0.89620024
+        Z: -2.38418579e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.149798632
+      Pitch: 0.269798577
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 3.138587
+      Yaw: 4.7185936
     Saved: ~
 Window Geometry:
   Displays:

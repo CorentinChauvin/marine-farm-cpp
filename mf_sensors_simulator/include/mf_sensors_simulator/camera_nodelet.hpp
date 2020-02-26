@@ -195,12 +195,18 @@ class CameraNodelet: public nodelet::Nodelet {
      * The collision body is the smallest AABB containing each FOV of each
      * pose. The corresponding collision shape is also filled.
      *
-     * \param [in] poses   Vector of poses
+     * \param [in]  poses  Vector of poses
      * \param [out] body   Body to fill
      * \param [out] shape  Collision shape of the body
+     * \param [in]  stamp  Time at which to retrieve ROS transforms
+     * return  Whether the call was successful
      */
-    void multi_fov_body(const std::vector<geometry_msgs::Pose> &poses,
-      rp3d::CollisionBody* body, std::unique_ptr<rp3d::BoxShape> &shape);
+    bool multi_fov_body(
+      const std::vector<geometry_msgs::Pose> &poses,
+      rp3d::CollisionBody* body,
+      std::unique_ptr<rp3d::BoxShape> &shape,
+      ros::Time stamp = ros::Time(0)
+    );
 
     /**
      * \brief  Service callback for raycasting from several camera poses
@@ -314,10 +320,16 @@ class CameraNodelet: public nodelet::Nodelet {
      * \param [out] hit_pt    Hit point (in fixed frame)
      * \param [out] alga_idx  Index of the hit alga in the ray_bodies_ vector
      * \param [in]  origin    Origin of the ray (in camera frame)
+     * \param [in]  fixed_camera_tf    Transform from fixed to camera frames
      * \return  Whether an alga has been hit
      */
-    bool raycast_alga(const tf2::Vector3 &aim_pt, tf2::Vector3 &hit_pt,
-      int &alga_idx, const tf2::Vector3 &origin = tf2::Vector3(0, 0, 0));
+    bool raycast_alga(
+      const tf2::Vector3 &aim_pt,
+      tf2::Vector3 &hit_pt,
+      int &alga_idx,
+      const geometry_msgs::TransformStamped &fixed_camera_tf,
+      const tf2::Vector3 &origin = tf2::Vector3(0, 0, 0)
+    );
 
     /**
      * \brief  Casts a ray on algae and gets hit distance
@@ -325,10 +337,15 @@ class CameraNodelet: public nodelet::Nodelet {
      * \param [in]  aim_pt    Point towards which casting the ray (in camera frame)
      * \param [out] distance  Distance to the hit alga
      * \param [in]  origin    Origin of the ray (in camera frame)
+     * \param [in]  fixed_camera_tf   Transform from fixed to camera frames
      * \return  Whether an alga has been hit
      */
-    bool raycast_alga(const tf2::Vector3 &aim_pt, float &distance,
-      const tf2::Vector3 &origin = tf2::Vector3(0, 0, 0));
+    bool raycast_alga(
+      const tf2::Vector3 &aim_pt,
+      float &distance,
+      const geometry_msgs::TransformStamped &fixed_camera_tf,
+      const tf2::Vector3 &origin = tf2::Vector3(0, 0, 0)
+    );
 
     /*
      * \brief  Raycast for each pixel of a camera for a specified viewpoint
@@ -353,11 +370,13 @@ class CameraNodelet: public nodelet::Nodelet {
      * \param [in]  n_pxl_h     Number of pixels of the camera in height direction
      * \param [in]  n_pxl_w     Number of pixels of the camera in width direction
      * \param [out] pxl_output  Hit points for all pixels
+     * \param [in]  stamp       Pose at which to fetch the ROS transforms
      */
-    void raycast_wall(
+    bool raycast_wall(
       const geometry_msgs::Pose &vp_pose,
       int n_pxl_h, int n_pxl_w,
-      mf_sensors_simulator::CameraOutput &pxl_output
+      mf_sensors_simulator::CameraOutput &pxl_output,
+      ros::Time stamp = ros::Time(0)
     );
 
     /**

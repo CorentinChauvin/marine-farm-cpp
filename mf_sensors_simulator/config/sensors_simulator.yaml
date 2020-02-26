@@ -14,4 +14,4 @@ camera_nodelet:
 
   noise_meas: true    # whether to noise measurements on disease heatmap
   noise_std: 1.0      # maximum standard deviation of the measurement noise
-  noise_decay: 0.5    # spatial decay rate for measurement noise standard deviation
+  noise_decay: 1.0    # spatial decay rate for measurement noise standard deviation

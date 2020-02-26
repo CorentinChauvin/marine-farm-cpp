@@ -5,7 +5,7 @@
 # Header
 Header header
 
-# Coordinates of the data points (in camera frame)
+# Coordinates of the data points (in global camera frame)
 float32[] x
 float32[] y
 float32[] z

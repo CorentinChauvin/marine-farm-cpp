@@ -24,15 +24,15 @@ namespace mfcpp {
 class LatticeNode
 {
   public:
-    geometry_msgs::Pose pose;   ///<  Pose of the node
+    geometry_msgs::Pose pose;   ///<  Pose of the node in robot frame
     float speed;                ///<  Longitudinal speed of the robot at this node
     std::vector<std::shared_ptr<LatticeNode>> next;  ///<  Nodes in the next lattice that can be reached from this node
 
     float info_gain;            ///<  Information gain fo this viewpoint
     std::vector<float> gp_cov;  ///<  Diagonal of the covariance of the Gaussian Process
-    std::vector<float> camera_pts_x;  ///<  X coord of camera hit pts for the viewpoint
-    std::vector<float> camera_pts_y;  ///<  Y coord of camera hit pts for the viewpoint
-    std::vector<float> camera_pts_z;  ///<  Z coord of camera hit pts for the viewpoint
+    std::vector<float> camera_pts_x;  ///<  X coord of camera hit pts for the viewpoint (in ocean frame)
+    std::vector<float> camera_pts_y;  ///<  Y coord of camera hit pts for the viewpoint (in ocean frame)
+    std::vector<float> camera_pts_z;  ///<  Z coord of camera hit pts for the viewpoint (in ocean frame)
 
     LatticeNode() {
       next.resize(0);

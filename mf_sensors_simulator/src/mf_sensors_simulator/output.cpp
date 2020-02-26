@@ -201,7 +201,7 @@ void CameraNodelet::publish_output()
 
       int alga_idx;
       tf2::Vector3 hit_pt;
-      bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx);
+      bool alga_hit = raycast_alga(aim_pt, hit_pt, alga_idx, fixed_camera_tf_);
 
       if (alga_hit) {
         // Transform hit point in alga frame

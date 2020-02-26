@@ -241,6 +241,17 @@ bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
     }
   }
 
+  // Get wall to camera ROS transform
+  geometry_msgs::TransformStamped wall_camera_tf;
+
+  try {
+    wall_camera_tf = tf_buffer_.lookupTransform(wall_frame_,  camera_frame_, req.stamp);
+  }
+  catch (tf2::TransformException &ex) {
+    NODELET_WARN("[gp_nodelet] %s", ex.what());
+    return false;
+  }
+
   // Parse the input sets of measurements
   int n_meas = req.meas.size();  // number of sets of measurements
   vector<vector<float>> x_meas(n_meas), y_meas(n_meas), z_meas(n_meas);
@@ -250,7 +261,7 @@ bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
     vector<float> x = req.meas[k].x;
     vector<float> y = req.meas[k].y;
     vector<float> z = req.meas[k].z;
-    transform_points(x, y, z, x_meas[k], y_meas[k], z_meas[k], wall_camera_tf_);
+    transform_points(x, y, z, x_meas[k], y_meas[k], z_meas[k], wall_camera_tf);
 
     values[k] = req.meas[k].value;
     distances[k] = req.meas[k].distance;
