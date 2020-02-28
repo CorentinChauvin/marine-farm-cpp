@@ -78,6 +78,7 @@ void PlanningNodelet::onInit()
   private_nh_.param<bool>("vert_motion", vert_motion_, true);
   private_nh_.param<bool>("mult_lattices", mult_lattices_, true);
   private_nh_.param<int>("nbr_lattices", nbr_lattices_, 1);
+  private_nh_.param<bool>("replan", replan_, false);
   private_nh_.param<bool>("cart_lattice", cart_lattice_, false);
   private_nh_.param<float>("plan_speed", plan_speed_, 1.0);
   private_nh_.param<float>("plan_horizon", plan_horizon_, 1.0);
@@ -117,6 +118,9 @@ void PlanningNodelet::onInit()
   z_hit_pt_sel_.resize(0);
   state_received_ = false;
   planner_enabled_ = true;
+  waypoints_.resize(0);
+  path_.poses.resize(0);
+  path_.header.frame_id = ocean_frame_;
 
 
   // ROS subscribers
@@ -149,8 +153,16 @@ void PlanningNodelet::main_cb(const ros::TimerEvent &timer_event)
     return;
 
   if (planner_enabled_ && state_received_ && get_tf()) {
+    // Check whether a plan has been determined for the full wall
+    // if (!replan_) {
+    //   bool plan_needed = check_planning_needed();
+    //
+    //   if (!plan_needed)
+    //     return;
+    // }
+
     clock_t start = clock();
-    cout << "=== Starting plannning... ===" << endl;
+    cout << "\n=== Starting plannning... ===" << endl;
 
     bool success = plan_trajectory();
 
@@ -254,15 +266,16 @@ void PlanningNodelet::pub_lattice_markers()
 
 bool PlanningNodelet::get_tf()
 {
-  geometry_msgs::TransformStamped t1, t2, t3, t4, t5, t6;
+  geometry_msgs::TransformStamped t1, t2, t3, t4, t5, t6, t7;
 
   try {
-    t1 = tf_buffer_.lookupTransform(wall_frame_,  robot_frame_, ros::Time(0));
-    t2 = tf_buffer_.lookupTransform(ocean_frame_, robot_frame_, ros::Time(0));
-    t3 = tf_buffer_.lookupTransform(robot_frame_, ocean_frame_, ros::Time(0));
-    t4 = tf_buffer_.lookupTransform(ocean_frame_, wall_frame_,  ros::Time(0));
-    t5 = tf_buffer_.lookupTransform(wall_frame_, ocean_frame_,  ros::Time(0));
-    t6 = tf_buffer_.lookupTransform(ocean_frame_, camera_frame_,  ros::Time(0));
+    t1 = tf_buffer_.lookupTransform(wall_frame_,  robot_frame_,  ros::Time(0));
+    t2 = tf_buffer_.lookupTransform(robot_frame_, wall_frame_,   ros::Time(0));
+    t3 = tf_buffer_.lookupTransform(ocean_frame_, robot_frame_,  ros::Time(0));
+    t4 = tf_buffer_.lookupTransform(robot_frame_, ocean_frame_,  ros::Time(0));
+    t5 = tf_buffer_.lookupTransform(ocean_frame_, wall_frame_,   ros::Time(0));
+    t6 = tf_buffer_.lookupTransform(wall_frame_,  ocean_frame_,  ros::Time(0));
+    t7 = tf_buffer_.lookupTransform(ocean_frame_, camera_frame_, ros::Time(0));
   }
   catch (tf2::TransformException &ex) {
     NODELET_WARN("[planning_nodelet] %s", ex.what());
@@ -270,11 +283,12 @@ bool PlanningNodelet::get_tf()
   }
 
   wall_robot_tf_   = t1;
-  ocean_robot_tf_  = t2;
-  robot_ocean_tf_  = t3;
-  ocean_wall_tf_   = t4;
-  wall_ocean_tf_   = t5;
-  ocean_camera_tf_ = t6;
+  robot_wall_tf_   = t2;
+  ocean_robot_tf_  = t3;
+  robot_ocean_tf_  = t4;
+  ocean_wall_tf_   = t5;
+  wall_ocean_tf_   = t6;
+  ocean_camera_tf_ = t7;
   return true;
 }
 
@@ -304,6 +318,10 @@ bool PlanningNodelet::disable_cb(
 {
   ROS_INFO("[planning_nodelet] Planner disabled");
   planner_enabled_ = false;
+
+  path_.poses.resize(0);
+  waypoints_.resize(0);
+
   return true;
 }
 

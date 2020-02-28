@@ -248,18 +248,18 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.0886950493
-        Y: -0.89620024
+        X: -0.00671634078
+        Y: -0.760614932
         Z: -2.38418579e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.269798577
+      Pitch: 0.294798523
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 4.7185936
+      Yaw: 3.71358132
     Saved: ~
 Window Geometry:
   Displays:

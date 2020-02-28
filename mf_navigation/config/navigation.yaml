@@ -1,5 +1,5 @@
 planning_nodelet:
-  main_freq: 0.2
+  main_freq: 0.5
   ocean_frame: "ocean"
   wall_frame: "wall"
   robot_frame: "base_link"
@@ -10,6 +10,7 @@ planning_nodelet:
   vert_motion: true      # whether to allow motion in the vertical plane
   mult_lattices: true    # whether to use multi-lattices planning
   nbr_lattices: 4        # number of lattices for multi-lattices planning
+  replan: false          # whether to replan from the current robot pose, or to plan from the last planned pose
   cart_lattice: false    # whether to create a cartesian lattice, or use motion model instead
   plan_speed: 0.5        # planned speed (m/s) of the robot
   plan_horizon: 1.0      # horizon (m) of the planning (for each lattice)

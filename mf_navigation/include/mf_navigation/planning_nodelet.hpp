@@ -68,6 +68,7 @@ class PlanningNodelet: public nodelet::Nodelet {
     RobotModel::state_type state_;  ///<  State of the robot (in ocean frame)
     bool state_received_;           ///<  Whether the state of the robot has been received
     geometry_msgs::TransformStamped wall_robot_tf_;    ///<  Transform from wall to robot frames
+    geometry_msgs::TransformStamped robot_wall_tf_;    ///<  Transform from robot to wall frames
     geometry_msgs::TransformStamped ocean_robot_tf_;   ///<  Transform from ocean to robot frames
     geometry_msgs::TransformStamped robot_ocean_tf_;   ///<  Transform from robot to ocean frames
     geometry_msgs::TransformStamped ocean_wall_tf_;    ///<  Transform from ocean to wall frames
@@ -80,7 +81,8 @@ class PlanningNodelet: public nodelet::Nodelet {
     std::vector<float> z_hit_pt_sel_;  ///<  Z coordinates of the hit points for the selected viewpoint (in ocean frame)
     std::vector<float> last_gp_mean_;              ///<  Last mean of the Gaussian Process
     std::vector<std::vector<float>> last_gp_cov_;  ///<  Last covariance of the Gaussian Process
-    nav_msgs::Path path_;   ///<  Path to follow
+    std::vector<geometry_msgs::Pose> waypoints_;   ///<  Waypoints to follow
+    nav_msgs::Path path_;                          ///<  Interpolated path between the waypoints
 
     /// \name  General ROS parameters
     ///@{
@@ -99,6 +101,7 @@ class PlanningNodelet: public nodelet::Nodelet {
     bool horiz_motion_;    ///<  Whether to allow motion in the horizontal plane
     bool vert_motion_;     ///<  Whether to allow motion in the vertical plane
     bool mult_lattices_;   ///<  Whether to use multi-lattices planning
+    bool replan_;          ///<  Whether to replan from the current robot pose, or to plan from the last planned pose
     int nbr_lattices_;     ///<  Number of lattices for multi-lattices planning
     bool cart_lattice_;    ///<  Whether to create a cartesian lattice, or use motion model instead
     float plan_speed_;     ///<  Planned speed (m/s) of the robot
@@ -217,11 +220,11 @@ class PlanningNodelet: public nodelet::Nodelet {
     /**
      * \brief  Generates several lattices along the wall
      *
-     * \todo TODO
+     * The lattices are simple cartesian grids along the wall. The viewpoints are
+     * expressed in robot frame.
      *
-     * \param[in]  init_state
-     * \param[out] lattices  Lattices of viewpoints (assumed to be already sized)
-     * \param[out]
+     * \param[in]  init_state   State at beginning of planning
+     * \param[out] lattices     Lattices of viewpoints (assumed to be already sized)
      */
     void generate_lattices(
       const RobotModel::state_type &init_state,
@@ -234,13 +237,55 @@ class PlanningNodelet: public nodelet::Nodelet {
      * Bounds are on the position with respect to the wall and the pitch angle.
      * Waypoints going backwards are also discarded.
      *
-     * \warning  The input lattice won't be usable anymore (unique pointers losing
+     * \warning  The input lattice won't be usable anymore (pointers losing
      *           ownership)
      *
      * \param[int] lattice_in   Lattice to filter
      * \param[out] lattice_out  Filtered lattice
      */
     void filter_lattice(Lattice &lattice_in, Lattice &lattice_out);
+
+    /**
+     * \brief  Apply a TF transform to all nodes of a set of lattices
+     */
+    void transform_lattices(
+      std::vector<Lattice> &lattices,
+      const geometry_msgs::TransformStamped &transform
+    );
+
+    /**
+     * \brief  Adds a node given by its state to a lattice
+     *
+     * \param[in]     state           State of the node (in ocean frame)
+     * \param[in]     frame_ocean_tf  Transform between "frame" and "ocean" frames
+     * \param[in,out] lattice         Lattice with an added node transformed in "frame" frame
+     */
+     void add_node(
+       const RobotModel::state_type &state,
+       const geometry_msgs::TransformStamped &frame_ocean_tf,
+       Lattice &lattice
+     );
+
+    /**
+     * \brief  Connects lattices and removes viewpoints not dynamically reachable
+     *
+     * Propagates the motion model from all the viewpoints to determine which
+     * viewpoints are reachable in the next lattice. Viewpoints not reachable
+     * from any viewpoint of the previous lattice (or from the initial state)
+     * are removed.
+     *
+     * \warning  The input lattice won't be usable anymore (pointers losing
+     *           ownership)
+     *
+     * \param[in] init_state    Initial state of the robot
+     * \param[in] lattices_in   Input lattices
+     * \param[out] lattices_out  Output lattices
+     */
+    void connect_lattices(
+      const RobotModel::state_type &init_state,
+      std::vector<Lattice> &lattices_in,
+      std::vector<Lattice> &lattices_out
+    );
 
     /**
      * \brief  Computes the diagonal of the covariance for each viewpoint of the lattice
@@ -280,6 +325,32 @@ class PlanningNodelet: public nodelet::Nodelet {
       LatticeNode *node,
       float &info_gain,
       std::vector<LatticeNode*> &selected_vp
+    );
+
+    /**
+     * \brief  Fills display objects
+     *
+     * \param[in] lattices     Lattices of viewpoints
+     * \param[in] selected_vp  Selected viewpoints
+     */
+    void fill_display_obj(
+      const std::vector<Lattice> &lattices,
+      const std::vector<LatticeNode*> &selected_vp
+    );
+
+    /**
+     * \brief  Generates a spline trajectory between the selected points
+     *
+     * Everything is in ocean frame.
+     *
+     * \param[in]  selected_vp  Selected viewpoints
+     * \param[out] new_path     New path to append to the previous one
+     * \param[out] waypoints    New waypoints to append to the previous ones
+     */
+    void generate_path(
+      const std::vector<geometry_msgs::Pose> &selected_vp,
+      nav_msgs::Path &path,
+      std::vector<geometry_msgs::Pose> &waypoints
     );
 
 

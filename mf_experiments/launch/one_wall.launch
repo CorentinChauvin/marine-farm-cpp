@@ -27,7 +27,7 @@
 
   <!-- Static transforms -->
   <node pkg="tf2_ros" type="static_transform_publisher" name="tf_world_ocean" args="0 0 0 0 0 3.14159265359 world ocean" />
-  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_world_wall" args="0 0 -2.1 0 1.5707963267948966 0 world wall" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_world_wall"  args="0 0 -2.1 0 1.5707963267948966 0 world wall" />
   <node pkg="tf2_ros" type="static_transform_publisher" name="tf_base_camera" args="0 0 0 0 0 1.5707963267948966 base_link camera" />
 
   <!-- Simulation -->
@@ -56,7 +56,8 @@
   <group ns="nav">
     <!-- launch-prefix="gdb -ex run - -args" -->
     <!-- launch-prefix="valgrind - -tool=memcheck - -leak-check=yes - -track-origins=yes - -log-file=/tmp/TEST4.log"  -->
-    <node pkg="nodelet" type="nodelet" args="manager" name="nav_nodelet_manager" output="screen" />
+    <node
+      pkg="nodelet" type="nodelet" args="manager" name="nav_nodelet_manager" output="screen" />
 
     <!-- Mapping -->
     <node pkg="nodelet" type="nodelet" args="load mf_mapping/GPNodelet nav_nodelet_manager"

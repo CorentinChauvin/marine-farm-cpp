@@ -9,6 +9,8 @@
 #ifndef ROBOT_MODEL_HPP
 #define ROBOT_MODEL_HPP
 
+#include "mf_common/common.hpp"
+#include <geometry_msgs/Pose.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <eigen3/Eigen/Dense>
 #include <vector>
@@ -261,7 +263,29 @@ inline double RobotModel::sign(double x) const
   return (double) (x >= 0);
 }
 
+/**
+ * \brief  Converts a pose into a state message
+ *
+ * The first 6 components will be filled with the pose (x, y, z, roll, pitch,
+ * yaw). The other components of the state will be filled with zeros.
+ *
+ * \param[in] pose        Pose to convert
+ * \param[in] state_size  Size of the state
+ * \return  Converted state
+ */
+inline RobotModel::state_type to_state(
+  const geometry_msgs::Pose &pose,
+  int state_size)
+{
+  RobotModel::state_type state(state_size, 0);
 
+  state[0] = pose.position.x;
+  state[1] = pose.position.y;
+  state[2] = pose.position.z;
+  to_euler(pose.orientation, state[3], state[4], state[5]);
+
+  return state;
+}
 
 
 }  // namespace mfcpp

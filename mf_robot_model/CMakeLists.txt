@@ -15,13 +15,14 @@ set(ROS_BUILD_TYPE Release)
 ########################
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  mf_common
 )
 
 find_package(Eigen3 REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp
+  CATKIN_DEPENDS roscpp mf_common
   LIBRARIES mf_robot_model
 )
 
