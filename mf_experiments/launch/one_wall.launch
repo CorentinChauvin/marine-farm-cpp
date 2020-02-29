@@ -68,6 +68,7 @@
     <!-- Planning -->
     <node pkg="nodelet" type="nodelet" args="load mf_navigation/PlanningNodelet nav_nodelet_manager"
       name="planning_nodelet" output="screen" if="$(arg path_planning)" >
+      <remap from="~length_wall" to="/nav/gp_nodelet/size_wall_y" />
       <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
       <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />
 

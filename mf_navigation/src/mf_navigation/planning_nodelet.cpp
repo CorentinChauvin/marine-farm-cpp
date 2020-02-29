@@ -16,6 +16,7 @@
 #include "mf_common/Float32Array.h"
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/PoseArray.h>
+#include <geometry_msgs/Point.h>
 #include <visualization_msgs/Marker.h>
 #include <std_srvs/Empty.h>
 #include <pluginlib/class_list_macros.h>
@@ -71,6 +72,7 @@ void PlanningNodelet::onInit()
   private_nh_.param<string>("robot_frame", robot_frame_, "base_link");
   private_nh_.param<string>("camera_frame", camera_frame_, "camera");
 
+  private_nh_.param<float>("length_wall", length_wall_, 1.0);
   private_nh_.param<vector<double>>("model_constants", model_csts, vector<double>(11, 0.0));
   private_nh_.param<vector<double>>("bnd_input", bnd_input, vector<double>(4, 0.0));
 
@@ -154,12 +156,12 @@ void PlanningNodelet::main_cb(const ros::TimerEvent &timer_event)
 
   if (planner_enabled_ && state_received_ && get_tf()) {
     // Check whether a plan has been determined for the full wall
-    // if (!replan_) {
-    //   bool plan_needed = check_planning_needed();
-    //
-    //   if (!plan_needed)
-    //     return;
-    // }
+    if (!replan_) {
+      bool plan_needed = check_planning_needed();
+
+      if (!plan_needed)
+        return;
+    }
 
     clock_t start = clock();
     cout << "\n=== Starting plannning... ===" << endl;
@@ -182,6 +184,25 @@ void PlanningNodelet::sigint_handler(int s)
   main_timer_.stop();
 
   raise(SIGTERM);
+}
+
+bool PlanningNodelet::check_planning_needed()
+{
+  // Get position of last planned waypoint in wall frame
+  if (waypoints_.size() == 0)
+    return true;
+
+  geometry_msgs::Point pos_wall;
+  geometry_msgs::Point pos_ocean = waypoints_.back().position;
+  tf2::doTransform(pos_ocean, pos_wall, wall_ocean_tf_);
+
+  // Check whether the position is after the end of the wall
+  if ((pos_wall.z > 0 && pos_wall.y >= length_wall_) || (pos_wall.z < 0 && pos_wall.y <= 0))
+  {
+    return false;
+  } else {
+    return true;
+  }
 }
 
 

@@ -9,13 +9,13 @@ planning_nodelet:
   horiz_motion: true     # whether to allow motion in the horizontal plane
   vert_motion: true      # whether to allow motion in the vertical plane
   mult_lattices: true    # whether to use multi-lattices planning
-  nbr_lattices: 4        # number of lattices for multi-lattices planning
+  nbr_lattices: 3        # number of lattices for multi-lattices planning
   replan: false          # whether to replan from the current robot pose, or to plan from the last planned pose
   cart_lattice: false    # whether to create a cartesian lattice, or use motion model instead
   plan_speed: 0.5        # planned speed (m/s) of the robot
-  plan_horizon: 1.0      # horizon (m) of the planning (for each lattice)
-  lattice_size_horiz: 4  # size of the lattice in the horizontal direction (half size when single-lattice planning)
-  lattice_size_vert: 4   # size of the lattice in the vertical direction (half size when single-lattice planning)
+  plan_horizon: 1.5      # horizon (m) of the planning (for each lattice)
+  lattice_size_horiz: 6  # size of the lattice in the horizontal direction (half size when single-lattice planning)
+  lattice_size_vert: 6   # size of the lattice in the vertical direction (half size when single-lattice planning)
   wall_orientation: 1.5707963  # orientation of the algae wall (absolute value)
   lattice_res: 0.4       # resolution (m) of the waypoints lattice (for cartesian lattice)
   bnd_wall_dist: [0.5, 1.5]  # bounds on the distance to the wall for waypoint selection

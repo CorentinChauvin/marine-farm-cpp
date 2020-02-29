@@ -81,8 +81,8 @@ class PlanningNodelet: public nodelet::Nodelet {
     std::vector<float> z_hit_pt_sel_;  ///<  Z coordinates of the hit points for the selected viewpoint (in ocean frame)
     std::vector<float> last_gp_mean_;              ///<  Last mean of the Gaussian Process
     std::vector<std::vector<float>> last_gp_cov_;  ///<  Last covariance of the Gaussian Process
-    std::vector<geometry_msgs::Pose> waypoints_;   ///<  Waypoints to follow
-    nav_msgs::Path path_;                          ///<  Interpolated path between the waypoints
+    std::vector<geometry_msgs::Pose> waypoints_;   ///<  Waypoints to follow (in ocean frame)
+    nav_msgs::Path path_;                          ///<  Interpolated path between the waypoints (in ocean frame)
 
     /// \name  General ROS parameters
     ///@{
@@ -91,6 +91,7 @@ class PlanningNodelet: public nodelet::Nodelet {
     std::string wall_frame_;    ///<  Wall frame
     std::string robot_frame_;   ///<  Robot frame
     std::string camera_frame_;  ///<  Camera frame
+    float length_wall_;         ///<  Length of the algae wall
     ///@}
 
     /// \name  ROS parameters for lattice of viewpoint generation
@@ -140,6 +141,16 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \brief  SINGINT (Ctrl+C) callback to stop the nodelet properly
      */
     static void sigint_handler(int s);
+
+    /**
+     * \brief  Checks whether planning is needed or not
+     *
+     * If the last planned waypoint is at the end of the wall, it is not
+     * required to plan more.
+     *
+     * \return  Whether to plan more
+     */
+    bool check_planning_needed();
 
     /**
      * \brief  Converts a 2D std vector to a custom ROS array
