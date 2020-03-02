@@ -45,7 +45,7 @@ simu:
   #
   robot_simulator:
     # Model parameters
-    init_state: [1.0, -0.0, 2.8,  # x, y, z (position)
+    init_state: [1.0, 1.0, 2.8,  # x, y, z (position)
                  0, 0, -1.5707963,  # phi, theta, psi (orientation)
                  0, 0, 0,  # u, v, w (linear speed)
                  0, 0, 0,  # p, q, r (angular speed)

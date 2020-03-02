@@ -578,7 +578,11 @@ void PlanningNodelet::compute_info_gain(Lattice &lattice)
 
     for (int l = 0; l < size_gp; l++) {
       float cov_diff = last_gp_cov_[l][l] - lattice.nodes[k]->gp_cov[l];
-      float weight = 100 * (1/(1 + exp(-gp_weight_*(last_gp_mean_[l] - 0.5))));
+
+      float weight = 0.0;
+      if (last_gp_mean_[l] > gp_threshold_)
+        weight = 100;
+
       lattice.nodes[k]->info_gain += weight * cov_diff;
     }
   }

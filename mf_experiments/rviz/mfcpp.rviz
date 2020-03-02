@@ -9,7 +9,7 @@ Panels:
         - /Odometry1/Shape1
         - /CameraFOV1/Namespaces1
       Splitter Ratio: 0.5
-    Tree Height: 437
+    Tree Height: 868
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -248,18 +248,18 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.00671634078
-        Y: -0.760614932
-        Z: -2.38418579e-07
+        X: -1.41810858
+        Y: -0.658735752
+        Z: -4.76837158e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.294798523
+      Pitch: 0.119798675
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 3.71358132
+      Yaw: 3.56858253
     Saved: ~
 Window Geometry:
   Displays:

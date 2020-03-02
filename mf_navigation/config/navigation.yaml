@@ -4,6 +4,7 @@ planning_nodelet:
   wall_frame: "wall"
   robot_frame: "base_link"
   camera_frame: "camera"
+  initially_disabled: false  # whether to disable the planner at the beginning
 
   # Lattice of viewpoint generation
   horiz_motion: true     # whether to allow motion in the horizontal plane
@@ -23,9 +24,9 @@ planning_nodelet:
   bnd_pitch: 60.0            # bound on pitch angle (in degree)
 
   # Viewpoint selection
-  camera_height: -1  # number of pixels of the camera along height (-1 for actual camera size)
-  camera_width:  -1  # number of pixels of the camera along width  (-1 for actual camera size)
-  gp_weight: 100     # weight attributed to the Gaussian Process values in viewpoint selection
+  camera_height: 5   # number of pixels of the camera along height (-1 for actual camera size)
+  camera_width:  10  # number of pixels of the camera along width  (-1 for actual camera size)
+  gp_threshold: 0.8  # threshold to consider a GP component in information gain computation
 
   # Path generation
   linear_path: false     # whether to create a linear path, or a spline one
@@ -38,6 +39,7 @@ planning_logic:
   wp_file_name: 'resources/wp.txt'  # path to the file containing the transition waypoints
   transition_file_name: 'resources/transition.txt'  # path to the file containing the points delimiting the transitions
   plan_res: 0.1                     # spatial resolution (m) of the transition path
+  initially_disabled: false         # whether to disable the planner at the beginning
 
 
 cart_control_nodelet:

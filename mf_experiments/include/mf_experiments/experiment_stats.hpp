@@ -77,10 +77,10 @@ class ExperimentStatsNode {
 
     /// \name  ROS parameters
     ///@{
-    float main_freq_;   ///<  Frequency of the main loop
-    float gp_weight_;   ///<  Weight attributed to the Gaussian Process values in viewpoint selection
-    bool save_gp_;      ///<  Whether to save the Gaussian Process at the end
-    bool load_gp_;      ///<  Whether to load the Gaussian Process at the beginning
+    float main_freq_;     ///<  Frequency of the main loop
+    float gp_threshold_;  ///<  Threshold to consider a GP component in information gain computation
+    bool save_gp_;        ///<  Whether to save the Gaussian Process at the end
+    bool load_gp_;        ///<  Whether to load the Gaussian Process at the beginning
     std::string gp_file_name_;  ///<  Name/path of the file where to save the GP
     ///@}
 

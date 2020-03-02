@@ -118,9 +118,9 @@ class PlanningNodelet: public nodelet::Nodelet {
 
     /// \name  ROS parameters for viewpoint selection
     ///@{
-    int camera_height_;  ///<  Number of pixels of the camera along height (-1 for actual camera size)
-    int camera_width_;   ///<  Number of pixels of the camera along width  (-1 for actual camera size)
-    float gp_weight_;    ///<  Weight attributed to the Gaussian Process values in viewpoint selection
+    int camera_height_;   ///<  Number of pixels of the camera along height (-1 for actual camera size)
+    int camera_width_;    ///<  Number of pixels of the camera along width  (-1 for actual camera size)
+    float gp_threshold_;  ///<  Threshold to consider a GP component in information gain computation
     ///@}
 
     /// \name  ROS parameters for path generation

@@ -51,13 +51,15 @@ void PlanningLogic::init_node()
   string path_frame;    //  frame in which the path is expressed
   string wp_file_name;  // relative path of the file containing the waypoints
   string transition_file_name;  // relative path of the file containing the points delimiting the transitions
-  float plan_res;       // spatial resolution (m) of the planned trajectory
+  float plan_res;               // spatial resolution (m) of the planned trajectory
+  bool initially_disabled;      // whether to disable the planner at the beginning
 
   nh_.param<float>("main_freq", main_freq_, 1.0);
   nh_.param<string>("path_frame", path_frame, "ocean");
   nh_.param<string>("wp_file_name", wp_file_name, "resources/path.txt");
   nh_.param<string>("transition_file_name", transition_file_name, "resources/transition.txt");
   nh_.param<float>("plan_res", plan_res, 1.0);
+  nh_.param<bool>("initially_disabled", initially_disabled, false);
 
   // Other variables
   transition_ = false;
@@ -68,6 +70,13 @@ void PlanningLogic::init_node()
   path_.header.frame_id = path_frame;
   load_path(wp_file_name, plan_res, path_);
   load_transition_pts(transition_file_name);
+
+  if (initially_disabled) {
+    transition_ = true;
+    transition_pts_.erase(transition_pts_.begin());
+  } else {
+    transition_ = false;
+  }
 
   // ROS subscribers
   odom_sub_ = nh_.subscribe<nav_msgs::Odometry>("odom", 1, &PlanningLogic::odom_cb, this);
@@ -116,6 +125,7 @@ void PlanningLogic::run_node()
       }
     }
 
+    // Publish the path if needed
     if (transition_) {
       path_.header.stamp = ros::Time::now();
       path_pub_.publish(path_);

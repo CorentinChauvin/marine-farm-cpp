@@ -63,14 +63,17 @@ void PlanningNodelet::onInit()
   sigaction(SIGINT, &sigIntHandler, NULL);
 
   // ROS parameters
-  vector<double> model_csts; // model constants
-  vector<double> bnd_input;  // boundaries on the input
+  vector<double> model_csts;  // model constants
+  vector<double> bnd_input;   // boundaries on the input
+  bool initially_disabled;    // whether to disable the planner at the beginning
+
 
   private_nh_.param<float>("main_freq", main_freq_, 1.0);
   private_nh_.param<string>("ocean_frame", ocean_frame_, "ocean");
   private_nh_.param<string>("wall_frame", wall_frame_, "wall");
   private_nh_.param<string>("robot_frame", robot_frame_, "base_link");
   private_nh_.param<string>("camera_frame", camera_frame_, "camera");
+  private_nh_.param<bool>("initially_disabled", initially_disabled, false);
 
   private_nh_.param<float>("length_wall", length_wall_, 1.0);
   private_nh_.param<vector<double>>("model_constants", model_csts, vector<double>(11, 0.0));
@@ -94,7 +97,7 @@ void PlanningNodelet::onInit()
 
   private_nh_.param<int>("camera_width", camera_width_, -1);
   private_nh_.param<int>("camera_height", camera_height_, -1);
-  private_nh_.param<float>("gp_weight", gp_weight_, 1.0);
+  private_nh_.param<float>("gp_threshold", gp_threshold_, 0.5);
 
   private_nh_.param<bool>("linear_path", linear_path_, false);
   private_nh_.param<float>("path_res", path_res_, 0.1);
@@ -119,7 +122,7 @@ void PlanningNodelet::onInit()
   y_hit_pt_sel_.resize(0);
   z_hit_pt_sel_.resize(0);
   state_received_ = false;
-  planner_enabled_ = true;
+  planner_enabled_ = !initially_disabled;
   waypoints_.resize(0);
   path_.poses.resize(0);
   path_.header.frame_id = ocean_frame_;

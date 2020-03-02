@@ -1,19 +1,20 @@
 <launch>
   <!-- Launchfile arguments -->
-  <arg name="rviz" value="true" />
-  <arg name="display_img_gp"  value="false" />
-  <arg name="display_cov_gp"  value="false" />
-  <arg name="display_diff_gp" value="false" />
+  <arg name="rviz"            value="true" />
+  <arg name="display_img_gp"  value="true" />
+  <arg name="display_cov_gp"  value="true" />
+  <arg name="display_diff_gp" value="true" />
 
-  <arg name="path_planning"   value="true" />
-  <arg name="back_forth_traj" value="false" />
+  <arg name="path_planning"              value="true" />
+  <arg name="back_forth_traj"            value="false" />
+  <arg name="planner_initially_disabled" value="false" />
   <arg name="mpc_control"     value="true" />
   <arg name="cart_control"    value="false" />
 
   <arg name="accelerate_time"   value="true" />
   <arg name="experiment_stats"  value="true" />
   <arg name="save_gp_mean" value="false" />
-  <arg name="load_gp_mean" value="false" />
+  <arg name="load_gp_mean" value="true" />
 
 
   <!-- ROS parameters -->
@@ -71,6 +72,7 @@
       <remap from="~length_wall" to="/nav/gp_nodelet/size_wall_y" />
       <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
       <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />
+      <param name="initially_disabled" value="$(arg planner_initially_disabled)" />
 
       <remap from="state" to="/simu/robot_simulator/state" />
       <remap from="raycast_multi" to="/simu/raycast_multi" />
@@ -81,6 +83,8 @@
       <remap from="~disable_planner" to="/nav/disable_planner" />
       <remap from="~odom" to="/simu/robot_simulator/odom" />
       <remap from="~path" to="/nav/path" />
+
+      <param name="initially_disabled" value="$(arg planner_initially_disabled)" />
     </node>
 
     <!-- Control -->
@@ -113,7 +117,7 @@
     </node>
 
     <node name="experiment_stats" type="experiment_stats" pkg="mf_experiments" output="screen" if="$(arg experiment_stats)">
-      <remap from="~gp_weight" to="/nav/planning_nodelet/gp_weight" />
+      <remap from="~gp_threshold" to="/nav/planning_nodelet/gp_threshold" />
       <param name="save_gp" value="$(arg save_gp_mean)" />
       <param name="load_gp" value="$(arg load_gp_mean)" />
 

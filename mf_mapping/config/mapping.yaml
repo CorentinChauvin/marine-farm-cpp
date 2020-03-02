@@ -14,7 +14,7 @@ gp_nodelet:
   gp_init_mean: 0.5     # initial mean values of the Gaussian Process
   gp_noise_var: 2.0     # noise variance of the Gaussian Process
   gp_cov_thresh: 0.001  # threshold to consider a value as 0 in the covariance
-  out_scale: 5.0        # exponential scale factor for the output
+  out_scale: 20.0       # exponential scale factor for the output
                         # (higher value implies sharper transition between 0 and 1)
 
 

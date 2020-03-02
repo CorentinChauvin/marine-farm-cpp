@@ -63,7 +63,7 @@ void ExperimentStatsNode::init_node()
 
   nh_.param<float>("main_freq", main_freq_, 1.0);
   nh_.param<string>("out_file_name", out_file_name, "/tmp/control_out.txt");
-  nh_.param<float>("gp_weight", gp_weight_, 1.0);
+  nh_.param<float>("gp_threshold", gp_threshold_, 0.5);
   nh_.param<bool>("save_gp", save_gp_, false);
   nh_.param<bool>("load_gp", load_gp_, false);
   nh_.param<string>("gp_file_name", gp_file_name_, "/tmp/gp_mean.txt");
@@ -145,7 +145,10 @@ void ExperimentStatsNode::run_node()
       for (int k = 0; k < size_gp; k++) {
         gp_cov_trace += gp_cov_[k];
 
-        float weight = 1/(1 + exp(-gp_weight_ * (gp_mean_[k] - 0.5)));
+        float weight = 0.0;
+        if (gp_mean_[k] > gp_threshold_)
+          weight = 1;
+
         information += weight * (init_gp_cov_[k] - gp_cov_[k]);
       }
 
