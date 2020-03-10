@@ -1,9 +1,9 @@
 <launch>
   <!-- Launchfile arguments -->
   <arg name="rviz"            value="true" />
-  <arg name="display_img_gp"  value="true" />
-  <arg name="display_cov_gp"  value="true" />
-  <arg name="display_diff_gp" value="true" />
+  <arg name="display_img_gp"  value="false" />
+  <arg name="display_cov_gp"  value="false" />
+  <arg name="display_diff_gp" value="false" />
 
   <arg name="path_planning"              value="true" />
   <arg name="back_forth_traj"            value="false" />
@@ -14,7 +14,7 @@
   <arg name="accelerate_time"   value="true" />
   <arg name="experiment_stats"  value="true" />
   <arg name="save_gp_mean" value="false" />
-  <arg name="load_gp_mean" value="true" />
+  <arg name="load_gp_mean" value="false" />
 
 
   <!-- ROS parameters -->

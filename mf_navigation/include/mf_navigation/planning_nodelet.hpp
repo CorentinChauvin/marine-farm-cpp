@@ -288,6 +288,9 @@ class PlanningNodelet: public nodelet::Nodelet {
      * \warning  The input lattice won't be usable anymore (pointers losing
      *           ownership)
      *
+     * \todo  Remove nodes of the first lattice that doesn't lead to the right
+     *        tree depth.
+     *
      * \param[in] init_state    Initial state of the robot
      * \param[in] lattices_in   Input lattices
      * \param[out] lattices_out  Output lattices

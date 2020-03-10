@@ -478,6 +478,9 @@ void PlanningNodelet::connect_lattices(
 
   // Transform the lattice back in robot frame
   transform_lattices(lattices_out, robot_wall_tf_);
+
+  // TODO: remove nodes of the first lattice that doesn't lead to the right tree depth
+  // ...
 }
 
 
