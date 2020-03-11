@@ -1,0 +1,31 @@
+\form#0:$ W = (C^{-1})_{obs} \mu_{obs} $
+\form#1:$ x_0 = x $
+\form#2:$ x_1 = y $
+\form#3:$ x_2 = z $
+\form#4:$ x_3 = \Phi $
+\form#5:$ x_4 = \theta $
+\form#6:$ x_5 = \psi $
+\form#7:$ x_6 = u $
+\form#8:$ x_7 = v $
+\form#9:$ x_8 = w $
+\form#10:$ x_9 = p $
+\form#11:$ x_{10} = q $
+\form#12:$ x_{11} = r $
+\form#13:$ x_{12} = \Delta m $
+\form#14:$ u_0 = n $
+\form#15:$ u_1 = \delta_r $
+\form#16:$ u_2 = \delta_e $
+\form#17:$ u_3 = P $
+\form#18:$ (x_0, u_0) $
+\form#19:$ (\Delta x, \Delta u) = (x-x_0, u-u_0) $
+\form#20:$ \dot{\Delta x} = A \Delta x + B \Delta u $
+\form#21:$ A_d = e^{dt.A} $
+\form#22:$ B_d = (\int_{0}^{dt} e^{s.A} ds) B $
+\form#23:$ (u, v) \in [-1, 1]^2 $
+\form#24:$ (x, y, z) $
+\form#25:$ x(u, v) = \alpha_0 + \alpha_1 u + \alpha_2 v + \alpha_3 u v $
+\form#26:$ y(u, v) = \beta_0 + \beta_1 u + \beta_2 v + \beta_3 u v $
+\form#27:$ z(u, v) = \gamma_0 + \gamma_1 u + \gamma_2 v + \gamma_3 u v $
+\form#28:$ \alpha $
+\form#29:$ \beta $
+\form#30:$ \gamma $

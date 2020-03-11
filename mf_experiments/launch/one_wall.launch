@@ -14,7 +14,7 @@
   <arg name="accelerate_time"   value="true" />
   <arg name="experiment_stats"  value="true" />
   <arg name="save_gp_mean" value="false" />
-  <arg name="load_gp_mean" value="false" />
+  <arg name="load_gp_mean" value="true" />
 
 
   <!-- ROS parameters -->

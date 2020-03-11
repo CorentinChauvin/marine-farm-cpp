@@ -1,0 +1,7 @@
+<map id="/home/corentin/thesis_ws/src/marine&#45;farm&#45;cpp/mf_navigation/src/mf_navigation/planning.cpp" name="/home/corentin/thesis_ws/src/marine&#45;farm&#45;cpp/mf_navigation/src/mf_navigation/planning.cpp">
+<area shape="rect" id="node2" href="$planning__nodelet_8hpp.html" title="Declaration of a nodelet for path plannning of an underwater robot surveying a marine farm..." alt="" coords="780,131,924,158"/>
+<area shape="rect" id="node3" href="$lattice_8hpp.html" title="Declaration of useful classes for planning with lattices. " alt="" coords="67,221,149,247"/>
+<area shape="rect" id="node7" href="$common_8hpp.html" title="Declaration of common functions. " alt="" coords="1149,303,1323,329"/>
+<area shape="rect" id="node27" href="$spline_8hpp.html" title="Declaration of a class for 3D spline interpolation. " alt="" coords="1849,221,2007,247"/>
+<area shape="rect" id="node6" href="$robot__model_8hpp.html" title="Declaration of physical underwater robot model. " alt="" coords="1377,213,1525,255"/>
+</map>

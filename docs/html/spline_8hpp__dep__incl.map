@@ -1,0 +1,7 @@
+<map id="/home/corentin/thesis_ws/src/marine&#45;farm&#45;cpp/mf_common/include/mf_common/spline.hpp" name="/home/corentin/thesis_ws/src/marine&#45;farm&#45;cpp/mf_common/include/mf_common/spline.hpp">
+<area shape="rect" id="node2" href="$spline_8cpp.html" title="Definition of a class for 3D spline interpolation. " alt="" coords="5,131,201,202"/>
+<area shape="rect" id="node3" href="$experiment__stats_8cpp.html" title="Definition of a node to generate a fake trajectory and evaluate the performance of the control..." alt="" coords="226,124,394,209"/>
+<area shape="rect" id="node4" href="$traj__publisher_8cpp.html" title="Definition of a node to generate hard&#45;coded trajectories. " alt="" coords="419,131,625,202"/>
+<area shape="rect" id="node5" href="$planning_8cpp.html" title="Definition of path planning functions. " alt="" coords="649,131,864,202"/>
+<area shape="rect" id="node6" href="$planning__logic_8cpp.html" title="Definition of a base class node managing high level planning logic. " alt="" coords="888,131,1103,202"/>
+</map>

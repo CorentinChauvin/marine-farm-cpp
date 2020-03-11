@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node2" href="$classmfcpp_1_1_camera_nodelet.html" title="Nodelet for a simulated camera. " alt="" coords="131,5,288,32"/>
+<area shape="rect" id="node3" href="$classmfcpp_1_1_cart_control_nodelet.html" title="Nodelet for cheated cartesian control of a robot. " alt="" coords="120,56,299,83"/>
+<area shape="rect" id="node4" href="$classmfcpp_1_1_farm_nodelet.html" title="Nodelet class for farm simulation. " alt="" coords="139,107,280,133"/>
+<area shape="rect" id="node5" href="$classmfcpp_1_1_g_p_nodelet.html" title="Nodelet for a Gaussian Process mapping an algae wall. " alt="" coords="144,157,275,184"/>
+<area shape="rect" id="node6" href="$classmfcpp_1_1_planning_nodelet.html" title="Nodelet for path planning of an underwater robot surveying a marine farm. " alt="" coords="129,208,290,235"/>
+</map>

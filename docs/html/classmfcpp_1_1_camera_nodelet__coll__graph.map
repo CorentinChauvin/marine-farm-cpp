@@ -1,0 +1,4 @@
+<map id="mfcpp::CameraNodelet" name="mfcpp::CameraNodelet">
+<area shape="rect" id="node3" href="$classmfcpp_1_1_camera_nodelet_1_1_overlap_callback.html" title="Callback class for overlap detection. " alt="" coords="496,169,653,210"/>
+<area shape="rect" id="node6" href="$classmfcpp_1_1_camera_nodelet_1_1_raycast_callback.html" title="Callback class for raycasting. " alt="" coords="496,33,653,74"/>
+</map>
