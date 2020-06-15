@@ -28,6 +28,7 @@
   <!-- Controller -->
   <group ns="nav">
     <node name="mpc_node" type="mpc_node" pkg="mf_navigation" output="screen">
+      <!-- launch-prefix="gdb -ex run - -args"> -->
       <remap from="~model_constants" to="/simu/robot_simulator/model_constants" />
       <remap from="~bnd_delta_m" to="/simu/robot_simulator/bnd_delta_m" />
       <remap from="~bnd_input" to="/simu/robot_simulator/bnd_input" />

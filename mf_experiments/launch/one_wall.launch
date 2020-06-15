@@ -1,20 +1,24 @@
 <launch>
   <!-- Launchfile arguments -->
-  <arg name="rviz"            value="true" />
-  <arg name="display_img_gp"  value="false" />
-  <arg name="display_cov_gp"  value="false" />
-  <arg name="display_diff_gp" value="false" />
+  <arg name="rviz"            default="true" />
+  <arg name="display_img_gp"  default="false" />
+  <arg name="display_cov_gp"  default="false" />
+  <arg name="display_diff_gp" default="false" />
 
-  <arg name="path_planning"              value="true" />
-  <arg name="back_forth_traj"            value="false" />
-  <arg name="planner_initially_disabled" value="false" />
-  <arg name="mpc_control"     value="true" />
-  <arg name="cart_control"    value="false" />
+  <arg name="path_planning"              default="true" />
+  <arg name="back_forth_traj"            default="false" />
+  <arg name="sinusoidal_traj"            default="false" />
+  <arg name="planner_initially_disabled" default="false" />
+  <arg name="mpc_control"     default="true" />
+  <arg name="cart_control"    default="false" />
 
-  <arg name="accelerate_time"   value="true" />
-  <arg name="experiment_stats"  value="true" />
-  <arg name="save_gp_mean" value="false" />
-  <arg name="load_gp_mean" value="true" />
+  <arg name="accelerate_time"   default="true" />
+  <arg name="experiment_stats"  default="true" />
+  <arg name="exp_out_file_name" default="/tmp/one_wall_out.txt" />
+  <arg name="save_gp_mean" default="false" />
+  <arg name="load_gp_mean" default="false" />
+
+  <arg name="random_seed" default="1" />
 
 
   <!-- ROS parameters -->
@@ -39,7 +43,9 @@
 
     <!-- Farm simulator -->
     <node pkg="nodelet" type="nodelet" args="load mf_farm_simulator/FarmNodelet simu_nodelet_manager"
-      name="farm_nodelet" output="screen" />
+      name="farm_nodelet" output="screen">
+      <param name="random_seed" value="$(arg random_seed)" />
+    </node>
 
     <!-- Sensors simulator -->
     <node pkg="nodelet" type="nodelet" args="load mf_sensors_simulator/CameraNodelet simu_nodelet_manager"
@@ -112,14 +118,19 @@
 
   <!-- Experimentation tools -->
   <group ns="experiments">
-    <node name="traj_publisher" type="traj_publisher" pkg="mf_experiments" output="screen" if="$(arg back_forth_traj)">
+    <node name="traj_publisher" type="traj_publisher" pkg="mf_experiments" output="screen" if="$(eval back_forth_traj or sinusoidal_traj)">
       <remap from="~path" to="/nav/path" />
+
+      <param name="wp_file_name" value="resources/back_forth_wp.txt" if="$(arg back_forth_traj)" />
+      <param name="wp_file_name" value="resources/sinusoidal_wp.txt" if="$(arg sinusoidal_traj)" />
     </node>
 
-    <node name="experiment_stats" type="experiment_stats" pkg="mf_experiments" output="screen" if="$(arg experiment_stats)">
+    <node name="experiment_stats" type="experiment_stats" pkg="mf_experiments" output="screen" if="$(arg experiment_stats)"
+      required="true">
       <remap from="~gp_threshold" to="/nav/planning_nodelet/gp_threshold" />
       <param name="save_gp" value="$(arg save_gp_mean)" />
       <param name="load_gp" value="$(arg load_gp_mean)" />
+      <param name="out_file_name" value="$(arg exp_out_file_name)" />
 
       <remap from="~odom" to="/simu/robot_simulator/odom" />
       <remap from="~path" to="/nav/path" />

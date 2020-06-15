@@ -16,6 +16,7 @@
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/Pose.h>
+#include <tf2_ros/transform_listener.h>
 #include <ros/ros.h>
 #include <fstream>
 #include <string>
@@ -57,6 +58,8 @@ class ExperimentStatsNode {
     ros::Publisher error_pub_;     ///<  Publisher for the tracking error
     ros::Publisher diff_img_pub_;  ///<  Publisher for the image of the difference between the mapped GP and the algae heatmap
     ros::ServiceClient load_gp_client_;  ///<  Service client for loading the GP
+    tf2_ros::Buffer tf_buffer_;               ///<  Buffer for tf2
+    tf2_ros::TransformListener tf_listener_;  ///<  Transform listener for tf2
 
     nav_msgs::Odometry odom_;     ///<  Last odometry message received
     nav_msgs::Path path_;         ///<  Reference path to follow
@@ -71,6 +74,7 @@ class ExperimentStatsNode {
     bool gp_cov_received_;    ///<  Whether the covariance of the GP has been received
     bool gp_eval_received_;   ///<  Whether the evaluated GP has been received
     bool algae_received_;     ///<  Whether the farm algae have been received
+    float moved_distance_;    ///<  Distance moved by the robot since the start
 
     double start_time_;       ///<  Start time of the test
     std::ofstream out_file_;  ///<  Output CSV file containg data of the experiment
@@ -158,6 +162,8 @@ class ExperimentStatsNode {
 
     /**
      * \brief  Callback for odometry
+     *
+     * Increments distance moved by the robot
      */
     void odom_cb(const nav_msgs::Odometry msg);
 

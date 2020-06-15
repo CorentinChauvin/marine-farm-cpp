@@ -81,7 +81,7 @@ Parameter name | Meaning
 ## Configuration files
 <a name="Configuration-files"></a>
 
-The different modules if the pipeline can be configured through several configuration files:
+The different modules of the pipeline can be configured through several configuration files:
 
 File name | Configuration
 --------- | -------------
@@ -104,4 +104,14 @@ The main part of the software is released under the open source license <a href=
 ## Read more
 <a name="Read-more"></a>
 
-More information about the method and the software can be found in the related Master's Thesis published here: http://www.diva-portal.org/.
+More information about the method and the software can be found in the related Master's Thesis published <a href="http://kth.diva-portal.org/smash/record.jsf?pid=diva2%3A1438452&dswid=8330">here</a>.
+
+Citing:
+```
+@mastersthesis{mastersthesis,
+  author = {Corentin Chauvin-Hameau},
+  title  = {Informative path planning for algae farm surveying},
+  school = {KTH, School of Electrical Engineering and Computer Science (EECS)},
+  year   = 2020
+}
+```

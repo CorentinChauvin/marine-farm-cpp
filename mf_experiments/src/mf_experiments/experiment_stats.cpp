@@ -1,8 +1,7 @@
 /**
  * @file
  *
- * \brief  Definition of a node to generate a fake trajectory and evaluate the
- *         performance of the control.
+ * \brief  Definition of a node to measure statistics about the one wall experiment
  * \author Corentin Chauvin-Hameau
  * \date   2020
  */
@@ -44,7 +43,8 @@ namespace mfcpp {
 
 
 ExperimentStatsNode::ExperimentStatsNode():
-  nh_("~")
+  nh_("~"),
+  tf_listener_(tf_buffer_)
 {
  init_node();
 }
@@ -75,10 +75,11 @@ void ExperimentStatsNode::init_node()
   gp_eval_received_ = false;
   algae_received_ = false;
   start_time_ = ros::Time::now().toSec();
+  moved_distance_ = 0;
 
   out_file_.open(out_file_name);
   if (out_file_.is_open())
-    out_file_ << "t, x, y, z, x_ref, y_ref, z_ref, pos_err, orient_err, gp_cov_trace, gp_diff_norm" << endl;
+    out_file_ << "t, d, x, y, z, x_ref, y_ref, z_ref, pos_err, orient_err, gp_cov_trace, gp_diff_norm" << endl;
   else
     ROS_WARN("[experiment_stats] Couldn't open file '%s' in write mode", out_file_name.c_str());
 
@@ -105,8 +106,9 @@ void ExperimentStatsNode::run_node()
 {
   ros::Rate loop_rate(main_freq_);
   ros::Time t_path = ros::Time::now();  // last time path has been published
+  bool experiment_over = false;
 
-  while (ros::ok()) {
+  while (ros::ok() && !experiment_over) {
     ros::spinOnce();
 
     // Attempt to load the GP if requested
@@ -161,6 +163,22 @@ void ExperimentStatsNode::run_node()
       // Publish statistics
       ref_pub_.publish(reference_pose);
       error_pub_.publish(error);
+
+      // Detect end of the experiment
+      geometry_msgs::TransformStamped wall_robot_tf;
+
+      try {
+        wall_robot_tf = tf_buffer_.lookupTransform("wall",  "base_link",  ros::Time(0));
+      }
+      catch (tf2::TransformException &ex) {
+        ROS_WARN("[experiment_stats] %s", ex.what());
+        continue;
+      }
+
+      if (wall_robot_tf.transform.translation.y < 0 && wall_robot_tf.transform.translation.z < 0) {
+        experiment_over = true;
+        ROS_INFO("========== EXPERIMENT OVER ===========");
+      }
     }
 
     loop_rate.sleep();
@@ -279,6 +297,7 @@ void ExperimentStatsNode::write_output(
   double t = ros::Time::now().toSec() - start_time_;
 
   out_file_ << t << ", "
+            << moved_distance_ << ", "
             << pose.position.x << ", "
             << pose.position.y << ", "
             << pose.position.z << ", "
@@ -343,6 +362,15 @@ void ExperimentStatsNode::save_gp()
 
 void ExperimentStatsNode::odom_cb(const nav_msgs::Odometry msg)
 {
+  // Increment moved distance
+  if (odom_received_) {
+    float dt = (msg.header.stamp - odom_.header.stamp).toSec();
+    float v = msg.twist.twist.linear.x;
+
+    moved_distance_ += v*dt;
+  }
+
+  // Store odometry
   odom_ = msg;
   odom_received_ = true;
 }

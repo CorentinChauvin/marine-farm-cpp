@@ -28,3 +28,6 @@ experiments:
   experiment_stats:
     main_freq: 10.0  # frequency of the main loop
     out_file_name: '/tmp/mpc_out.csv'  # path of the output file for the results of the test
+    save_gp: false    # whether to save the GP mean at the end
+    load_gp: false    # whether to load the GP mean at the beginning
+    gp_file_name: ''  # path of the saved GP mean

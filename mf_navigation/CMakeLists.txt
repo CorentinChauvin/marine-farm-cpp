@@ -4,10 +4,7 @@ project(mf_navigation)
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 
-# set(CMAKE_CXX_FLAGS_DEBUG "-g -fno-omit-frame-pointer")
-# set(ROS_BUILD_TYPE Debug)
-# add_compile_options(-pg)
-# set(catkin_LIBRARIES ${catkin_LIBRARIES} -pg)
+# set(CMAKE_BUILD_TYPE Debug)
 
 set(EIGEN_BUILD_FLAGS "-O3 -DEIGEN_NO_DEBUG")
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${EIGEN_BUILD_FLAGS}")

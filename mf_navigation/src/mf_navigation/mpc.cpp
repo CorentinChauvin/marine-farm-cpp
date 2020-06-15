@@ -186,6 +186,7 @@ void MPCNode::fill_ltv_G_H_D(const VectorT &X_ref, const VectorT &U_ref,
   // Linearise the system at each reference point
   MatrixT Ad_0;  // Ad[0] matrix (linearised at first reference point)
   vector<MatrixT> Ad_m(N);  // multiples of Ad[k]: Ad_m[k] = Ad[k]*Ad[k-1]*...*Ad[1] (Ad_m[0]=identity)
+  vector<MatrixT> Ad(N);  // Ad matrices
   vector<MatrixT> Bd(N);  // Bd matrices
 
   for (int k = 0; k < N; k++) {
@@ -202,24 +203,32 @@ void MPCNode::fill_ltv_G_H_D(const VectorT &X_ref, const VectorT &U_ref,
     else if (k > 1)
       Ad_m[k] = _Ad * Ad_m[k-1];
 
+    Ad[k] = _Ad;
     Bd[k] = _Bd;
   }
 
   // Build G (column by column)
   for (int j = 0; j < N; j++) {
-    for (int i = j; i < N; i++) {
-      G.block(i*n, j*m, n, m) = Ad_m[i-j] * Bd[j];
+    G.block(0, j*m, n, m) = Bd[j];
+    MatrixT prod = Bd[j];  // product of Ad and Bd: prod = Ad(i)...Ad(j+1)Bd(j)
+
+    for (int i = j+1; i < N; i++) {
+      prod = Ad[i] * prod;
+      G.block(i*n, j*m, n, m) = prod;
     }
   }
 
   // Build H
-  H.block(0, 0, n, n) = Ad_0;
+  H.block(0, 0, n, n) = Ad[0];
+  MatrixT prod = Ad[0];
+
   for (int i = 1; i < N; i++) {
-    H.block(i*n, 0, n, n) = Ad_m[i] * Ad_0;
+    prod = Ad[i] * prod;
+    H.block(i*n, 0, n, n) = prod;
   }
 
   // Build D
-  vector<VectorT>delta(N);
+  VectorT delta;  // k-th reference error
 
   for (int k = 0; k < N; k++) {
     // Evaluate the ODE at the k-th reference point
@@ -239,12 +248,17 @@ void MPCNode::fill_ltv_G_H_D(const VectorT &X_ref, const VectorT &U_ref,
       f_k(l) = _f_k[l];
 
     // Compute k-th reference error
-    delta[k] = X_ref.block(k*n, 0, n, 1) + dt*f_k - X_ref.block((k+1)*n, 0, n, 1);
+    delta = X_ref.block(k*n, 0, n, 1) + dt*f_k - X_ref.block((k+1)*n, 0, n, 1);
 
-    // Fill D
-    for (int l = 0; l <= k; l++) {
-      D.block(k*n, 0, n, 1) += Ad_m[k-l] * delta[l];
-    }
+    // Fill the k-th row of D
+    if (k == 0)
+      D.block(k*n, 0, n, 1) = delta;
+    else
+      D.block(k*n, 0, n, 1) = Ad[k]*D.block((k-1)*n, 0, n, 1) + delta;
+
+    // for (int l = 0; l <= k; l++) {
+    //   D.block(k*n, 0, n, 1) += Ad_m[k-l] * delta[l];
+    // }
   }
 }
 
@@ -589,7 +603,7 @@ bool MPCNode::compute_control(
   // Build MPC objects
   MatrixXf G, H;  // to express X with respect to U and X0
   VectorXf D;     // idem
-  MatrixXf L, M;  // to compute quadratic partts of the cost function
+  MatrixXf L, M;  // to compute quadratic parts of the cost function
   VectorXf V;     // to compute linear parts of the cost function
   MatrixXf LG;    // product of L and G
 
