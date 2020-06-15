@@ -13,6 +13,7 @@ var searchData=
   ['min_5fwall_5fdist_5f',['min_wall_dist_',['../classmfcpp_1_1_planning_nodelet.html#a23368782673b6825b6c89fcb051038cb',1,'mfcpp::PlanningNodelet']]],
   ['min_5fx',['min_x',['../structmfcpp_1_1_g_p_nodelet_1_1_rect_area.html#ad4f8ef39655a20457cda1bcbc9572ea9',1,'mfcpp::GPNodelet::RectArea']]],
   ['min_5fy',['min_y',['../structmfcpp_1_1_g_p_nodelet_1_1_rect_area.html#a00edd8c1e4e5df824d73ed0f74307efe',1,'mfcpp::GPNodelet::RectArea']]],
+  ['moved_5fdistance_5f',['moved_distance_',['../classmfcpp_1_1_experiment_stats_node.html#a219a4840bdd7648128beb0c75ffda6cd',1,'mfcpp::ExperimentStatsNode']]],
   ['movekeys',['moveKeys',['../namespacekeyboard__teleop.html#a142e611c03baadf4551c696bdddad3ee',1,'keyboard_teleop']]],
   ['msg',['msg',['../namespacekeyboard__teleop.html#a3febaf01d8f516a95473db9045900c7c',1,'keyboard_teleop']]],
   ['mult_5flattices_5f',['mult_lattices_',['../classmfcpp_1_1_planning_nodelet.html#a6df04b26fd1953a0a48e3755ee594f80',1,'mfcpp::PlanningNodelet']]]

@@ -106,9 +106,9 @@ The main part of the software is released under the open source license <a href=
 
 More information about the method and the software can be found in the related Master's Thesis published <a href="http://kth.diva-portal.org/smash/record.jsf?pid=diva2%3A1438452&dswid=8330">here</a>.
 
-Citing:
+To cite:
 ```
-@mastersthesis{mastersthesis,
+@mastersthesis{chauvin2020informative,
   author = {Corentin Chauvin-Hameau},
   title  = {Informative path planning for algae farm surveying},
   school = {KTH, School of Electrical Engineering and Computer Science (EECS)},

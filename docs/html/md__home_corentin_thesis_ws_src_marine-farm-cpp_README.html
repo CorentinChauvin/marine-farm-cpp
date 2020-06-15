@@ -88,11 +88,97 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div><!-- top -->
 <div class="header">
   <div class="headertitle">
-<div class="title">marine-farm-cpp </div>  </div>
+<div class="title">MFCPP </div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>Coverage path planning for an underwater robot monitoring an algae farm </p>
-</div></div><!-- contents -->
+<div class="textblock"><p><em>Corentin Chauvin-Hameau &ndash; 2019-2020</em></p>
+<div class="image">
+<img src="docs/images/farm.jpg"  alt="farm" width="600"/>
+</div>
+<h2>Contents</h2>
+<ul>
+<li><a href="##Overview">Overview</a></li>
+<li><a href="#Getting-started">Getting started</a></li>
+<li><a href="#Main-launchfile">Main launchfile</a></li>
+<li><a href="#Configuration-files">Configuration files</a></li>
+<li><a href="#API-documentation">API documentation</a></li>
+<li><a href="#License">License</a></li>
+<li><a href="#Read-more">Read more</a></li>
+</ul>
+<h2>Overview</h2>
+<p><a class="anchor" id="Overview"></a></p>
+<p>This projects tackles informative path planning for an underwater robot surveying an algae farm. It proposes a simulation of the algae farm, the robot and its sensors, along with a navigation pipeline collecting information about the farm, generating trajectories to collect as much information as possible and controlling the robot to follow it. The entire architecture of the software can be found in the following figure:</p>
+<div class="image">
+<img src="full_architecture.svg" alt="full_architecture.svg"/>
+</div>
+<p>It is composed of several modules, split into a simulation and a navigation pipeline. The farm simulator generates algae lines and populates it with algae. Each algae has an interest heatmap which encodes zones of interest that need to be surveyed. The robot is simulated by integrating its dynamic equations at a regular pace, and its camera by casting rays and checking for collisions with a collision engine. A Gaussian Process updated by Kalman Filter gathers information about the farm. Using this, a path planner samples viewpoints along the algae wall and selects the ones that maximises information gain. Finally, a Model Predictive Controller generates control input to send to the robot so that it follows the desired reference trajectory while taking dynamic constraints into account. A high level planning module handles switching between algae lines or between wall sides for example.</p>
+<h2>Getting started</h2>
+<p><a class="anchor" id="Getting-started"></a></p>
+<p>This software requires <a href="https://www.ros.org/">ROS</a>. It has been tested on Ubuntu 16.04 with ROS Kinetic. To install and start using it, simply follow these steps: </p><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;mkdir -p ros_ws/src</div><div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;cd ros_ws/src</div><div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;git clone https://github.com/CorentinChauvin/marine-farm-cpp.git</div><div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;catkin build</div><div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;source ../devel/setup.bash</div><div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;</div><div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;roslaunch mf_experiments one_wall.launch</div></div><!-- fragment --><h2>Main launchfile</h2>
+<p><a class="anchor" id="Main-launchfile"></a></p>
+<p><code>mf_experiments/launch/one_wall.launch</code> is the main launchfile to start a simulated experiment where the robot surveys one algae wall. It has allows to select options in the introduction of the file. The different options are the following:</p>
+<table class="doxtable">
+<tr>
+<th>Parameter name </th><th>Meaning  </th></tr>
+<tr>
+<td><code>rviz</code> </td><td>Whether to run Rviz visualisation </td></tr>
+<tr>
+<td><code>display_img_gp</code> </td><td>Whether to visualise the map estimated by Gaussian Process </td></tr>
+<tr>
+<td><code>display_cov_gp</code> </td><td>Whether to visualise the Gaussian Process covariance </td></tr>
+<tr>
+<td><code>display_diff_gp</code> </td><td>Whether to visualise the difference between Gaussian Process map and ground truth </td></tr>
+<tr>
+<td><code>path_planning</code> </td><td>Whether to start the path planner </td></tr>
+<tr>
+<td><code>back_forth_traj</code> </td><td>Whether to publish a predefined back and forth path </td></tr>
+<tr>
+<td><code>planner_initially_disabled</code></td><td>Whether the planner is disabled when surveying the first side of the wall. If so, the robot will follow the back and forth trajectory if <code>back_forth_traj</code> is set to <code>true</code> </td></tr>
+<tr>
+<td><code>mpc_control</code> </td><td>Whether to start the Model Predictive Controller </td></tr>
+<tr>
+<td><code>cart_control</code> </td><td>Whether to start a cartesian controller. If so, the robot will follow the reference trajectory without taking care of any dynamic constraint. </td></tr>
+<tr>
+<td><code>accelerate_time</code> </td><td>Whether to change the time factor of the simulation, to accelerate the process </td></tr>
+<tr>
+<td><code>experiment_stats</code> </td><td>Whether to start the process recording statistics about the experiment </td></tr>
+<tr>
+<td><code>save_gp_mean</code> </td><td>Whether to save the mean of the Gaussian Process in a file at the end of the experiment </td></tr>
+<tr>
+<td><code>load_gp_mean</code> </td><td>Whether to load the mean of the Gaussian Process from a file at the beginning of the experiment </td></tr>
+</table>
+<h2>Configuration files</h2>
+<p><a class="anchor" id="Configuration-files"></a></p>
+<p>The different modules of the pipeline can be configured through several configuration files:</p>
+<table class="doxtable">
+<tr>
+<th>File name </th><th>Configuration  </th></tr>
+<tr>
+<td><code>mf_farm_simulator/config/farm_simulator.yaml</code> </td><td>Farm generation </td></tr>
+<tr>
+<td><code>mf_robot_simulator/config/robot_simulator.yaml</code> </td><td>Robot model and simulation </td></tr>
+<tr>
+<td><code>mf_sensors_simulator/config/sensors_simulator.yaml</code> </td><td>Camera simulation </td></tr>
+<tr>
+<td><code>mf_mapping/config/mapping.yaml</code> </td><td>Gaussian Process mapping </td></tr>
+<tr>
+<td><code>mf_navigation/config/navigation.yaml</code> </td><td>Path planning and control </td></tr>
+<tr>
+<td><code>mf_experiments/config/one_wall.yaml</code> </td><td>Details about the algae wall surveying experiment, and overwrite some specific parameters defined previously </td></tr>
+</table>
+<h2>API documentation</h2>
+<p><a class="anchor" id="API-documentation"></a></p>
+<p>More details on the software can be found on the API documentation <a href="https://corentinchauvin.github.io/marine-farm-cpp/html/index.html">here</a>.</p>
+<h2>License</h2>
+<p><a class="anchor" id="License"></a> The main part of the software is released under the open source license <a href="https://github.com/CorentinChauvin/marine-farm-cpp/blob/master/LICENSE">GNU LGPL-3.0</a>. It makes use of few dependencies released under different licenses:</p><ul>
+<li><a href="https://github.com/DanielChappuis/reactphysics3d">reactphysics3d</a> released under <a href="https://github.com/DanielChappuis/reactphysics3d/blob/master/LICENSE">Zlib</a> license.</li>
+<li><a href="https://github.com/oxfordcontrol/osqp">OSQP</a> released under <a href="https://github.com/oxfordcontrol/osqp/blob/master/LICENSE">Apache 2.0</a> license.</li>
+<li>One modified file from <a href="https://github.com/robotology/osqp-eigen">osqp-eigen</a> released under <a href="https://github.com/robotology/osqp-eigen/blob/master/LICENSE">GNU LGPL-3.0</a> license.</li>
+</ul>
+<h2>Read more</h2>
+<p><a class="anchor" id="Read-more"></a></p>
+<p>More information about the method and the software can be found in the related Master's Thesis published <a href="http://kth.diva-portal.org/smash/record.jsf?pid=diva2%3A1438452&amp;dswid=8330">here</a>.</p>
+<p>To cite: </p><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;@mastersthesis{chauvin2020informative,</div><div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;  author = {Corentin Chauvin-Hameau},</div><div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;  title  = {Informative path planning for algae farm surveying},</div><div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;  school = {KTH, School of Electrical Engineering and Computer Science (EECS)},</div><div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;  year   = 2020</div><div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;}</div></div><!-- fragment --> </div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
 Generated by &#160;<a href="http://www.doxygen.org/index.html">

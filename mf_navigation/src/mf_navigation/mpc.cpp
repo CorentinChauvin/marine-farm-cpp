@@ -185,7 +185,6 @@ void MPCNode::fill_ltv_G_H_D(const VectorT &X_ref, const VectorT &U_ref,
 
   // Linearise the system at each reference point
   MatrixT Ad_0;  // Ad[0] matrix (linearised at first reference point)
-  vector<MatrixT> Ad_m(N);  // multiples of Ad[k]: Ad_m[k] = Ad[k]*Ad[k-1]*...*Ad[1] (Ad_m[0]=identity)
   vector<MatrixT> Ad(N);  // Ad matrices
   vector<MatrixT> Bd(N);  // Bd matrices
 
@@ -194,14 +193,6 @@ void MPCNode::fill_ltv_G_H_D(const VectorT &X_ref, const VectorT &U_ref,
     VectorT x_ref = X_ref.block(k*n, 0, n, 1);
     VectorT u_ref = U_ref.block(k*m, 0, m, 1);
     robot_model_.get_lin_discr_matrices(x_ref, u_ref, _Ad, _Bd, dt);
-
-    if (k == 0) {
-      Ad_0 = _Ad;
-      Ad_m[0] = MatrixT::Identity(n, n);
-    } else if (k == 1)
-      Ad_m[1] = _Ad;
-    else if (k > 1)
-      Ad_m[k] = _Ad * Ad_m[k-1];
 
     Ad[k] = _Ad;
     Bd[k] = _Bd;
@@ -255,10 +246,6 @@ void MPCNode::fill_ltv_G_H_D(const VectorT &X_ref, const VectorT &U_ref,
       D.block(k*n, 0, n, 1) = delta;
     else
       D.block(k*n, 0, n, 1) = Ad[k]*D.block((k-1)*n, 0, n, 1) + delta;
-
-    // for (int l = 0; l <= k; l++) {
-    //   D.block(k*n, 0, n, 1) += Ad_m[k-l] * delta[l];
-    // }
   }
 }
 

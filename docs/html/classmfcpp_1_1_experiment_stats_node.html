@@ -203,6 +203,12 @@ Private Attributes</h2></td></tr>
 <tr class="memitem:abc8c3f525d2f129a183a29085d53a2db"><td class="memItemLeft" align="right" valign="top">ros::ServiceClient&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmfcpp_1_1_experiment_stats_node.html#abc8c3f525d2f129a183a29085d53a2db">load_gp_client_</a></td></tr>
 <tr class="memdesc:abc8c3f525d2f129a183a29085d53a2db"><td class="mdescLeft">&#160;</td><td class="mdescRight">Service client for loading the GP.  <a href="#abc8c3f525d2f129a183a29085d53a2db">More...</a><br /></td></tr>
 <tr class="separator:abc8c3f525d2f129a183a29085d53a2db"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8c6a634e98ef7b7f9418a4026990966e"><td class="memItemLeft" align="right" valign="top">tf2_ros::Buffer&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmfcpp_1_1_experiment_stats_node.html#a8c6a634e98ef7b7f9418a4026990966e">tf_buffer_</a></td></tr>
+<tr class="memdesc:a8c6a634e98ef7b7f9418a4026990966e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Buffer for tf2.  <a href="#a8c6a634e98ef7b7f9418a4026990966e">More...</a><br /></td></tr>
+<tr class="separator:a8c6a634e98ef7b7f9418a4026990966e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae15659a4283a60b1dc626ee81bd62c07"><td class="memItemLeft" align="right" valign="top">tf2_ros::TransformListener&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmfcpp_1_1_experiment_stats_node.html#ae15659a4283a60b1dc626ee81bd62c07">tf_listener_</a></td></tr>
+<tr class="memdesc:ae15659a4283a60b1dc626ee81bd62c07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Transform listener for tf2.  <a href="#ae15659a4283a60b1dc626ee81bd62c07">More...</a><br /></td></tr>
+<tr class="separator:ae15659a4283a60b1dc626ee81bd62c07"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad7d2cb059711d1a124efc537c0b5f0a9"><td class="memItemLeft" align="right" valign="top">nav_msgs::Odometry&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmfcpp_1_1_experiment_stats_node.html#ad7d2cb059711d1a124efc537c0b5f0a9">odom_</a></td></tr>
 <tr class="memdesc:ad7d2cb059711d1a124efc537c0b5f0a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Last odometry message received.  <a href="#ad7d2cb059711d1a124efc537c0b5f0a9">More...</a><br /></td></tr>
 <tr class="separator:ad7d2cb059711d1a124efc537c0b5f0a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -242,6 +248,9 @@ Private Attributes</h2></td></tr>
 <tr class="memitem:ab70cee97a3364a9a979815cf0bee7001"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmfcpp_1_1_experiment_stats_node.html#ab70cee97a3364a9a979815cf0bee7001">algae_received_</a></td></tr>
 <tr class="memdesc:ab70cee97a3364a9a979815cf0bee7001"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether the farm algae have been received.  <a href="#ab70cee97a3364a9a979815cf0bee7001">More...</a><br /></td></tr>
 <tr class="separator:ab70cee97a3364a9a979815cf0bee7001"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a219a4840bdd7648128beb0c75ffda6cd"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmfcpp_1_1_experiment_stats_node.html#a219a4840bdd7648128beb0c75ffda6cd">moved_distance_</a></td></tr>
+<tr class="memdesc:a219a4840bdd7648128beb0c75ffda6cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Distance moved by the robot since the start.  <a href="#a219a4840bdd7648128beb0c75ffda6cd">More...</a><br /></td></tr>
+<tr class="separator:a219a4840bdd7648128beb0c75ffda6cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a419014d28c24700d9b895a8648286d29"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmfcpp_1_1_experiment_stats_node.html#a419014d28c24700d9b895a8648286d29">start_time_</a></td></tr>
 <tr class="memdesc:a419014d28c24700d9b895a8648286d29"><td class="mdescLeft">&#160;</td><td class="mdescRight">Start time of the test.  <a href="#a419014d28c24700d9b895a8648286d29">More...</a><br /></td></tr>
 <tr class="separator:a419014d28c24700d9b895a8648286d29"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -273,7 +282,7 @@ Private Attributes</h2></td></tr>
 <li>mapping error </li>
 </ul>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00037">37</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00038">38</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a class="anchor" id="aba11978726ac635380747add7d006538"></a>
 <div class="memitem">
@@ -288,7 +297,7 @@ Private Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00046">46</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00045">45</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -334,7 +343,7 @@ Private Attributes</h2></td></tr>
 
 <p>Callback for farm algae. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00396">396</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00424">424</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -382,7 +391,7 @@ Private Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>2-norm of the difference of the two arrays </dd></dl>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00202">202</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00220">220</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -428,7 +437,7 @@ Private Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Closest pose to <code>pose</code> in <code>path</code> </dd></dl>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00179">179</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00197">197</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -456,7 +465,7 @@ Private Attributes</h2></td></tr>
 
 <p>Callback for the covariance of the Gaussian Process. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00365">365</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00393">393</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -484,7 +493,7 @@ Private Attributes</h2></td></tr>
 
 <p>Callback for the evaluated GP. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00380">380</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00408">408</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -512,7 +521,7 @@ Private Attributes</h2></td></tr>
 
 <p>Callback for the mean of the Gaussian Process. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00358">358</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00386">386</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -585,7 +594,7 @@ Private Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Whether the file could be read </dd></dl>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00296">296</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00315">315</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -612,8 +621,9 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Callback for odometry. </p>
+<p>Increments distance moved by the robot </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00344">344</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00363">363</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -641,7 +651,7 @@ Private Attributes</h2></td></tr>
 
 <p>Callback for the reference path. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00351">351</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00379">379</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -660,7 +670,7 @@ Private Attributes</h2></td></tr>
 
 <p>Runs the node. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00104">104</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00105">105</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -687,7 +697,7 @@ Private Attributes</h2></td></tr>
 
 <p>Saves the mean of the Gaussian Process in a file. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00322">322</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00341">341</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -760,7 +770,7 @@ Private Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00266">266</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8cpp_source.html#l00284">284</a> of file <a class="el" href="experiment__stats_8cpp_source.html">experiment_stats.cpp</a>.</p>
 
 </div>
 </div>
@@ -785,7 +795,7 @@ Private Attributes</h2></td></tr>
 
 <p>Disease heatmaps of the algae. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00067">67</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00070">70</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -809,7 +819,7 @@ Private Attributes</h2></td></tr>
 
 <p>Whether the farm algae have been received. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00073">73</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00076">76</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -833,7 +843,7 @@ Private Attributes</h2></td></tr>
 
 <p>Subscriber for the farm algae. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00055">55</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00056">56</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -857,7 +867,7 @@ Private Attributes</h2></td></tr>
 
 <p>Publisher for the image of the difference between the mapped GP and the algae heatmap. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00058">58</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00059">59</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -881,7 +891,7 @@ Private Attributes</h2></td></tr>
 
 <p>Publisher for the tracking error. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00057">57</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00058">58</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -905,7 +915,7 @@ Private Attributes</h2></td></tr>
 
 <p>Diagonal of the covariance of the Gaussian Proces. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00064">64</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00067">67</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -929,7 +939,7 @@ Private Attributes</h2></td></tr>
 
 <p>Whether the covariance of the GP has been received. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00071">71</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00074">74</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -953,7 +963,7 @@ Private Attributes</h2></td></tr>
 
 <p>Subscriber for covariance of the GP. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00053">53</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00054">54</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -977,7 +987,7 @@ Private Attributes</h2></td></tr>
 
 <p>Evaluated GP. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00066">66</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00069">69</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1001,7 +1011,7 @@ Private Attributes</h2></td></tr>
 
 <p>Whether the evaluated GP has been received. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00072">72</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00075">75</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1025,7 +1035,7 @@ Private Attributes</h2></td></tr>
 
 <p>Subscriber for the evaluated GP. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00054">54</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00055">55</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1048,7 +1058,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Name/path of the file where to save the GP </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00084">84</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00088">88</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1072,7 +1082,7 @@ Private Attributes</h2></td></tr>
 
 <p>Mean of the Gaussian Process. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00063">63</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00066">66</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1096,7 +1106,7 @@ Private Attributes</h2></td></tr>
 
 <p>Whether the mean of the GP has been received. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00070">70</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00073">73</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1120,7 +1130,7 @@ Private Attributes</h2></td></tr>
 
 <p>Subscriber for mean of the GP. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00052">52</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00053">53</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1144,7 +1154,7 @@ Private Attributes</h2></td></tr>
 
 <p>Threshold to consider a GP component in information gain computation. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00081">81</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00085">85</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1168,7 +1178,7 @@ Private Attributes</h2></td></tr>
 
 <p>Diagonal of the initial covariance of the GP. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00065">65</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00068">68</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1192,7 +1202,7 @@ Private Attributes</h2></td></tr>
 
 <p>Whether to load the Gaussian Process at the beginning. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00083">83</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00087">87</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1216,7 +1226,7 @@ Private Attributes</h2></td></tr>
 
 <p>Service client for loading the GP. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00059">59</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00060">60</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1240,7 +1250,31 @@ Private Attributes</h2></td></tr>
 
 <p>Frequency of the main loop. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00080">80</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00084">84</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a219a4840bdd7648128beb0c75ffda6cd"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float mfcpp::ExperimentStatsNode::moved_distance_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Distance moved by the robot since the start. </p>
+
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00077">77</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1264,7 +1298,7 @@ Private Attributes</h2></td></tr>
 
 <p>Node handler. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00049">49</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00050">50</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1288,7 +1322,7 @@ Private Attributes</h2></td></tr>
 
 <p>Last odometry message received. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00061">61</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00064">64</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1312,7 +1346,7 @@ Private Attributes</h2></td></tr>
 
 <p>Whether odometry has been received. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00068">68</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00071">71</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1336,7 +1370,7 @@ Private Attributes</h2></td></tr>
 
 <p>Subscriber for robot odometry. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00050">50</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00051">51</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1360,7 +1394,7 @@ Private Attributes</h2></td></tr>
 
 <p>Output CSV file containg data of the experiment. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00076">76</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00080">80</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1384,7 +1418,7 @@ Private Attributes</h2></td></tr>
 
 <p>Reference path to follow. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00062">62</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00065">65</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1408,7 +1442,7 @@ Private Attributes</h2></td></tr>
 
 <p>Whether the reference path has been received. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00069">69</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00072">72</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1432,7 +1466,7 @@ Private Attributes</h2></td></tr>
 
 <p>Subscriber for the reference path. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00051">51</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00052">52</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1456,7 +1490,7 @@ Private Attributes</h2></td></tr>
 
 <p>Publisher for the reference pose. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00056">56</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00057">57</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1480,7 +1514,7 @@ Private Attributes</h2></td></tr>
 
 <p>Whether to save the Gaussian Process at the end. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00082">82</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00086">86</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>
@@ -1504,7 +1538,55 @@ Private Attributes</h2></td></tr>
 
 <p>Start time of the test. </p>
 
-<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00075">75</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00079">79</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a8c6a634e98ef7b7f9418a4026990966e"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">tf2_ros::Buffer mfcpp::ExperimentStatsNode::tf_buffer_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Buffer for tf2. </p>
+
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00061">61</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="ae15659a4283a60b1dc626ee81bd62c07"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">tf2_ros::TransformListener mfcpp::ExperimentStatsNode::tf_listener_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Transform listener for tf2. </p>
+
+<p>Definition at line <a class="el" href="experiment__stats_8hpp_source.html#l00062">62</a> of file <a class="el" href="experiment__stats_8hpp_source.html">experiment_stats.hpp</a>.</p>
 
 </div>
 </div>

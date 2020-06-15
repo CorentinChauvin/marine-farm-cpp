@@ -1,6 +1,6 @@
 <map id="/home/corentin/thesis_ws/src/marine&#45;farm&#45;cpp/mf_common/include/mf_common/common.hpp" name="/home/corentin/thesis_ws/src/marine&#45;farm&#45;cpp/mf_common/include/mf_common/common.hpp">
 <area shape="rect" id="node2" href="$common_8cpp.html" title="Definition of common functions. " alt="" coords="5,131,201,202"/>
-<area shape="rect" id="node3" href="$experiment__stats_8cpp.html" title="Definition of a node to generate a fake trajectory and evaluate the performance of the control..." alt="" coords="226,124,394,209"/>
+<area shape="rect" id="node3" href="$experiment__stats_8cpp.html" title="Definition of a node to measure statistics about the one wall experiment. " alt="" coords="226,124,394,209"/>
 <area shape="rect" id="node4" href="$traj__publisher_8cpp.html" title="Definition of a node to generate hard&#45;coded trajectories. " alt="" coords="419,131,625,202"/>
 <area shape="rect" id="node5" href="$mpc_8cpp.html" title="Definition of a Model Predictive Controler for an underwater robot. " alt="" coords="1493,398,1708,469"/>
 <area shape="rect" id="node6" href="$mpc__node_8cpp.html" title="Definition of a node for Model Predictive Control of an underwater robot. " alt="" coords="1255,398,1469,469"/>
