@@ -61,8 +61,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
                onmouseout="return searchBox.OnSearchSelectHide()"
                alt=""/>
           <input type="text" id="MSearchField" value="Search" accesskey="S"
-               onfocus="searchBox.OnSearchFieldFocus(true)" 
-               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onfocus="searchBox.OnSearchFieldFocus(true)"
+               onblur="searchBox.OnSearchFieldFocus(false)"
                onkeyup="searchBox.OnSearchFieldChange(event)"/>
           </span><span class="right">
             <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.png" alt=""/></a>
@@ -81,7 +81,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
-<iframe src="javascript:void(0)" frameborder="0" 
+<iframe src="javascript:void(0)" frameborder="0"
         name="MSearchResults" id="MSearchResults">
 </iframe>
 </div>
@@ -131,7 +131,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </table>
 <h2>Getting started</h2>
 <p><a class="anchor" id="Getting-started"></a></p>
-<p>This software requires <a href="https://www.ros.org/">ROS</a>. It has been tested on Ubuntu 16.04 with ROS Kinetic. To install and start using it, simply follow these steps: </p><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;mkdir -p ros_ws/src</div><div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;cd ros_ws/src</div><div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;git clone https://github.com/CorentinChauvin/marine-farm-cpp.git</div><div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;catkin build</div><div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;source ../devel/setup.bash</div><div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;</div><div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;roslaunch mf_experiments one_wall.launch</div></div><!-- fragment --><p>To generate Doxygen documentation, issue: </p><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;cd ros_ws/src/marine-farm-cpp/docs</div><div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;doxygen</div></div><!-- fragment --><h2>Main launchfile</h2>
+<p>This software requires <a href="https://www.ros.org/">ROS</a>. It has been tested on Ubuntu 16.04 with ROS Kinetic. To install and start using it, simply follow these steps: </p><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;mkdir -p ros_ws/src</div><div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;cd ros_ws/src</div><div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;git clone --recursive https://github.com/CorentinChauvin/marine-farm-cpp.git</div><div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;catkin build</div><div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;source ../devel/setup.bash</div><div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;</div><div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;roslaunch mf_experiments one_wall.launch</div></div><!-- fragment --><p>To generate Doxygen documentation, issue: </p><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;cd ros_ws/src/marine-farm-cpp/docs</div><div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;doxygen</div></div><!-- fragment --><h2>Main launchfile</h2>
 <p><a class="anchor" id="Main-launchfile"></a></p>
 <p><code>mf_experiments/launch/one_wall.launch</code> is the main launchfile to start a simulated experiment where the robot surveys one algae wall. It has allows to select options in the introduction of the file. The different options are the following:</p>
 <table class="doxtable">

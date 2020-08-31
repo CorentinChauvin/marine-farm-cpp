@@ -33,7 +33,7 @@ This software requires <a href="https://www.ros.org/">ROS</a>. It has been teste
 ```
 mkdir -p ros_ws/src
 cd ros_ws/src
-git clone https://github.com/CorentinChauvin/marine-farm-cpp.git
+git clone --recursive https://github.com/CorentinChauvin/marine-farm-cpp.git
 catkin build
 source ../devel/setup.bash
 
