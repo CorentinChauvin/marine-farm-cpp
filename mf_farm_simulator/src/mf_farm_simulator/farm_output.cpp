@@ -26,7 +26,7 @@ void FarmNodelet::pub_rviz_markers(float duration) const
   MarkerArgs args;
   args.stamp = ros::Time::now();
   args.duration = ros::Duration(duration);
-  args.frame_id = "/world";
+  args.frame_id = "world";
   args.color.r = 0.8;
   args.color.g = 0.8;
   args.color.b = 0.8;

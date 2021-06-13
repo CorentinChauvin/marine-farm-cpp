@@ -35,6 +35,8 @@ vector<tf2::Vector3> get_alga_coord(const AlgaeLine &line, const Alga &alga)
   coord[1] = X + W/2*y;
   coord[2] = coord[1] - H*(cos(psi)*z - sin(psi)*x);
   coord[3] = coord[0] - H*(cos(psi)*z - sin(psi)*x);
+
+  return coord;
 }
 
 

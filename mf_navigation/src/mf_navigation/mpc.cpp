@@ -525,6 +525,8 @@ bool MPCNode::solve_qp(
     c_free(data);
   }
   if (settings) c_free(settings);
+
+  return true;
 }
 
 

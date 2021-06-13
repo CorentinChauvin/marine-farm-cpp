@@ -320,6 +320,8 @@ bool GPNodelet::update_gp_cb(mf_mapping::UpdateGP::Request &req,
       }
     }
   }
+
+  return true;
 }
 
 
